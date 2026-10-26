@@ -45,10 +45,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -307,14 +303,13 @@ private class Tile(val bitmap: Bitmap, val x: Float, val y: Float, val w: Float,
 
 /**
  * The document's pages: scrolled and pinch-zoomed by touch, drawn by the engine in tiles, with the
- * caret, the selection and the keyboard's composing text over them.
+ * caret and selection over them. IME composing text is laid out by the engine.
  */
 @Composable
 fun DocumentView(
     engine: Engine,
     info: DocumentInfo,
     selection: SelectionView?,
-    composing: String,
     viewport: DocumentViewport,
     mobile: Boolean,
     selectionColor: Color,
@@ -423,7 +418,6 @@ fun DocumentView(
         ),
         label = "caretAlpha",
     )
-    val measurer = rememberTextMeasurer()
     // the pages are what the engine draws: dark, or light (also in a dark theme, Switch to Light Background)
     val pageColor = if (dark) io.github.artcraftandroid.wordcraft.ui.WordColors.DarkPage else Color.White
     val canvasColor = if (mobile) pageColor else io.github.artcraftandroid.wordcraft.ui.WordColors.Canvas
@@ -538,7 +532,7 @@ fun DocumentView(
                 val color = if (pen.tool == "highlighter") pen.color.copy(alpha = 0.45f) else pen.color
                 drawPath(path, color, style = Stroke(width = (pen.width * viewport.scale).coerceAtLeast(1f), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
             }
-            if (handlesOn && ink == null && composing.isEmpty()) {
+            if (handlesOn && ink == null) {
                 val r = HANDLE_RADIUS_DP * density
                 for ((_, tip, _, lean) in handles(viewport, selection)) {
                     val c = handleCentre(tip, lean, r)
@@ -557,11 +551,7 @@ fun DocumentView(
                     drawCircle(handleColor, r, c)
                 }
             }
-            drawSelection(viewport, selection, composing, selectionColor, caretColor, if (showCaret && ink == null) caretAlpha else 0f, dragPreview, cropping) { text, at, px ->
-                val layout = measurer.measure(text, TextStyle(fontSize = (px / density).sp, textDecoration = TextDecoration.Underline, color = caretColor))
-                drawRect(pageColor, topLeft = at, size = Size(layout.size.width.toFloat(), layout.size.height.toFloat()))
-                drawText(layout, topLeft = at)
-            }
+            drawSelection(viewport, selection, selectionColor, caretColor, if (showCaret && ink == null) caretAlpha else 0f, dragPreview, cropping)
         }
     }
 }
@@ -605,17 +595,15 @@ private fun frameOnScreen(viewport: DocumentViewport, f: io.github.artcraftandro
 /** Where a handle's ball sits for its tip and lean. */
 private fun handleCentre(tip: Offset, lean: Int, r: Float): Offset = if (lean == 0) Offset(tip.x, tip.y + r + 2f) else Offset(tip.x + lean * r, tip.y + r)
 
-/** The selection's rectangles, the caret, and the composing text at the caret. */
+/** The selection's rectangles and caret. */
 private fun DrawScope.drawSelection(
     viewport: DocumentViewport,
     selection: SelectionView?,
-    composing: String,
     selectionColor: Color,
     caretColor: Color,
     caretAlpha: Float,
     preview: Pair<Rect, Float>?,
     cropping: Boolean,
-    drawComposing: DrawScope.(String, Offset, Float) -> Unit,
 ) {
     val sel = selection ?: return
     val frame = sel.objectFrame
@@ -682,10 +670,6 @@ private fun DrawScope.drawSelection(
     if (!sel.collapsed) return
     val top = viewport.onPage(caret.page.toInt(), caret.x, caret.top)
     val h = caret.height * viewport.scale
-    if (composing.isNotEmpty()) {
-        drawComposing(composing, top, h * 0.72f)
-        return
-    }
     if (caretAlpha <= 0f) return
     val w = max(2f, 1.5f * density)
     drawRect(caretColor.copy(alpha = caretColor.alpha * caretAlpha), topLeft = Offset(top.x - w / 2f, top.y), size = Size(w, h))

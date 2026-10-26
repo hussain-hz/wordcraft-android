@@ -145,10 +145,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Read the Styles list again (another document, or styles changed). */
     fun loadStyleLooks() = withEngine { e -> styleLooks = e.command { styleLooks() } }
 
-    /** The keyboard's composing text, drawn at the caret until it is committed. */
-    var composing by mutableStateOf("")
-        private set
-
     /** A message to show the user once. */
     var message by mutableStateOf<String?>(null)
     var engine by mutableStateOf<Engine?>(null)
@@ -406,7 +402,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Read from the caret (or from the start when nothing follows it). */
     fun startReadAloud() = withEngine { e ->
-        commitComposing(e)
         val list = e.command { readAloudSentences(false) }.ifEmpty { e.command { readAloudSentences(true) } }
         if (list.isEmpty()) {
             message = messageText("There's nothing to read.")
@@ -515,7 +510,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Share the document, as it is or as a PDF, through the phone's share sheet. */
     fun share(asPdf: Boolean) = withEngine { e ->
         val doc = document ?: return@withEngine
-        commitComposing(e)
         val base = doc.name.substringBeforeLast('.', doc.name)
         val name = if (asPdf) "$base.pdf" else saveName(doc.name)
         val bytes = e.command { exportBytes(name) }
@@ -532,7 +526,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Print the document through the phone's print service. */
     fun print() = withEngine { e ->
         val doc = document ?: return@withEngine
-        commitComposing(e)
         val bytes = e.command { exportBytes("print.pdf") }
         printRequests.trySend(doc.name.substringBeforeLast('.', doc.name) to bytes)
     }
@@ -913,7 +906,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val old = linkEdit
         linkEdit = null
         if (address.isBlank() || old == null) return@withEngine
-        commitComposing(e)
         e.command {
             if (selectLink()) {
                 if (text.isNotBlank() && text != old.text) {
@@ -930,7 +922,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Remove Link: the text stays, as plain text. */
     fun removeLink() = withEngine { e ->
         contextBar = false
-        commitComposing(e)
         e.command {
             if (selectLink()) execute("insert.removeLink", "")
         }
@@ -993,7 +984,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** What every opened or new document starts with. */
     private suspend fun started(e: Engine, doc: OpenDocument, edit: Boolean) {
         document = doc
-        composing = ""
         findOpen = false
         findSettingsOpen = false
         findView = null
@@ -1104,7 +1094,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleMobileView() = withEngine { e ->
-        commitComposing(e)
         viewMode = if (viewMode == ViewMode.Mobile) ViewMode.Print else ViewMode.Mobile
         if (viewMode == ViewMode.Mobile) e.command { setView("mobile", mobileWidth.coerceAtLeast(200f)) } else e.command { setView("print", 0f) }
         refresh(e)
@@ -1114,14 +1103,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Start editing (the pen): the document shows as pages, and the keyboard comes up. */
     fun startEditing() = withEngine { e ->
         // editing keeps the view the document is shown in (Mobile View or the pages)
-        commitComposing(e)
         editing = true
         keyboardRequests++
     }
 
-    /** Stop editing (the check mark): the palette closes and the composing text goes in. */
+    /** Stop editing (the check mark): the palette and keyboard close; IME text is already in the document. */
     fun stopEditing() = withEngine { e ->
-        commitComposing(e)
         // out of the equation being edited, if any (its shading and caret go)
         if (selection?.equation != null) e.command { runCatching { execute("equation.exit", "") } }
         editing = false
@@ -1257,9 +1244,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Run an edit, then show its result. */
     fun edit(block: MobileSession.() -> Unit) = withEngine { e ->
-        commitComposing(e)
         e.command(block)
         refresh(e)
+        inputGeneration++
     }
 
     /** Run the engine command [id] with [params] (JSON). */
@@ -1347,8 +1334,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 findView = null
                 return@withEngine
             }
-            commitComposing(e)
-            findView = runCatching { e.command { findAgain(findParams(text).toString()) } }.getOrElse { e.command { findView() } }
+                findView = runCatching { e.command { findAgain(findParams(text).toString()) } }.getOrElse { e.command { findView() } }
             refresh(e)
         }
     }
@@ -1364,7 +1350,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Replace the selected match with [replaceText] and select the next one. */
     fun replaceOne() = withEngine { e ->
         if (findQuery.isBlank()) return@withEngine
-        commitComposing(e)
         runCatching { e.command { execute("edit.replace", findParams().put("with", replaceText).toString()) } }
         findView = runCatching { e.command { findAgain(findParams().toString()) } }.getOrElse { e.command { findView() } }
         refresh(e)
@@ -1373,7 +1358,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Replace every match with [replaceText]. */
     fun replaceAll() = withEngine { e ->
         if (findQuery.isBlank()) return@withEngine
-        commitComposing(e)
         val out = runCatching { e.command { execute("edit.replaceAll", findParams().put("with", replaceText).toString()) } }.getOrNull()
         val n = runCatching { JSONObject(out ?: "{}").optInt("replaced") }.getOrDefault(0)
         message = messageText("Replaced items: %1\$s", n)
@@ -1431,7 +1415,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A tap on the page: the caret goes there; while editing, the keyboard comes up. */
     fun tap(page: Int, x: Float, y: Float) = withEngine { e ->
-        commitComposing(e)
         contextBar = false
         e.command { tap(page.toUInt(), x, y, false) }
         refresh(e)
@@ -1506,7 +1489,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A double tap or long press: select the word there (and start editing). */
     fun selectWord(page: Int, x: Float, y: Float) = withEngine { e ->
-        commitComposing(e)
         suggestions = emptyList()
         e.command { selectAt(page.toUInt(), x, y, "word") }
         refresh(e)
@@ -1515,27 +1497,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         contextBar = true
     }
 
-    private suspend fun commitComposing(e: Engine) {
-        val text = composing
-        if (text.isNotEmpty()) {
-            composing = ""
-            e.command { typeText(text) }
-        }
-    }
-
-    // The keyboard (EditorInputView). Its calls arrive on the main thread in order; edits queue on
-    // the engine's command thread in the same order.
+    // IME buffer edits apply synchronously in engine order; layout refreshes remain asynchronous.
 
     fun inputCommit(text: String) {
-        composing = ""
         if (text.isNotEmpty()) withEngine { e ->
             e.command { typeText(text) }
             refresh(e)
+            inputGeneration++
         }
     }
 
-    fun inputCompose(text: String) {
-        composing = text
+    fun inputEdit(change: io.github.artcraftandroid.wordcraft.ui.editor.ImeEdit, composing: Boolean): Boolean {
+        val e = engine ?: return false
+        return try {
+            e.commandBlocking { editIme(change.replace, change.start, change.end, change.text, change.selectionStart, change.selectionEnd, composing) }
+            withEngine { refresh(it) }
+            true
+        } catch (t: MobileException) {
+            message = t.userMessage
+            false
+        }
     }
 
     fun inputDelete(before: Int, after: Int) {
@@ -1573,7 +1554,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Save over the file the document came from, or ask where to save a copy. */
     fun save() = withEngine { e ->
         val doc = document ?: return@withEngine
-        commitComposing(e)
         val name = docxName(doc.name)
         if (doc.uri == null || !doc.writable) {
             saveAsRequests.trySend(name)

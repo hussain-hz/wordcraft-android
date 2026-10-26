@@ -26,6 +26,7 @@ use wordcraft_engine::render::{self, RenderOptions};
 use wordcraft_engine::{CmdError, Region, Session, io, speech};
 
 uniffi::setup_scaffolding!();
+mod ime;
 
 #[cfg(test)]
 mod tests;
@@ -539,6 +540,38 @@ impl MobileSession {
     /// Typing in the equation being edited: text goes in as the equation builds it up (a space
     /// or an operator after a fraction or a script), Enter breaks the line and Tab goes to the
     /// next place to type.
+    fn type_locked(s: &mut Session, text: &str, raw: bool) -> Result<(), MobileError> {
+        if s.math.is_some() {
+            return Self::type_in_equation(s, text);
+        }
+        let mut pending = String::new();
+        let flush = |s: &mut Session, pending: &mut String| -> Result<(), MobileError> {
+            if !pending.is_empty() {
+                Self::run(s, "text.insert", json!({ "text": std::mem::take(pending), "raw": raw }))?;
+            }
+            Ok(())
+        };
+        for ch in text.chars() {
+            match ch {
+                '\r' => {}
+                '\n' => {
+                    flush(s, &mut pending)?;
+                    Self::run(s, "text.newParagraph", json!({}))?;
+                }
+                '\t' => {
+                    flush(s, &mut pending)?;
+                    Self::run(s, "text.tab", json!({}))?;
+                }
+                c if TYPED_ALONE.contains(&c) => {
+                    flush(s, &mut pending)?;
+                    Self::run(s, "text.insert", json!({ "text": c.to_string(), "raw": raw }))?;
+                }
+                c => pending.push(c),
+            }
+        }
+        flush(s, &mut pending)
+    }
+
     fn type_in_equation(s: &mut Session, text: &str) -> Result<(), MobileError> {
         let mut pending = String::new();
         for ch in text.chars() {
@@ -868,36 +901,7 @@ impl MobileSession {
     /// starts a paragraph and a tab is a tab; spaces, punctuation and quotes go in on their own so
     /// AutoCorrect, AutoFormat and smart quotes run as they do for keys typed one at a time.
     pub fn type_text(&self, text: String) -> Result<(), MobileError> {
-        let mut s = self.lock();
-        if s.math.is_some() {
-            return Self::type_in_equation(&mut s, &text);
-        }
-        let mut pending = String::new();
-        let flush = |s: &mut Session, pending: &mut String| -> Result<(), MobileError> {
-            if !pending.is_empty() {
-                Self::run(s, "text.insert", json!({ "text": std::mem::take(pending) }))?;
-            }
-            Ok(())
-        };
-        for ch in text.chars() {
-            match ch {
-                '\r' => {}
-                '\n' => {
-                    flush(&mut s, &mut pending)?;
-                    Self::run(&mut s, "text.newParagraph", json!({}))?;
-                }
-                '\t' => {
-                    flush(&mut s, &mut pending)?;
-                    Self::run(&mut s, "text.tab", json!({}))?;
-                }
-                c if TYPED_ALONE.contains(&c) => {
-                    flush(&mut s, &mut pending)?;
-                    Self::run(&mut s, "text.insert", json!({ "text": c.to_string() }))?;
-                }
-                c => pending.push(c),
-            }
-        }
-        flush(&mut s, &mut pending)
+        Self::type_locked(&mut self.lock(), &text, false)
     }
 
     /// Delete `before` characters before the caret and `after` after it (the selection instead,

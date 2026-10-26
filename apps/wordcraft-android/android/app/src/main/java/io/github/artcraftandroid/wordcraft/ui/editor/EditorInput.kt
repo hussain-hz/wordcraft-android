@@ -2,7 +2,9 @@ package io.github.artcraftandroid.wordcraft.ui.editor
 
 import android.content.Context
 import android.text.InputType
-import android.text.TextUtils
+import android.text.Editable
+import android.text.Selection
+import android.text.SpannableStringBuilder
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.BaseInputConnection
@@ -19,8 +21,8 @@ interface EditorInputListener {
     /** Text to type at the caret, replacing the selection. */
     fun commit(text: String)
 
-    /** The keyboard's word in progress, shown at the caret until committed. */
-    fun compose(text: String)
+    /** Apply one exact Android buffer change to the engine before answering the IME. */
+    fun edit(change: ImeEdit, composing: Boolean): Boolean
 
     /** Delete characters before and after the caret. */
     fun deleteAround(before: Int, after: Int)
@@ -45,8 +47,7 @@ class EditorInputView(context: Context) : View(context) {
     var listener: EditorInputListener? = null
     private val imm = context.getSystemService(InputMethodManager::class.java)
 
-    /** The on-screen keyboard's word in progress, not in the document yet. */
-    private var composing = ""
+    private var connection: EditorConnection? = null
 
     init {
         isFocusable = true
@@ -71,7 +72,8 @@ class EditorInputView(context: Context) : View(context) {
         outAttrs.initialSelStart = around.before.length
         outAttrs.initialSelEnd = around.before.length + around.selected.length
         EditorInfoCompat.setInitialSurroundingText(outAttrs, around.before + around.selected + around.after)
-        return EditorConnection(this)
+        connection?.deactivate()
+        return EditorConnection(this, around).also { connection = it }
     }
 
     /** Take the focus and show the keyboard. */
@@ -90,19 +92,19 @@ class EditorInputView(context: Context) : View(context) {
 
     /** The caret moved other than by typing: the keyboard forgets its word and starts afresh. */
     fun restartInput() {
-        composing = ""
+        connection?.deactivate()
+        connection = null
         imm?.restartInput(this)
     }
 
-    /** A hardware keyboard's key (the on-screen keyboard's arrive through the connection). */
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = handleKey(event) || super.onKeyDown(keyCode, event)
-
-    private fun commitComposing() {
-        val text = composing
-        composing = ""
-        listener?.compose("")
-        if (text.isNotEmpty()) listener?.commit(text)
+    override fun onDetachedFromWindow() {
+        connection?.deactivate()
+        connection = null
+        super.onDetachedFromWindow()
     }
+
+    /** A hardware keyboard's key (the on-screen keyboard's arrive through the connection). */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = connection?.sendKeyEvent(event) ?: (handleKey(event) || super.onKeyDown(keyCode, event))
 
     /** One key pressed: a shortcut, an editing key, or a character to type. */
     private fun handleKey(event: KeyEvent): Boolean {
@@ -115,31 +117,20 @@ class EditorInputView(context: Context) : View(context) {
                 if (event.isShiftPressed) append("Shift+")
                 append(name)
             }
-            commitComposing()
             return l.shortcut(combo)
         }
         val extend = if (event.isShiftPressed) """{"extend":true}""" else ""
         fun move(id: String) {
-            commitComposing()
             l.command(id, extend)
         }
         when (event.keyCode) {
-            KeyEvent.KEYCODE_DEL -> {
-                if (composing.isNotEmpty()) {
-                    composing = composing.dropLast(1)
-                    l.compose(composing)
-                } else {
-                    l.deleteAround(1, 0)
-                }
-            }
+            KeyEvent.KEYCODE_DEL -> l.deleteAround(1, 0)
             KeyEvent.KEYCODE_FORWARD_DEL -> l.deleteAround(0, 1)
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                commitComposing()
-                if (event.isShiftPressed) l.command("text.lineBreak") else l.commit("\n")
+                    if (event.isShiftPressed) l.command("text.lineBreak") else l.commit("\n")
             }
             KeyEvent.KEYCODE_TAB -> {
-                commitComposing()
-                l.command(if (event.isShiftPressed) "text.backTab" else "text.tab")
+                    l.command(if (event.isShiftPressed) "text.backTab" else "text.tab")
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> move("caret.left")
             KeyEvent.KEYCODE_DPAD_RIGHT -> move("caret.right")
@@ -152,8 +143,7 @@ class EditorInputView(context: Context) : View(context) {
             else -> {
                 val ch = event.unicodeChar
                 if (ch == 0 || Character.isISOControl(ch)) return false
-                commitComposing()
-                l.commit(String(Character.toChars(ch)))
+                    l.commit(String(Character.toChars(ch)))
             }
         }
         return true
@@ -186,71 +176,83 @@ class EditorInputView(context: Context) : View(context) {
         else -> null
     }
 
-    private class EditorConnection(private val view: EditorInputView) : BaseInputConnection(view, false) {
-        private val listener get() = view.listener
-
-        override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
-            view.composing = ""
-            listener?.compose("")
-            listener?.commit(text?.toString().orEmpty())
-            return true
+    private class EditorConnection(private val view: EditorInputView, around: TextAround) : BaseInputConnection(view, true) {
+        private val buffer = SpannableStringBuilder(around.before + around.selected + around.after)
+        private var closed = false
+        private var mutationDepth = 0
+        private var batchDepth = 0
+        private var extractedToken: Int? = null
+        init { Selection.setSelection(buffer, around.before.length, around.before.length + around.selected.length) }
+        override fun getEditable(): Editable = buffer
+        fun deactivate() { closed = true }
+        private fun snapshot() = ImeSnapshot(buffer.toString(), Selection.getSelectionStart(buffer).coerceAtLeast(0), Selection.getSelectionEnd(buffer).coerceAtLeast(0))
+        private fun reportSelection() {
+            if (!closed && batchDepth == 0 && mutationDepth == 0) {
+                view.imm?.updateSelection(view, Selection.getSelectionStart(buffer), Selection.getSelectionEnd(buffer),
+                    getComposingSpanStart(buffer), getComposingSpanEnd(buffer))
+                extractedToken?.let { view.imm?.updateExtractedText(view, it, extracted()) }
+            }
         }
-
-        override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
-            view.composing = text?.toString().orEmpty()
-            listener?.compose(view.composing)
-            return true
+        private inline fun mutate(action: () -> Boolean): Boolean {
+            if (closed || view.connection !== this) return false
+            val old = if (mutationDepth == 0) SpannableStringBuilder(buffer) else null
+            val before = snapshot()
+            mutationDepth++
+            val result = try { action() } finally { mutationDepth-- }
+            if (mutationDepth == 0) {
+                val edit = imeEdit(before, snapshot())
+                if (edit != null && view.listener?.edit(edit, getComposingSpanStart(buffer) >= 0) != true) {
+                    buffer.replace(0, buffer.length, old!!)
+                    Selection.setSelection(buffer, before.start, before.end)
+                    reportSelection()
+                    return false
+                }
+                if (edit != null && getComposingSpanStart(buffer) < 0) {
+                    val fresh = view.listener?.textAround(500, 500)
+                    if (fresh != null) {
+                        buffer.replace(0, buffer.length, fresh.before + fresh.selected + fresh.after)
+                        Selection.setSelection(buffer, fresh.before.length, fresh.before.length + fresh.selected.length)
+                    }
+                }
+                reportSelection()
+            }
+            return result
         }
-
-        override fun setComposingRegion(start: Int, end: Int): Boolean = false
-
-        override fun finishComposingText(): Boolean {
-            view.commitComposing()
-            return true
-        }
-
-        override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
-            listener?.deleteAround(beforeLength, afterLength)
-            return true
-        }
-
-        override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
-            listener?.deleteAround(beforeLength, afterLength)
-            return true
-        }
-
+        override fun beginBatchEdit(): Boolean { if (closed) return false; batchDepth++; return true }
+        override fun endBatchEdit(): Boolean { if (batchDepth > 0) batchDepth--; reportSelection(); return true }
+        override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean = mutate { super.commitText(text, newCursorPosition) }
+        override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean = mutate { super.setComposingText(text, newCursorPosition) }
+        override fun setComposingRegion(start: Int, end: Int): Boolean = mutate { super.setComposingRegion(start, end) }
+        override fun finishComposingText(): Boolean = mutate { super.finishComposingText() }
+        override fun setSelection(start: Int, end: Int): Boolean = mutate { super.setSelection(start, end) }
+        override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean = mutate { super.deleteSurroundingText(beforeLength, afterLength) }
+        override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean = mutate { super.deleteSurroundingTextInCodePoints(beforeLength, afterLength) }
         override fun sendKeyEvent(event: KeyEvent): Boolean {
-            if (event.action == KeyEvent.ACTION_DOWN) view.handleKey(event)
+            if (closed) return false
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DEL -> return deleteSurroundingTextInCodePoints(1, 0)
+                    KeyEvent.KEYCODE_FORWARD_DEL -> return deleteSurroundingTextInCodePoints(0, 1)
+                    KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (!event.isShiftPressed) return commitText("\n", 1)
+                }
+                if (!event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed && event.unicodeChar != 0 && !Character.isISOControl(event.unicodeChar)) {
+                    return commitText(String(Character.toChars(event.unicodeChar)), 1)
+                }
+                finishComposingText()
+                view.handleKey(event)
+                view.restartInput()
+            }
             return true
         }
-
-        override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence {
-            val before = listener?.textAround(n, 0)?.before.orEmpty() + view.composing
-            return before.takeLast(n.coerceAtLeast(0))
+        private fun extracted(): ExtractedText = ExtractedText().apply {
+            text = buffer.toString(); startOffset = 0; partialStartOffset = -1; partialEndOffset = -1
+            selectionStart = Selection.getSelectionStart(buffer); selectionEnd = Selection.getSelectionEnd(buffer)
         }
-
-        override fun getTextAfterCursor(n: Int, flags: Int): CharSequence =
-            listener?.textAround(0, n)?.after.orEmpty().take(n.coerceAtLeast(0))
-
-        override fun getSelectedText(flags: Int): CharSequence? =
-            listener?.textAround(0, 0)?.selected?.takeIf { it.isNotEmpty() }
-
-        override fun getCursorCapsMode(reqModes: Int): Int {
-            val before = listener?.textAround(100, 0)?.before.orEmpty() + view.composing
-            return TextUtils.getCapsMode(before, before.length, reqModes)
+        override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText {
+            if (flags and InputConnection.GET_EXTRACTED_TEXT_MONITOR != 0) extractedToken = request?.token
+            return extracted()
         }
-
-        override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText? = null
-
-        override fun performEditorAction(actionCode: Int): Boolean {
-            view.commitComposing()
-            listener?.commit("\n")
-            return true
-        }
-
-        override fun closeConnection() {
-            view.commitComposing()
-            super.closeConnection()
-        }
+        override fun performEditorAction(actionCode: Int): Boolean = commitText("\n", 1)
+        override fun closeConnection() { deactivate(); super.closeConnection() }
     }
 }

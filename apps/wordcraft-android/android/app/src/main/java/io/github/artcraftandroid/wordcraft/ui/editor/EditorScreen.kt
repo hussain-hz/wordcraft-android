@@ -104,7 +104,7 @@ fun EditorScreen(vm: AppViewModel) {
     val listener = remember(vm) {
         object : EditorInputListener {
             override fun commit(text: String) = vm.inputCommit(text)
-            override fun compose(text: String) = vm.inputCompose(text)
+            override fun edit(change: ImeEdit, composing: Boolean) = vm.inputEdit(change, composing)
             override fun deleteAround(before: Int, after: Int) = vm.inputDelete(before, after)
             override fun command(id: String, params: String) = vm.inputCommand(id, params)
             override fun shortcut(combo: String): Boolean = vm.inputShortcut(combo)
@@ -312,7 +312,6 @@ fun EditorScreen(vm: AppViewModel) {
                         engine = engine,
                         info = info,
                         selection = selection,
-                        composing = vm.composing,
                         viewport = viewport,
                         mobile = mobile,
                         selectionColor = WordColors.Selection,

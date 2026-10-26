@@ -14,7 +14,7 @@
 - [تقرير إصدار 0.0.1: دمج المحرك وإشعارات تحديث التطبيق](docs/RELEASE-0.0.1-ar.md)
 - [إصلاح معارض الألوان والأشكال والنماذج في beta6](docs/BETA6-ar.md)
 - [تقرير beta5 بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
-- [تحميل Release أو نسخة ترقية beta](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.4)
+- [تحميل التطبيق](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.4)
 - [فهرس الملفات المعدلة في هذا التحديث](docs/CHANGE-MAP-ar.md)
 - [المسار إلى تطبيق Android](apps/wordcraft-android/android)
 

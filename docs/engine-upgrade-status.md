@@ -1,7 +1,7 @@
 # Engine 0.11 Android integration
 
-Latest stable app: 0.0.5, version code 5990. Engine: 0.11.0.
-Current test build: 0.0.6-beta.2, version code 6020.
+Latest stable app: 0.0.6, version code 6990. Engine: 0.11.0.
+Approved test build: 0.0.6-beta.2, version code 6020.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
@@ -44,4 +44,4 @@ in-app downloads and the Android installer handoff.
 
 See [the 0.0.6-beta.2 test report](TEST-0.0.6-beta.2-ar.md) for the new app themes,
 centered language/appearance windows and fixed English launcher name.
-This test build is not a stable release and awaits user feedback.
+The user approved beta.2. Stable 0.0.6 contains the same implementation with the final version metadata. See [the 0.0.6 release report](RELEASE-0.0.6-ar.md).

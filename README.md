@@ -10,6 +10,7 @@
 
 - [التقرير الكامل بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
 - [تحميل APK التجريبي الأخير](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.1-beta.5)
+- [فهرس الملفات المرفوعة وحالة المطالب السابقة](docs/CHANGE-MAP-ar.md)
 - [المسار إلى تطبيق Android](apps/wordcraft-android/android)
 
 

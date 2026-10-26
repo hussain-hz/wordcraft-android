@@ -327,6 +327,7 @@ fun DocumentView(
     wordHighlights: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     highlightColor: Color = Color(0x4D4C6EF5),
     dark: Boolean = false,
+    darkPaperChannel: Int = 0x14,
     findMatches: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     findCurrent: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     objectHandles: Boolean = false,
@@ -353,7 +354,8 @@ fun DocumentView(
     val strokeNow by androidx.compose.runtime.rememberUpdatedState(onStroke)
     val eraseNow by androidx.compose.runtime.rememberUpdatedState(onErase)
     // dark pages are drawn by the engine: a change of theme draws every tile again
-    val tiles = remember(info.documentId, mobile, dark) { mutableStateMapOf<TileKey, Tile>() }
+    val darkPaper = Color(0xFF000000 or (darkPaperChannel * 0x010101).toLong())
+    val tiles = remember(info.documentId, mobile, dark, darkPaper) { mutableStateMapOf<TileKey, Tile>() }
     LaunchedEffect(info.pages) { viewport.setPages(info.pages) }
 
     // The tiles that show, the caret's page first: this list changes only when a tile comes into
@@ -379,7 +381,7 @@ fun DocumentView(
             keys
         }
     }
-    LaunchedEffect(needed, info.revision, info.pages, dark) {
+    LaunchedEffect(needed, info.revision, info.pages, dark, darkPaper) {
         val keys = needed ?: return@LaunchedEffect
         val scale = keys.firstOrNull()?.scale ?: return@LaunchedEffect
         for (key in keys) {
@@ -419,7 +421,7 @@ fun DocumentView(
         label = "caretAlpha",
     )
     // the pages are what the engine draws: dark, or light (also in a dark theme, Switch to Light Background)
-    val pageColor = if (dark) io.github.artcraftandroid.wordcraft.ui.WordColors.DarkPage else Color.White
+    val pageColor = if (dark) darkPaper else Color.White
     val canvasColor = if (mobile) pageColor else io.github.artcraftandroid.wordcraft.ui.WordColors.Canvas
     val borderColor = io.github.artcraftandroid.wordcraft.ui.WordColors.PageBorder
 

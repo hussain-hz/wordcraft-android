@@ -1,6 +1,7 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
 import io.github.artcraftandroid.wordcraft.ui.uiText
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -124,7 +125,7 @@ val PILL_MARGIN = 16.dp
 /** A rounded floating bar (white with a soft shadow, or dark grey in dark). */
 @Composable
 private fun Pill(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Surface(modifier, shape = RoundedCornerShape(PILL_HEIGHT / 2), color = WordColors.Bar, shadowElevation = if (WordColors.dark) 0.dp else 6.dp, content = content)
+    Surface(modifier, shape = RoundedCornerShape(PILL_HEIGHT / 2), color = WordColors.Bar, border = if (WordColors.appearance == io.github.artcraftandroid.wordcraft.ui.Appearance.Black) BorderStroke(1.dp, WordColors.BarEdge) else null, shadowElevation = if (WordColors.dark) 0.dp else 6.dp, content = content)
 }
 
 /** A button of the floating toolbar: on shows a circle behind it. */
@@ -237,7 +238,7 @@ private fun PillButton(glyph: Glyph, on: Boolean = false, enabled: Boolean = tru
 /** Reading: the floating pill near the bottom (Mobile View or Print Layout, Read Aloud, Comments, Share). */
 @Composable
 fun ViewPill(mobileView: Boolean, onToggleView: () -> Unit, onReadAloud: () -> Unit, onComments: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(28.dp), color = WordColors.Bar, shadowElevation = if (WordColors.dark) 0.dp else 6.dp) {
+    Surface(modifier, shape = RoundedCornerShape(28.dp), color = WordColors.Bar, border = if (WordColors.appearance == io.github.artcraftandroid.wordcraft.ui.Appearance.Black) BorderStroke(1.dp, WordColors.BarEdge) else null, shadowElevation = if (WordColors.dark) 0.dp else 6.dp) {
         Row(Modifier.height(56.dp).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             // the button shows the other view
             BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnPill, onToggleView, width = 55.dp, height = 56.dp)
@@ -251,7 +252,7 @@ fun ViewPill(mobileView: Boolean, onToggleView: () -> Unit, onReadAloud: () -> U
 /** On reopening a document: a card offering to go back to page [page], where it was left. */
 @Composable
 fun ResumeCallout(page: Int, onGo: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(modifier.clickable(onClick = onGo), shape = RoundedCornerShape(12.dp), color = WordColors.Bar, shadowElevation = if (WordColors.dark) 0.dp else 6.dp) {
+    Surface(modifier.clickable(onClick = onGo), shape = RoundedCornerShape(12.dp), color = WordColors.Bar, border = if (WordColors.appearance == io.github.artcraftandroid.wordcraft.ui.Appearance.Black) BorderStroke(1.dp, WordColors.BarEdge) else null, shadowElevation = if (WordColors.dark) 0.dp else 6.dp) {
         Row(Modifier.height(64.dp).padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlyphIcon(LucideIcons.BookOpenText.glyph(), WordColors.Accent, size = 24.dp)
             Column(Modifier.padding(start = 14.dp, end = 8.dp)) {

@@ -143,7 +143,8 @@ fun EditorScreen(vm: AppViewModel) {
 
     // the pages follow the theme (the engine draws them dark)
     val dark = WordColors.dark
-    LaunchedEffect(dark, vm.lightBackground) { vm.setDarkPages(dark && !vm.lightBackground) }
+    val darkPaper = WordColors.darkPaperChannel
+    LaunchedEffect(dark, darkPaper, vm.lightBackground) { vm.setDarkPages(dark && !vm.lightBackground, darkPaper) }
     // the keyboard starts afresh when the caret moved other than by typing
     LaunchedEffect(vm.inputGeneration) { input?.restartInput() }
     // the app's own text fields (Alt Text, the link and comment panes) take the keyboard: the
@@ -334,6 +335,7 @@ fun EditorScreen(vm: AppViewModel) {
                         handleColor = if (vm.editing && !vm.inkOn && !showingMatch) WordColors.Accent else androidx.compose.ui.graphics.Color.Unspecified,
                         onHandleDrag = { end, page, x, y -> vm.moveSelectionEnd(end, page, x, y) },
                         dark = vm.pagesDark,
+                        darkPaperChannel = vm.pagesPaper,
                         findMatches = find?.matches.orEmpty(),
                         findCurrent = find?.currentRects.orEmpty(),
                         objectHandles = vm.editing && !vm.inkOn && vm.format?.`object` != null,

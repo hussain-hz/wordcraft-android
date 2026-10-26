@@ -1441,9 +1441,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var pagesDark by mutableStateOf(false)
         private set
 
+    var pagesPaper by mutableStateOf(0x14)
+        private set
+
     /** Draw the pages dark (or not) to suit the theme. */
-    fun setDarkPages(dark: Boolean) = withEngine { e ->
-        e.command { setDark(dark) }
+    fun setDarkPages(dark: Boolean, paper: Int) = withEngine { e ->
+        e.command { setDarkPaper(paper.toUByte()); setDark(dark) }
+        pagesPaper = paper
         pagesDark = dark
     }
 

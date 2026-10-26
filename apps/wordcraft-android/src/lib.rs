@@ -15,7 +15,10 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{
+    Arc, Mutex, MutexGuard, PoisonError,
+    atomic::{AtomicU8, Ordering},
+};
 
 use serde_json::{Value, json};
 use wordcraft_engine::cmd::{file, table_mouse};
@@ -504,6 +507,7 @@ pub fn shape_outline(preset: String, width: f32, height: f32) -> Option<ShapeOut
 #[derive(uniffi::Object)]
 pub struct MobileSession {
     session: Mutex<Session>,
+    dark_paper: AtomicU8,
     /// The sentences Read Aloud is speaking (the app's own speech plays them one by one).
     reading: Mutex<Vec<speech::Utterance>>,
 }
@@ -513,7 +517,7 @@ impl Default for MobileSession {
         let mut s = Session::new(wordcraft_engine::blank_document(&Region::default()));
         // the app speaks each sentence with the phone's own speech and asks for the next
         s.read_aloud.backend = speech::Backend::Hold;
-        Self { session: Mutex::new(s), reading: Mutex::new(Vec::new()) }
+        Self { session: Mutex::new(s), dark_paper: AtomicU8::new(DARK_PAPER), reading: Mutex::new(Vec::new()) }
     }
 }
 
@@ -529,7 +533,7 @@ impl MobileSession {
     fn snapshot(&self) -> (Document, Arc<DocLayout>, RenderOptions) {
         let mut s = self.lock();
         let layout = s.layout();
-        let opts = render_options(&s);
+        let opts = render_options(&s, self.dark_paper.load(Ordering::Relaxed));
         (s.doc.clone(), layout, opts)
     }
 
@@ -970,6 +974,11 @@ impl MobileSession {
         self.lock().view.dark_mode = dark;
     }
 
+    /// Display-only paper tone: Black uses 0, Gray retains the near-black reading paper.
+    pub fn set_dark_paper(&self, channel: u8) {
+        self.dark_paper.store(channel, Ordering::Relaxed);
+    }
+
     /// Where Find's matches are after a search or a step (see [`FindView`]).
     pub fn find_view(&self) -> FindView {
         let mut s = self.lock();
@@ -1153,7 +1162,7 @@ impl MobileSession {
         let Some(spec) = wordcraft_engine::cmd::chart::selected_chart(&s) else { return Vec::new() };
         let (w, h) = CHART_THUMB;
         let scale = (width_px.clamp(16, 2000) as f32 / w).clamp(0.05, 8.0);
-        let opts = render_options(&s);
+        let opts = render_options(&s, self.dark_paper.load(Ordering::Relaxed));
         wordcraft_engine::cmd::chart::gallery(&spec, &which)
             .into_iter()
             .map(|(id, v)| {
@@ -1169,7 +1178,7 @@ impl MobileSession {
     pub fn picture_style_gallery(&self, width_px: u32) -> Vec<GalleryImage> {
         use wordcraft_engine::cmd::objects::{PICTURE_STYLES, picture_style, sample_picture_png};
         let s = self.lock();
-        let opts = render_options(&s);
+        let opts = render_options(&s, self.dark_paper.load(Ordering::Relaxed));
         let (w, h) = PICTURE_THUMB;
         let scale = (width_px.clamp(16, 2000) as f32 / w).clamp(0.05, 8.0);
         let mut doc = Document::new();
@@ -1540,7 +1549,7 @@ fn from_hsl(h: f64, s: f64, l: f64) -> wordcraft_engine::doc::props::Rgb {
 
 /// How the editor draws pages: as the desktop does on screen (formatting marks, markup and the
 /// dark page as the view has them; headers and footers dimmed while the body is edited).
-fn render_options(s: &Session) -> RenderOptions {
+fn render_options(s: &Session, dark_paper: u8) -> RenderOptions {
     let mut opts = RenderOptions::default();
     opts.display.marks = s.view.marks;
     opts.display.always = s.prefs.marks;
@@ -1550,7 +1559,7 @@ fn render_options(s: &Session) -> RenderOptions {
     opts.display.hide_ink = s.view.hide_ink;
     opts.display.revisions = s.prefs.markup.clone();
     opts.dark = s.view.dark_mode;
-    opts.dark_paper = DARK_PAPER;
+    opts.dark_paper = dark_paper;
     opts
 }
 

@@ -26,7 +26,7 @@ internal fun ThemeChooser(vm: AppViewModel, close: () -> Unit) {
 private fun ThemePreview(appearance: Appearance) {
     val dark = appearance.dark
     val body = when (appearance) { Appearance.Gray -> Color(0xFF303030); Appearance.Black -> Color.Black; else -> Color.White }
-    val bar = when (appearance) { Appearance.Colorful -> Color(0xFF3B5BDB); Appearance.Gray -> Color(0xFF454545); Appearance.Black -> Color(0xFF292929); else -> Color(0xFFF0F0F0) }
+    val bar = when (appearance) { Appearance.Colorful -> Color(0xFF3B5BDB); Appearance.Gray -> Color(0xFF454545); Appearance.Black -> Color.Black; else -> Color(0xFFF0F0F0) }
     Column(Modifier.size(52.dp, 38.dp).clip(RoundedCornerShape(6.dp)).background(body).border(1.dp, WordColors.CheckEdge, RoundedCornerShape(6.dp))) {
         Box(Modifier.fillMaxWidth().height(9.dp).background(bar))
         Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

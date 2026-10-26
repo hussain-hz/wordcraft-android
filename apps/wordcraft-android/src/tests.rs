@@ -770,3 +770,22 @@ fn the_shape_gallery_draws_every_preset_and_shrugs_off_junk() {
     assert!(shape_outline("noSuchShape".into(), 40.0, 40.0).is_none());
     assert!(shape_outline("hexagon".into(), f32::NAN, f32::INFINITY).is_some(), "junk sizes are clamped");
 }
+
+#[test]
+fn black_paper_is_display_only_and_switches_back_to_gray_and_white() {
+    let m = MobileSession::default();
+    m.type_text("Arabic العربية English".into()).unwrap();
+    let before = body_text(&m);
+    m.set_dark(true);
+    m.set_dark_paper(0);
+    let black = m.render_page(0, 1.0).unwrap();
+    assert_eq!(&black.rgba[..4], &[0, 0, 0, 255]);
+    assert!(black.rgba.as_chunks::<4>().0.iter().any(|p| p[0] > 200), "text stays visible");
+    let tile = m.render_area(0, 0.0, 0.0, 20.0, 20.0, 1.0).unwrap();
+    assert_eq!(&tile.rgba[..4], &[0, 0, 0, 255]);
+    m.set_dark_paper(DARK_PAPER);
+    assert_eq!(&m.render_page(0, 1.0).unwrap().rgba[..4], &[DARK_PAPER, DARK_PAPER, DARK_PAPER, 255]);
+    m.set_dark(false);
+    assert_eq!(&m.render_page(0, 1.0).unwrap().rgba[..4], &[255, 255, 255, 255]);
+    assert_eq!(body_text(&m), before, "appearance never changes document text");
+}

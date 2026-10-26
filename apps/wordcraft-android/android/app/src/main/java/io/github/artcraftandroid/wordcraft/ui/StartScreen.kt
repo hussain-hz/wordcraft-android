@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -57,9 +59,10 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
     var pinned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var searching by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
-    var creating by remember { mutableStateOf(false) }
     var showingUpdate by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val update = vm.appUpdate
+    val newTab = vm.startTab == StartTab.New
+    androidx.activity.compose.BackHandler(enabled = newTab && !showingUpdate && !searching) { vm.startTab = StartTab.Home }
     androidx.activity.compose.BackHandler(enabled = showingUpdate) { showingUpdate = false }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(searching) { if (searching) focus.requestFocus() }
@@ -90,27 +93,29 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
                             Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(6.dp).clip(CircleShape).background(WordColors.Accent))
                         }
                     }
-                    StartIcon(LucideIcons.Search, "Search") { searching = true }
+                    StartIcon(LucideIcons.Search, "Search") { vm.startTab = StartTab.Home; searching = true }
                 }
                 Box(Modifier.size(48.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(0xFFE0E0E0)).clickable(onClick = vm::openSettings), contentAlignment = Alignment.Center) {
                     Icon(HomeIcons.User, contentDescription = uiText("Settings"), tint = androidx.compose.ui.graphics.Color(0xFF303030), modifier = Modifier.size(29.dp))
                 }
             }
-            Row(Modifier.fillMaxWidth().height(54.dp).bottomEdge(WordColors.Divider)) {
-                HomeListTab("Recent", LucideIcons.Clock, !pinned, Modifier.weight(1f)) { pinned = false }
-                HomeListTab("Pinned", HomeIcons.Star, pinned, Modifier.weight(1f)) { pinned = true }
+            if (!newTab) {
+                Row(Modifier.fillMaxWidth().height(54.dp).bottomEdge(WordColors.Divider)) {
+                    HomeListTab("Recent", LucideIcons.Clock, !pinned, Modifier.weight(1f)) { pinned = false }
+                    HomeListTab("Pinned", HomeIcons.Star, pinned, Modifier.weight(1f)) { pinned = true }
+                }
             }
             val files = vm.recent.filter { (!pinned || it.uri in vm.pinnedDocuments) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                RecentList(vm, files, onOpen, when { query.isNotBlank() -> "No matching documents"; pinned -> "Pin documents to find them here."; else -> "Documents you open show here." })
+                if (newTab) NewPage(vm)
+                else RecentList(vm, files, onOpen, when { query.isNotBlank() -> "No matching documents"; pinned -> "Pin documents to find them here."; else -> "Documents you open show here." })
             }
             Row(Modifier.fillMaxWidth().height(80.dp).topEdge(WordColors.Divider)) {
-                BottomTab("Home", HomeIcons.Home, true, Modifier.weight(1f)) { pinned = false; searching = false; query = "" }
-                BottomTab("New", HomeIcons.New, false, Modifier.weight(1f)) { creating = true }
+                BottomTab("Home", HomeIcons.Home, !newTab, Modifier.weight(1f)) { vm.startTab = StartTab.Home; pinned = false; searching = false; query = "" }
+                BottomTab("New", HomeIcons.New, newTab, Modifier.weight(1f)) { vm.startTab = StartTab.New; searching = false; query = "" }
                 BottomTab("Open", LucideIcons.FolderOpen, false, Modifier.weight(1f), onOpen)
             }
         }
-        if (creating) NewSheet(vm, onClose = { creating = false })
         if (showingUpdate && update != null) {
             Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable { showingUpdate = false }) {
                 Column(Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth()
@@ -234,34 +239,33 @@ private fun RecentRow(vm: AppViewModel, r: RecentFile) {
     }
 }
 
+/** A full destination of the bottom navigation, rather than a sheet above Home. */
 @Composable
-private fun OpenRow(icon: ImageVector, title: String, detail: String, enabled: Boolean = true, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(64.dp).clickable(enabled = enabled, onClick = onClick).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-        Spacer(Modifier.width(16.dp))
-        Icon(icon, contentDescription = null, tint = WordColors.Accent, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(16.dp))
-        Column {
-            Text(uiText(title), color = WordColors.OnPill, fontSize = 16.sp)
-            Text(uiText(detail), color = WordColors.OnSurface, fontSize = 13.sp)
+private fun NewPage(vm: AppViewModel) {
+    val templates = listOf("Blank document" to "blank", "Sample" to "sample", "Letter" to "letter", "Resume" to "resume", "Report" to "report")
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(150.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            Text(uiText("New"), color = WordColors.OnPill, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
         }
-    }
-}
-
-/** Create new: a blank document or one of WordCraft's own templates. */
-@Composable
-private fun NewSheet(vm: AppViewModel, onClose: () -> Unit) {
-    // Back closes the sheet, not the app
-    androidx.activity.compose.BackHandler(onBack = onClose)
-    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0x99000000)).clickable(onClick = onClose)) {
-        Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(WordColors.Surface).clickable {}.padding(bottom = 12.dp),
-        ) {
-            Text(uiText("New"), color = WordColors.OnPill, fontSize = 20.sp, modifier = Modifier.padding(16.dp))
-            for ((label, template) in listOf("Blank document" to "blank", "Sample" to "sample", "Letter" to "letter", "Resume" to "resume", "Report" to "report")) {
-                OpenRow(if (template == "blank") LucideIcons.FilePlus2 else LucideIcons.FileText, label, if (template == "blank") "An empty page" else "A WordCraft template", enabled = vm.engine != null) {
-                    onClose()
-                    vm.newDocument(template)
-                }
+        items(templates, key = { it.second }) { (label, template) ->
+            Column(
+                Modifier.fillMaxWidth().height(172.dp).clip(RoundedCornerShape(14.dp))
+                    .background(WordColors.Sheet).border(1.dp, WordColors.Divider, RoundedCornerShape(14.dp))
+                    .clickable(enabled = vm.engine != null) { vm.newDocument(template) }.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(if (template == "blank") LucideIcons.FilePlus2 else LucideIcons.FileText, contentDescription = null,
+                    tint = WordColors.Accent, modifier = Modifier.size(42.dp))
+                Spacer(Modifier.weight(1f))
+                Text(uiText(label), color = WordColors.OnPill, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(uiText(if (template == "blank") "An empty page" else "A WordCraft template"), color = WordColors.SettingsValue,
+                    fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }

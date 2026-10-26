@@ -30,6 +30,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 enum class Screen { Start, Editor, Settings }
+enum class StartTab { Home, New }
 
 /** The open document: its name, and where it came from when the app may write back there. */
 data class OpenDocument(val name: String, val uri: Uri?, val writable: Boolean)
@@ -64,6 +65,7 @@ const val ACTION_OPEN_PINNED = "io.github.artcraftandroid.wordcraft.action.OPEN_
 
 /** The app's state: which screen shows, the open document, and the engine's view of it. */
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+    var startTab by mutableStateOf(StartTab.Home)
     var appUpdate by mutableStateOf<io.github.artcraftandroid.wordcraft.updates.AppUpdate?>(null)
         private set
     var checkingUpdates by mutableStateOf(false)

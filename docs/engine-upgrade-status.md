@@ -1,6 +1,6 @@
 # Engine 0.11 Android integration
 
-Current app: 0.0.2, version code 2990. Engine: 0.11.0.
+Current app: 0.0.3, version code 3990. Engine: 0.11.0.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
@@ -26,3 +26,5 @@ upgrade compatibility, implementation details and validation limits. The beta5 a
 beta6 reports remain historical reports of those earlier builds.
 
 See [the 0.0.2 UI update report](RELEASE-0.0.2-ar.md) for the circular icon and settings sections.
+
+See [the 0.0.3 report](RELEASE-0.0.3-ar.md) for the independent New destination and responsive template cards.

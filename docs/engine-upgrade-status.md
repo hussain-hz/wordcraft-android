@@ -6,8 +6,9 @@ Source: https://github.com/storytold/wordcraft/releases/tag/v0.10.0
 
 The workspace now builds against the merged 0.10 engine. This is an Android
 integration of that release, retaining the fork's features, not an unmodified
-upstream checkout. Validation and universal APK build are complete. Current app version: 0.0.1-beta.5; engine: 0.10.0.
-Later UI changes and validation are documented in [the Arabic update report](UPDATE-REPORT-ar.md).
+upstream checkout. Validation and universal APK build are complete. Current app version: 0.0.1-beta.6; engine: 0.10.0.
+Later UI changes and validation are documented in [the beta5 Arabic report](UPDATE-REPORT-ar.md)
+and [the beta6 gallery fix report](BETA6-ar.md).
 
 ## Preserved Android features
 

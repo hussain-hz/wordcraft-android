@@ -2,6 +2,7 @@ package io.github.artcraftandroid.wordcraft.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,7 @@ import kotlin.math.sin
 
 /**
  * The Shapes gallery: the shapes inserted lately, the lines and connectors, then the preset
- * groups, each under its band, eight to a row. A gallery entry is a key: a preset's name, a line
+ * groups, each under its band, with rows that fit the panel width. A gallery entry is a key: a preset's name, a line
  * as `kind:arrow`, or `textBox`.
  */
 @Composable
@@ -60,17 +61,11 @@ private val SHAPE_EDGE = Color(0xFF0E405A)
 
 @Composable
 private fun GalleryGroup(name: String, items: List<String>, vm: AppViewModel) {
-    // the group's band, then rows of 61 × 56 dp cells with 45 dp icons
     SectionBand(name)
-    Column(Modifier.padding(start = 16.dp, top = 19.dp, bottom = 16.dp)) {
-        for (row in items.chunked(8)) {
-            Row {
-                for (key in row) {
-                    Box(Modifier.size(61.3.dp, 56.dp).clickable { vm.insertShape(key) }, contentAlignment = Alignment.Center) {
-                        ShapeIcon(key)
-                    }
-                }
-            }
+    AdaptiveGallery(items, maxColumns = 8, preferredWidth = 61.3.dp, rowHeight = 60.dp,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) { key ->
+        Box(Modifier.fillMaxSize().clickable { vm.insertShape(key) }, contentAlignment = Alignment.Center) {
+            ShapeIcon(key)
         }
     }
 }

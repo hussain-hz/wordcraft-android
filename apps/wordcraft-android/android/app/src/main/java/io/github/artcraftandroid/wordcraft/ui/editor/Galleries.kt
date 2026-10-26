@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -157,19 +159,19 @@ internal fun PaperRow(name: String, w: Float, h: Float, selected: Boolean, size:
 @Composable
 private fun PresetRow(selected: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit, text: @Composable () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(72.dp).background(if (selected) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().heightIn(min = 72.dp).background(if (selected) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(74.dp), contentAlignment = Alignment.Center) { icon() }
-        Column { text() }
+        Column(Modifier.weight(1f).padding(end = 12.dp, top = 8.dp, bottom = 8.dp)) { text() }
     }
 }
 
 @Composable
 private fun TwoColumns(a: String, b: String) {
-    Row {
-        Text(a, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp, modifier = Modifier.width(219.dp))
-        Text(b, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(a, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f))
+        Text(b, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f))
     }
 }
 
@@ -339,7 +341,7 @@ internal fun PictureStyleGallery(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().height(PICTURE_STYLE_ROW)) {
                 for ((id, bmp) in row) {
                     Box(Modifier.weight(1f).height(PICTURE_STYLE_ROW).clickable { vm.command("picture.style", json("style" to id)) }, contentAlignment = Alignment.Center) {
-                        Image(bmp, contentDescription = styleName(id), modifier = Modifier.height(PICTURE_STYLE_ROW))
+                        Image(bmp, contentDescription = styleName(id), contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(4.dp))
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }

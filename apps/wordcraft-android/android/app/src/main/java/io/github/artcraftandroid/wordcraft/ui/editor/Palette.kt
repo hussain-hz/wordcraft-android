@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.artcraftandroid.wordcraft.ui.Motion
 import kotlin.math.roundToInt
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -395,22 +399,28 @@ private fun SizePanel(vm: AppViewModel) {
     }
 }
 
-/** A grid of colour cells (`cellW` × 42 dp, from 16 dp); the current colour has a darker edge. */
+/** Colour targets reflow to the panel width; both edges keep the same inset. */
 @Composable
-internal fun SwatchGrid(swatches: List<Swatch>, perRow: Int, cellW: Dp, selected: String?, onPick: (Swatch) -> Unit) {
-    Column(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp)) {
-        for (row in swatches.chunked(perRow)) {
-            Row {
-                for (s in row) {
-                    val on = s.hex.equals(selected, ignoreCase = true)
-                    Box(Modifier.size(cellW, 42.dp).clickable { onPick(s) }, contentAlignment = Alignment.Center) {
-                        Box(
-                            Modifier.size(cellW - 4.dp, 38.dp).background(hexColor(s.hex))
-                                .border(if (on) 2.dp else 1.dp, if (on) WordColors.OnStrip else WordColors.Pressed),
-                        )
-                    }
-                }
-            }
+internal fun SwatchGrid(swatches: List<Swatch>, perRow: Int, cellW: Dp, selected: String?, verticalPadding: Dp = 10.dp, onPick: (Swatch) -> Unit) {
+    AdaptiveGallery(swatches, perRow, cellW, 48.dp, Modifier.padding(horizontal = 16.dp, vertical = verticalPadding)) { swatch ->
+        val on = swatch.hex.equals(selected, ignoreCase = true)
+        Box(Modifier.fillMaxSize().selectable(selected = on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { onPick(swatch) }).semantics {
+            contentDescription = "${swatch.name} #${swatch.hex}"
+        }.padding(3.dp)) {
+            Box(Modifier.fillMaxSize().background(hexColor(swatch.hex))
+                .border(if (on) 2.dp else 1.dp, if (on) WordColors.OnStrip else WordColors.Pressed))
+        }
+    }
+}
+
+/** Each hue occupies its own row, with neighboring shades from light to dark. */
+@Composable
+internal fun ThemeColorGrid(rows: List<List<Swatch>>, selected: String?, onPick: (Swatch) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        for (family in distinctColorFamilies(rows) { it.hex }) {
+            if (family.neutral) SectionBand("Grayscale")
+            SwatchGrid(family.shades.sortedByDescending { hexColor(it.hex).luminance() }, perRow = minOf(family.shades.size, 6),
+                cellW = 44.dp, selected = selected, verticalPadding = 3.dp, onPick = onPick)
         }
     }
 }
@@ -444,7 +454,7 @@ private fun FontColorPanel(vm: AppViewModel) {
     val current = vm.format?.color
     Scrolling {
         SectionBand("Theme Colors")
-        SwatchGrid(choices.theme.flatten(), perRow = 10, cellW = 49.dp, selected = current) { vm.applyFontColor(it.hex) }
+        ThemeColorGrid(choices.theme, selected = current) { vm.applyFontColor(it.hex) }
         SectionBand("Standard Colors")
         SwatchGrid(choices.standard, perRow = 10, cellW = 49.dp, selected = current) { vm.applyFontColor(it.hex) }
         NoColorRow("Automatic", current == "auto") { vm.applyFontColor("auto") }
@@ -452,21 +462,25 @@ private fun FontColorPanel(vm: AppViewModel) {
     }
 }
 
-/** More colours, free: twelve hues in five shades each, then greys. */
+/** Ten hue families, five neighboring shades each, followed by greys. */
 @Composable
 private fun MoreColorsPanel(vm: AppViewModel) {
     val current = vm.format?.color
-    val swatches = buildList {
-        for (light in listOf(0.85f, 0.7f, 0.5f, 0.35f, 0.2f)) {
-            for (h in 0 until 10) {
-                val c = android.graphics.Color.HSVToColor(floatArrayOf(h * 36f, if (light > 0.5f) 1.6f - light * 1.2f else 1f, if (light > 0.5f) 1f else light * 2f))
-                add("%06X".format(c and 0xFFFFFF))
-            }
+    val families = (0 until 10).map { hue ->
+        listOf(0.85f, 0.7f, 0.5f, 0.35f, 0.2f).map { light ->
+            val color = android.graphics.Color.HSVToColor(floatArrayOf(hue * 36f, if (light > 0.5f) 1.6f - light * 1.2f else 1f, if (light > 0.5f) 1f else light * 2f))
+            val hex = "%06X".format(color and 0xFFFFFF)
+            Swatch(hex, hex)
         }
-        for (g in 0 until 10) add("%02X%02X%02X".format(255 - g * 28, 255 - g * 28, 255 - g * 28))
-    }.map { Swatch(it, it) }
+    } + listOf((0 until 10).map { grey ->
+        val hex = "%02X%02X%02X".format(255 - grey * 28, 255 - grey * 28, 255 - grey * 28)
+        Swatch(hex, hex)
+    })
     Scrolling {
-        SwatchGrid(swatches, perRow = 10, cellW = 49.dp, selected = current) { vm.applyFontColor(it.hex) }
+        Spacer(Modifier.height(6.dp))
+        for (family in families) {
+            SwatchGrid(family, perRow = family.size, cellW = 44.dp, selected = current, verticalPadding = 3.dp) { vm.applyFontColor(it.hex) }
+        }
     }
 }
 
@@ -510,9 +524,13 @@ private fun BulletsPanel(vm: AppViewModel) {
     // the round ones small, as a bullet sits beside text
     val size = mapOf("•" to 9.sp, "○" to 10.sp)
     Scrolling {
-        Row(Modifier.padding(start = 21.dp, top = 20.dp), horizontalArrangement = Arrangement.spacedBy(13.3.dp)) {
-            ListTile(48.dp, 48.dp, !on, { vm.command("para.bullets", json("off" to true)) }) { TileText("None", 11.sp) }
-            for (k in kinds) ListTile(48.dp, 48.dp, false, { vm.command("para.bullets", json("kind" to k)) }) { TileText(shown[k] ?: k, size[k] ?: 15.sp) }
+        AdaptiveGallery(listOf<String?>(null) + kinds, 7, 61.dp, 62.dp,
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) { kind ->
+            ListTile(48.dp, 48.dp, kind == null && !on, {
+                vm.command("para.bullets", if (kind == null) json("off" to true) else json("kind" to kind))
+            }) {
+                if (kind == null) TileText("None", 11.sp) else TileText(shown[kind] ?: kind, size[kind] ?: 15.sp)
+            }
         }
     }
 }
@@ -532,15 +550,10 @@ private fun NumberingPanel(vm: AppViewModel) {
         listOf("i.", "ii.", "iii.") to { vm.command("para.numbering", json("kind" to "lowerRoman")) },
     )
     Scrolling {
-        Column(Modifier.padding(start = 10.dp, top = 20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-            for (row in tiles.chunked(7)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-                    for ((labels, click) in row) {
-                        ListTile(57.dp, 56.dp, labels == null && !on, click) {
-                            if (labels == null) TileText("None", 11.sp) else NumberPreview(labels)
-                        }
-                    }
-                }
+        AdaptiveGallery(tiles, 7, 70.dp, 69.dp,
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) { (labels, click) ->
+            ListTile(57.dp, 56.dp, labels == null && !on, click) {
+                if (labels == null) TileText("None", 11.sp) else NumberPreview(labels)
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -247,7 +248,7 @@ private fun ColorGridPanel(vm: AppViewModel, apply: (String?) -> Unit) {
     val choices = vm.colors ?: return
     Scrolling {
         SectionBand("Theme Colors")
-        SwatchGrid(choices.theme.flatten(), perRow = 10, cellW = 49.dp, selected = null) { apply(it.hex) }
+        ThemeColorGrid(choices.theme, selected = null) { apply(it.hex) }
         SectionBand("Standard Colors")
         SwatchGrid(choices.standard, perRow = 10, cellW = 49.dp, selected = null) { apply(it.hex) }
         NoColorRow("No Color", false) { apply(null) }
@@ -513,33 +514,32 @@ private fun GraphicStylesPanel(vm: AppViewModel) {
 /** A row of style tiles: rounded squares in the style's fill and outline (a checkerboard under what is see-through), "Abc" in its text colour unless [text] is off. */
 @Composable
 private fun StyleRow(keys: List<String>, look: (String) -> TileLook, text: Boolean = true, onPick: (String) -> Unit) {
-    Row(Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)) {
-        for (key in keys) {
-            val l = look(key)
-            Box(Modifier.size(70.dp, 56.dp).clickable { onPick(key) }, contentAlignment = Alignment.Center) {
-                androidx.compose.foundation.Canvas(Modifier.size(46.dp)) {
-                    val r = androidx.compose.ui.geometry.CornerRadius(7.dp.toPx())
-                    if (l.shadow) drawRoundRect(Color.Black.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(0f, 2.dp.toPx()), cornerRadius = r)
-                    if (l.fill == null || l.alpha < 1f) {
-                        // a checkerboard: what shows through
-                        val n = 6
-                        val cell = size.width / n
-                        for (i in 0 until n) for (j in 0 until n) {
-                            drawRect(if ((i + j) % 2 == 0) Color(0xFF8A8A8A) else Color(0xFF5C5C5C), androidx.compose.ui.geometry.Offset(i * cell, j * cell), androidx.compose.ui.geometry.Size(cell, cell))
-                        }
+    AdaptiveGallery(keys, maxColumns = 7, preferredWidth = 70.dp, rowHeight = 64.dp,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { key ->
+        val l = look(key)
+        Box(Modifier.fillMaxSize().clickable { onPick(key) }, contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.size(46.dp)) {
+                val r = androidx.compose.ui.geometry.CornerRadius(7.dp.toPx())
+                if (l.shadow) drawRoundRect(Color.Black.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(0f, 2.dp.toPx()), cornerRadius = r)
+                if (l.fill == null || l.alpha < 1f) {
+                    // a checkerboard: what shows through
+                    val n = 6
+                    val cell = size.width / n
+                    for (i in 0 until n) for (j in 0 until n) {
+                        drawRect(if ((i + j) % 2 == 0) Color(0xFF8A8A8A) else Color(0xFF5C5C5C), androidx.compose.ui.geometry.Offset(i * cell, j * cell), androidx.compose.ui.geometry.Size(cell, cell))
                     }
-                    val f = l.fill
-                    if (f != null && l.gradient) {
-                        val top = androidx.compose.ui.graphics.lerp(f, Color.White, 0.35f)
-                        val bottom = androidx.compose.ui.graphics.lerp(f, Color.Black, 0.3f)
-                        drawRoundRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, f, bottom)), cornerRadius = r)
-                    } else if (f != null) {
-                        drawRoundRect(f.copy(alpha = l.alpha), cornerRadius = r)
-                    }
-                    l.edge?.let { drawRoundRect(it, cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx())) }
                 }
-                if (text) Text(uiText("Abc"), color = l.text, fontSize = 19.sp)
+                val f = l.fill
+                if (f != null && l.gradient) {
+                    val top = androidx.compose.ui.graphics.lerp(f, Color.White, 0.35f)
+                    val bottom = androidx.compose.ui.graphics.lerp(f, Color.Black, 0.3f)
+                    drawRoundRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, f, bottom)), cornerRadius = r)
+                } else if (f != null) {
+                    drawRoundRect(f.copy(alpha = l.alpha), cornerRadius = r)
+                }
+                l.edge?.let { drawRoundRect(it, cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx())) }
             }
+            if (text) Text(uiText("Abc"), color = l.text, fontSize = 19.sp)
         }
     }
 }

@@ -4,12 +4,13 @@
 
 <h1 align="center">WordCraft for Android</h1>
 
-## النسخة العربية — beta5
+## النسخة العربية — beta6
 
 المحرك **0.10.0** مع الاحتفاظ بأدوات Android، واجهة عربية/إنجليزية واتجاه تلقائي، رئيسية جديدة للأخيرة والمثبتة، واختيار اللغة من الإعدادات. أُصلحت المشاركة وأضيف زر إعادة بجانب التراجع.
 
-- [التقرير الكامل بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
-- [تحميل APK التجريبي الأخير](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.1-beta.5)
+- [إصلاح معارض الألوان والأشكال والنماذج في beta6](docs/BETA6-ar.md)
+- [تقرير beta5 بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
+- [تحميل APK التجريبي الأخير](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.1-beta.6)
 - [فهرس الملفات المعدلة في هذا التحديث](docs/CHANGE-MAP-ar.md)
 - [المسار إلى تطبيق Android](apps/wordcraft-android/android)
 

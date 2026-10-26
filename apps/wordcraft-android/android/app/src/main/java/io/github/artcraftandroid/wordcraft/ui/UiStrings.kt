@@ -413,6 +413,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Pin documents to find them here." -> R.string.ui_6bcc94085099
     "More options" -> R.string.ui_bc79cdffbaa8
     "Choose the app language" -> R.string.ui_dbc72a80ad3e
+    "Grayscale" -> R.string.ui_93638ea9e0b0
     "Share" -> R.string.ui_29887a5ff984
     "Share as PDF" -> R.string.ui_ee00ac0fd74a
     "Show" -> R.string.ui_0df6f1cad36c

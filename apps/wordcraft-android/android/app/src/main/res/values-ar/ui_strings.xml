@@ -60,6 +60,7 @@
     <string name="ui_fb72fc26e3d2">أشكال أساسية</string>
     <string name="ui_a7ddfa05b06e">خلف النص</string>
     <string name="ui_a53dffffb7e5">أسفل</string>
+    <string name="ui_c6cfe6e4f129">أسود</string>
     <string name="ui_2bd70e4d3926">صفحة فارغة</string>
     <string name="ui_b45da2d68c4a">مستند فارغ</string>
     <string name="ui_9449dd42a91b">أسهم ممتلئة</string>
@@ -91,6 +92,7 @@
     <string name="ui_f26f3275e735">التحقق من التحديثات</string>
     <string name="ui_497a19986d82">جارٍ التحقق من التحديثات…</string>
     <string name="ui_11997590030a">اختر عنصرًا</string>
+    <string name="ui_e51295496c5b">اختر مظهر التطبيق</string>
     <string name="ui_dbc72a80ad3e">اختر لغة التطبيق</string>
     <string name="ui_2d062f090f13">اختر الترميز الذي يعرض النص بصورة صحيحة.</string>
     <string name="ui_804cf3352c42">مسح التنسيق</string>
@@ -99,7 +101,7 @@
     <string name="ui_8e0c496136d0">شريط متجمع</string>
     <string name="ui_a73b320b935e">عمود متفاوت المسافات</string>
     <string name="ui_6b73191a0a4b">اللون</string>
-    <string name="ui_e02654696bff">ملون</string>
+    <string name="ui_e02654696bff">ملوّن</string>
     <string name="ui_88c45d9e526c">الألوان</string>
     <string name="ui_3fdc9a587693">العمود</string>
     <string name="ui_53aade77cd69">الأعمدة</string>
@@ -120,6 +122,7 @@
     <string name="ui_1f45f02561f4">قص</string>
     <string name="ui_518653530449">دورة</string>
     <string name="ui_60acc53f13a5">داكن</string>
+    <string name="ui_350b555a4f4a">رمادي داكن</string>
     <string name="ui_78023df4505c">تسميات البيانات</string>
     <string name="ui_889313b9b63a">إنقاص المسافة البادئة</string>
     <string name="ui_21b111cbfe6e">الافتراضي</string>
@@ -501,6 +504,7 @@
     <string name="ui_58339f45df96">الأربعاء</string>
     <string name="ui_41a6741e9a0f">الغرب</string>
     <string name="ui_135e912e8905">ما الجديد؟</string>
+    <string name="ui_3495e757855a">أبيض</string>
     <string name="ui_147170e793c6">واسعة</string>
     <string name="ui_3019947b6daf">العرض</string>
     <string name="ui_dfe17006f6a2">عدد الكلمات</string>

@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 val dark = io.github.artcraftandroid.wordcraft.ui.WordColors.dark
                 androidx.compose.runtime.SideEffect {
                     androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
-                        isAppearanceLightStatusBars = !dark
+                        isAppearanceLightStatusBars = !io.github.artcraftandroid.wordcraft.ui.WordColors.darkStatusBar
                         isAppearanceLightNavigationBars = !dark
                     }
                 }

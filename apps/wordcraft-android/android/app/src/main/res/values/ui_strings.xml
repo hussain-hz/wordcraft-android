@@ -60,6 +60,7 @@
     <string name="ui_fb72fc26e3d2">Basic Shapes</string>
     <string name="ui_a7ddfa05b06e">Behind Text</string>
     <string name="ui_a53dffffb7e5">Below</string>
+    <string name="ui_c6cfe6e4f129">Black</string>
     <string name="ui_2bd70e4d3926">Blank Page</string>
     <string name="ui_b45da2d68c4a">Blank document</string>
     <string name="ui_9449dd42a91b">Block Arrows</string>
@@ -91,6 +92,7 @@
     <string name="ui_f26f3275e735">Check for updates</string>
     <string name="ui_497a19986d82">Checking for updates…</string>
     <string name="ui_11997590030a">Choose an item</string>
+    <string name="ui_e51295496c5b">Choose the app appearance</string>
     <string name="ui_dbc72a80ad3e">Choose the app language</string>
     <string name="ui_2d062f090f13">Choose the encoding that makes the text read correctly.</string>
     <string name="ui_804cf3352c42">Clear Formatting</string>
@@ -120,6 +122,7 @@
     <string name="ui_1f45f02561f4">Cut</string>
     <string name="ui_518653530449">Cycle</string>
     <string name="ui_60acc53f13a5">Dark</string>
+    <string name="ui_350b555a4f4a">Dark Gray</string>
     <string name="ui_78023df4505c">Data Labels</string>
     <string name="ui_889313b9b63a">Decrease Indent</string>
     <string name="ui_21b111cbfe6e">Default</string>
@@ -501,6 +504,7 @@
     <string name="ui_58339f45df96">Wed</string>
     <string name="ui_41a6741e9a0f">West</string>
     <string name="ui_135e912e8905">What\'s new</string>
+    <string name="ui_3495e757855a">White</string>
     <string name="ui_147170e793c6">Wide</string>
     <string name="ui_3019947b6daf">Width</string>
     <string name="ui_dfe17006f6a2">Word Count</string>

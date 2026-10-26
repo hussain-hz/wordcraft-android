@@ -75,13 +75,13 @@ private val BAR_BUTTON = 48.dp
 /** Reading: close, the name, then Edit, Share, Find and More. */
 @Composable
 fun ViewTopBar(title: String, onClose: () -> Unit, onEdit: () -> Unit, onShare: () -> Unit, onFind: () -> Unit, onMore: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(BAR_HEIGHT).background(WordColors.Bar).padding(end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarButton(LucideIcons.X.glyph(), WordColors.OnBar, onClose, width = BAR_HEIGHT, height = BAR_HEIGHT)
-        Text(title, color = WordColors.OnBar, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        BarButton(LucideIcons.PenLine.glyph(), WordColors.OnBar, onEdit, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT, label = uiText("Share"))
-        BarButton(LucideIcons.Search.glyph(), WordColors.OnBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT)
+    Row(Modifier.fillMaxWidth().height(BAR_HEIGHT).background(WordColors.TitleBar).padding(end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        BarButton(LucideIcons.X.glyph(), WordColors.OnTitleBar, onClose, width = BAR_HEIGHT, height = BAR_HEIGHT)
+        Text(title, color = WordColors.OnTitleBar, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        BarButton(LucideIcons.PenLine.glyph(), WordColors.OnTitleBar, onEdit, width = BAR_BUTTON, height = BAR_HEIGHT)
+        BarButton(LucideIcons.Share2.glyph(), WordColors.OnTitleBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT, label = uiText("Share"))
+        BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT)
+        BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT)
     }
 }
 
@@ -100,18 +100,18 @@ fun EditTopBar(
     onRedo: () -> Unit,
     onMore: () -> Unit,
 ) {
-    BoxWithConstraints(Modifier.fillMaxWidth().shadow(2.dp).background(WordColors.Bar)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().shadow(2.dp).background(WordColors.TitleBar)) {
         val buttonWidth = minOf(BAR_BUTTON, maxWidth / 8)
         Row(Modifier.fillMaxWidth().height(BAR_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(LucideIcons.Check.glyph(), WordColors.OnBar, onDone, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Check.glyph(), WordColors.OnTitleBar, onDone, width = buttonWidth, height = BAR_HEIGHT)
             Spacer(Modifier.weight(1f))
-            BarButton(LucideIcons.PenTool.glyph(), WordColors.OnBar, onShowCommands, width = buttonWidth, height = BAR_HEIGHT)
-            BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Share"))
-            BarButton(LucideIcons.Search.glyph(), WordColors.OnBar, onFind, width = buttonWidth, height = BAR_HEIGHT)
-            BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnBar, onMobileView, width = buttonWidth, height = BAR_HEIGHT)
-            BarButton(LucideIcons.Undo2.glyph(), WordColors.OnBar, onUndo, enabled = canUndo, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Undo"))
-            BarButton(LucideIcons.Redo2.glyph(), WordColors.OnBar, onRedo, enabled = canRedo, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Redo"))
-            BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnBar, onMore, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.PenTool.glyph(), WordColors.OnTitleBar, onShowCommands, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Share2.glyph(), WordColors.OnTitleBar, onShare, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Share"))
+            BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnTitleBar, onMobileView, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Undo2.glyph(), WordColors.OnTitleBar, onUndo, enabled = canUndo, disabledTint = WordColors.TitleDisabled, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Undo"))
+            BarButton(LucideIcons.Redo2.glyph(), WordColors.OnTitleBar, onRedo, enabled = canRedo, disabledTint = WordColors.TitleDisabled, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Redo"))
+            BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = buttonWidth, height = BAR_HEIGHT)
         }
     }
 }

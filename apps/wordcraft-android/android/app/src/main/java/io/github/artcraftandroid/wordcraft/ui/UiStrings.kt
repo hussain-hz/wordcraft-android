@@ -80,6 +80,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Basic Shapes" -> R.string.ui_fb72fc26e3d2
     "Behind Text" -> R.string.ui_a7ddfa05b06e
     "Below" -> R.string.ui_a53dffffb7e5
+    "Black" -> R.string.ui_c6cfe6e4f129
     "Blank Page" -> R.string.ui_2bd70e4d3926
     "Blank document" -> R.string.ui_b45da2d68c4a
     "Block Arrows" -> R.string.ui_9449dd42a91b
@@ -111,6 +112,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Check for updates" -> R.string.ui_f26f3275e735
     "Checking for updates…" -> R.string.ui_497a19986d82
     "Choose an item" -> R.string.ui_11997590030a
+    "Choose the app appearance" -> R.string.ui_e51295496c5b
     "Choose the app language" -> R.string.ui_dbc72a80ad3e
     "Choose the encoding that makes the text read correctly." -> R.string.ui_2d062f090f13
     "Clear Formatting" -> R.string.ui_804cf3352c42
@@ -140,6 +142,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Cut" -> R.string.ui_1f45f02561f4
     "Cycle" -> R.string.ui_518653530449
     "Dark" -> R.string.ui_60acc53f13a5
+    "Dark Gray" -> R.string.ui_350b555a4f4a
     "Data Labels" -> R.string.ui_78023df4505c
     "Decrease Indent" -> R.string.ui_889313b9b63a
     "Default" -> R.string.ui_21b111cbfe6e
@@ -521,6 +524,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Wed" -> R.string.ui_58339f45df96
     "West" -> R.string.ui_41a6741e9a0f
     "What's new" -> R.string.ui_135e912e8905
+    "White" -> R.string.ui_3495e757855a
     "Wide" -> R.string.ui_147170e793c6
     "Width" -> R.string.ui_3019947b6daf
     "Word Count" -> R.string.ui_dfe17006f6a2

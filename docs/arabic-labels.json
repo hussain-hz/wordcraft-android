@@ -45,7 +45,7 @@
   "Chart Title": "عنوان المخطط",
   "Close": "إغلاق",
   "Color": "اللون",
-  "Colorful": "ملون",
+  "Colorful": "ملوّن",
   "Colors": "الألوان",
   "Column": "العمود",
   "Columns": "الأعمدة",
@@ -515,5 +515,9 @@
   "Download update": "تنزيل التحديث",
   "Android may ask you to allow updates from WordCraft. Your documents and settings will be kept.": "قد يطلب Android السماح بتثبيت تحديثات من ووردكرافت. ستبقى مستنداتك وإعداداتك محفوظة.",
   "For more details, ": "لمزيد من التفاصيل ",
-  "click here": "اضغط هنا"
+  "click here": "اضغط هنا",
+  "Dark Gray": "رمادي داكن",
+  "Choose the app appearance": "اختر مظهر التطبيق",
+  "White": "أبيض",
+  "Black": "أسود"
 }

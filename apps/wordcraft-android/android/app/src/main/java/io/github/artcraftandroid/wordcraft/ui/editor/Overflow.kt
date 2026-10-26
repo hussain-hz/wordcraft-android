@@ -174,13 +174,13 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
     var picking by remember { androidx.compose.runtime.mutableStateOf(false) }
     var pickingLanguage by remember { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(WordColors.StatusBand).statusBarsPadding().background(WordColors.SettingsBack).navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.Bar), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(LucideIcons.ArrowLeft.glyph(), WordColors.OnBar, { vm.closeSettings() }, width = 56.dp, height = 56.dp)
-            Text(uiText("Settings"), color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.padding(start = 16.dp))
+        Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.TitleBar), verticalAlignment = Alignment.CenterVertically) {
+            BarButton(LucideIcons.ArrowLeft.glyph(), WordColors.OnTitleBar, { vm.closeSettings() }, width = 56.dp, height = 56.dp)
+            Text(uiText("Settings"), color = WordColors.OnTitleBar, fontSize = 20.sp, modifier = Modifier.padding(start = 16.dp))
         }
         Column(Modifier.verticalScroll(rememberScrollState())) {
             SettingsSection("Display Preferences")
-            SettingsItem("Theme", THEMES[vm.themeChoice] ?: "System Default") { picking = true }
+            SettingsItem("Theme", io.github.artcraftandroid.wordcraft.ui.APP_THEMES[vm.themeChoice] ?: "System Default") { picking = true }
             SettingsItem("Language", when (vm.languageChoice) { "ar" -> "العربية"; "en" -> "English"; else -> "System Default" }) { pickingLanguage = true }
             SettingsLine()
             SettingsSection("General")
@@ -209,63 +209,9 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
             Spacer(Modifier.height(24.dp))
         }
     }
-    if (pickingLanguage) {
-        androidx.activity.compose.BackHandler { pickingLanguage = false }
-        Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable { pickingLanguage = false }) {
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(WordColors.Sheet).clickable {}.navigationBarsPadding().padding(20.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(uiText("Language"), color = WordColors.OnPill, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    BarButton(LucideIcons.X.glyph(), WordColors.OnBar, { pickingLanguage = false }, label = uiText("Close"))
-                }
-                Text(uiText("Choose the app language"), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
-                for ((tag, label) in listOf("" to "System Default", "ar" to "العربية", "en" to "English")) {
-                    Row(Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(12.dp)).background(if (vm.languageChoice == tag) WordColors.Accent.copy(alpha = 0.12f) else Color.Transparent).clickable {
-                        pickingLanguage = false
-                        vm.chooseLanguage(tag)
-                    }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(uiText(label), color = WordColors.OnPill, fontSize = 17.sp, modifier = Modifier.weight(1f))
-                        if (vm.languageChoice == tag) GlyphIcon(LucideIcons.Check.glyph(), WordColors.Accent)
-                    }
-                }
-            }
-        }
-    }
-    if (picking) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { picking = false },
-            title = { Text(uiText("Theme")) },
-            text = {
-                Column {
-                    for ((key, label) in THEMES) {
-                        Row(
-                            Modifier.fillMaxWidth().height(48.dp).clickable {
-                                vm.chooseTheme(key)
-                                picking = false
-                            },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            androidx.compose.material3.RadioButton(
-                                selected = vm.themeChoice == key,
-                                onClick = {
-                                    vm.chooseTheme(key)
-                                    picking = false
-                                },
-                                colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = WordColors.Accent),
-                            )
-                            Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp)
-                        }
-                    }
-                }
-            },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { picking = false }) { Text(uiText("Cancel")) } },
-            containerColor = WordColors.Surface,
-            titleContentColor = WordColors.OnSurface,
-        )
-    }
+    if (pickingLanguage) io.github.artcraftandroid.wordcraft.ui.LanguageChooser(vm) { pickingLanguage = false }
+    if (picking) io.github.artcraftandroid.wordcraft.ui.ThemeChooser(vm) { picking = false }
 }
-
-/** The themes Settings offers. */
-private val THEMES = linkedMapOf("system" to "System Default", "light" to "Light", "dark" to "Dark")
 
 /** What WordCraft ships with that others made, and their licences. */
 private val OPEN_MATERIAL = listOf(

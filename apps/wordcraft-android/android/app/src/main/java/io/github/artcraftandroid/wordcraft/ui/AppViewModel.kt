@@ -610,7 +610,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Theme: `system` (follow the phone), `light` or `dark`. */
+    /** Theme: system, colorful, light, gray or dark (legacy key for black). */
     var themeChoice by mutableStateOf(prefs.getString("theme", "system") ?: "system")
         private set
 
@@ -623,8 +623,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     fun chooseTheme(choice: String) {
-        themeChoice = choice
-        prefs.edit().putString("theme", choice).apply()
+        themeChoice = choice.takeIf { it in APP_THEMES } ?: "system"
+        prefs.edit().putString("theme", themeChoice).apply()
     }
 
     fun chooseStartInMobileView(on: Boolean) {

@@ -67,10 +67,10 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(searching) { if (searching) focus.requestFocus() }
     androidx.activity.compose.BackHandler(enabled = searching) { searching = false; query = "" }
-    val homeBackground = if (WordColors.dark) androidx.compose.ui.graphics.Color.Black else WordColors.Surface
-    Box(Modifier.fillMaxSize().background(homeBackground).statusBarsPadding().navigationBarsPadding()) {
+    val homeBackground = WordColors.HomeBack
+    Box(Modifier.fillMaxSize().background(WordColors.StatusBand).statusBarsPadding().background(homeBackground).navigationBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().height(72.dp).background(WordColors.TitleBar).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Image(painterResource(R.drawable.ic_launcher_tile), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
                 Spacer(Modifier.width(12.dp))
                 if (searching) {
@@ -78,25 +78,26 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
                         value = query,
                         onValueChange = { query = it },
                         singleLine = true,
-                        textStyle = TextStyle(color = WordColors.OnPill, fontSize = 18.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(WordColors.OnTitleBar),
+                        textStyle = TextStyle(color = WordColors.OnTitleBar, fontSize = 18.sp),
                         modifier = Modifier.weight(1f).focusRequester(focus),
                         decorationBox = { field ->
-                            Box { if (query.isEmpty()) Text(uiText("Search documents"), color = WordColors.SettingsValue, fontSize = 18.sp); field() }
+                            Box { if (query.isEmpty()) Text(uiText("Search documents"), color = WordColors.OnTitleBar.copy(alpha = 0.85f), fontSize = 18.sp); field() }
                         },
                     )
-                    StartIcon(LucideIcons.X, "Close") { searching = false; query = "" }
+                    StartIcon(LucideIcons.X, "Close", WordColors.OnTitleBar) { searching = false; query = "" }
                 } else {
-                    Text("WordCraft", color = WordColors.Accent, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text("WordCraft", color = WordColors.TitleBrand, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (update != null) {
                         Box(Modifier.size(48.dp).clickable { showingUpdate = !showingUpdate }, contentAlignment = Alignment.Center) {
-                            Icon(HomeIcons.Update, contentDescription = uiText("An update is available"), tint = WordColors.Accent, modifier = Modifier.size(26.dp))
-                            Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(6.dp).clip(CircleShape).background(WordColors.Accent))
+                            Icon(HomeIcons.Update, contentDescription = uiText("An update is available"), tint = WordColors.TitleBrand, modifier = Modifier.size(26.dp))
+                            Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(6.dp).clip(CircleShape).background(WordColors.TitleBrand))
                         }
                     }
-                    StartIcon(LucideIcons.Search, "Search") { vm.startTab = StartTab.Home; searching = true }
+                    StartIcon(LucideIcons.Search, "Search", WordColors.OnTitleBar) { vm.startTab = StartTab.Home; searching = true }
                 }
-                Box(Modifier.size(48.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(0xFFE0E0E0)).clickable(onClick = vm::openSettings), contentAlignment = Alignment.Center) {
-                    Icon(HomeIcons.User, contentDescription = uiText("Settings"), tint = androidx.compose.ui.graphics.Color(0xFF303030), modifier = Modifier.size(29.dp))
+                Box(Modifier.size(48.dp).clip(CircleShape).background(WordColors.AvatarFill).clickable(onClick = vm::openSettings), contentAlignment = Alignment.Center) {
+                    Icon(HomeIcons.User, contentDescription = uiText("Settings"), tint = WordColors.OnAvatar, modifier = Modifier.size(29.dp))
                 }
             }
             if (!newTab) {
@@ -121,9 +122,9 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun StartIcon(icon: ImageVector, label: String? = null, onClick: () -> Unit) {
+private fun StartIcon(icon: ImageVector, label: String? = null, tint: androidx.compose.ui.graphics.Color = WordColors.OnBar, onClick: () -> Unit) {
     Box(Modifier.size(48.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = label?.let { uiText(it) }, tint = WordColors.OnBar, modifier = Modifier.size(26.dp))
+        Icon(icon, contentDescription = label?.let { uiText(it) }, tint = tint, modifier = Modifier.size(26.dp))
     }
 }
 

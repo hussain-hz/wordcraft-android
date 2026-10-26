@@ -50,11 +50,11 @@ fun TextEncodingScreen(vm: AppViewModel) {
         if (i > 2) list.scrollToItem(i - 2)
     }
     Column(Modifier.fillMaxSize().background(WordColors.StatusBand).statusBarsPadding().background(WordColors.SettingsBack).navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.Bar), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(LucideIcons.X.glyph(), WordColors.OnBar, { vm.cancelEncoding() }, width = 56.dp, height = 56.dp)
-            Text(uiText("Text Encoding"), color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+        Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.TitleBar), verticalAlignment = Alignment.CenterVertically) {
+            BarButton(LucideIcons.X.glyph(), WordColors.OnTitleBar, { vm.cancelEncoding() }, width = 56.dp, height = 56.dp)
+            Text(uiText("Text Encoding"), color = WordColors.OnTitleBar, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
             Text(uiText("Open"),
-                color = WordColors.Accent,
+                color = WordColors.OnTitleBar,
                 fontSize = 16.sp,
                 modifier = Modifier.clickable { vm.openInEncoding() }.padding(horizontal = 16.dp, vertical = 16.dp),
             )

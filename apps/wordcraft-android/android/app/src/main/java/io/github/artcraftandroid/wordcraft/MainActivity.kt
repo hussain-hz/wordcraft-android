@@ -22,11 +22,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
-    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) io.github.artcraftandroid.wordcraft.updates.AppUpdates.cached(this)?.let {
-            io.github.artcraftandroid.wordcraft.updates.AppUpdates.notify(this, it)
-        }
-    }
 
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -79,14 +74,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT), SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
         io.github.artcraftandroid.wordcraft.updates.AppUpdates.schedule(this)
-        if (savedInstanceState == null) {
-            vm.checkForUpdates()
-            val updatePrefs = getSharedPreferences("app_updates", MODE_PRIVATE)
-            if (android.os.Build.VERSION.SDK_INT >= 33 && !updatePrefs.getBoolean("permissionAsked", false)) {
-                updatePrefs.edit().putBoolean("permissionAsked", true).apply()
-                notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
         window.isNavigationBarContrastEnforced = false
         setContent {
             WordcraftTheme(vm.themeChoice) {
@@ -144,6 +131,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (savedInstanceState == null) handle(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Pick up a result cached by the background check when returning to the app.
+        vm.checkForUpdates()
     }
 
     /** Leaving the app saves the changes to the document's own file (AutoSave). */

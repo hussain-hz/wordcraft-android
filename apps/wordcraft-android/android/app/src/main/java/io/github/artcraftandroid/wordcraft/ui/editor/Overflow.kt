@@ -187,17 +187,25 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
             SettingsSwitch("Default View", "Start WordCraft in Mobile View", vm.startInMobileView, vm::chooseStartInMobileView)
             SettingsSwitch("AutoSave", "Automatically save files", vm.autoSaveOn, vm::chooseAutoSave)
             SettingsLine()
-            SettingsSection("About")
-            SettingsItem("WordCraft", uiText("Version %1\$s", io.github.artcraftandroid.wordcraft.updates.AppUpdates.installedVersion(androidx.compose.ui.platform.LocalContext.current)))
-            SettingsItem("Engine", engineVersion)
+            SettingsSection("App updates")
+            SettingsItem("App version", io.github.artcraftandroid.wordcraft.updates.AppUpdates.installedVersion(androidx.compose.ui.platform.LocalContext.current))
             SettingsItem("Check for updates", vm.updateStatus.ifEmpty { "App updates" }) { vm.checkForUpdates(manual = true) }
             if (vm.appUpdate != null) SettingsItem("View release", vm.appUpdate!!.version) { vm.openUpdate() }
+            SettingsLine()
+            SettingsSection("About")
+            SettingsItem("Engine", engineVersion)
             Text(uiText("An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft."),
                 color = WordColors.SettingsValue,
                 fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            SettingsItem("Open material", OPEN_MATERIAL.map { uiText(it) }.joinToString("\n"))
+            SettingsLine()
+            SettingsSection("Open material")
+            for (material in OPEN_MATERIAL) {
+                Text(uiText(material), color = WordColors.SettingsValue, fontSize = 14.sp, lineHeight = 22.sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp))
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -270,7 +278,7 @@ private val OPEN_MATERIAL = listOf(
 
 @Composable
 private fun SettingsSection(title: String) {
-    Text(uiText(title), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 14.dp, bottom = 6.dp))
+    Text(uiText(title), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 20.dp, bottom = 8.dp))
 }
 
 @Composable
@@ -281,7 +289,7 @@ private fun SettingsLine() {
 /** An item: its title over its value; tappable when [onClick] is given. */
 @Composable
 private fun SettingsItem(title: String, value: String, onClick: (() -> Unit)? = null) {
-    Column(Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 10.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 16.dp, vertical = 10.dp)) {
         Text(uiText(title), color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
         Text(uiText(value), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
     }
@@ -290,7 +298,7 @@ private fun SettingsItem(title: String, value: String, onClick: (() -> Unit)? = 
 /** A switch: the group's title, what it does, then On or Off beside the switch. */
 @Composable
 private fun SettingsSwitch(title: String, what: String, on: Boolean, onChange: (Boolean) -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(horizontal = 10.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(horizontal = 16.dp, vertical = 10.dp)) {
         Text(uiText(title), color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
         Text(uiText(what), color = WordColors.OnSettings, fontSize = 14.sp, modifier = Modifier.padding(start = 5.dp, top = 14.dp))
         Row(Modifier.padding(start = 5.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {

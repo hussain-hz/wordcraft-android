@@ -29,6 +29,7 @@ internal fun lucide(name: String, vararg paths: String): ImageVector {
 
 /** Landing-page icons share the same Lucide grid and stroke as the document tools. */
 internal object HomeIcons {
+    val Update by lazy { lucide("app-update", "M22 12a10 10 0 1 1-20 0a10 10 0 1 1 20 0", "M12 7v10", "m8 13 4 4 4-4") }
     val User by lazy { lucide("user", "M20 21a8 8 0 0 0-16 0", "M16 7a4 4 0 1 1-8 0a4 4 0 1 1 8 0") }
     val Star by lazy { lucide("star", "m12 3 2.8 5.7 6.3.9-4.55 4.4 1.07 6.3L12 17.3l-5.62 3 1.07-6.3L2.9 9.6l6.3-.9Z") }
     val Home by lazy { lucide("house", "m3 10 9-7 9 7", "M5 9v11h14V9", "M9 20v-8h6v8") }

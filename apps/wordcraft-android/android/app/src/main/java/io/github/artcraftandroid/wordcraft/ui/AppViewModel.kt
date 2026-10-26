@@ -70,11 +70,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var updateStatus by mutableStateOf("")
         private set
-    var dismissedUpdate by mutableStateOf<String?>(null)
-        private set
-
-    fun dismissUpdate() { dismissedUpdate = appUpdate?.version }
-
     fun checkForUpdates(manual: Boolean = false) {
         if (checkingUpdates) return
         checkingUpdates = true
@@ -84,8 +79,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 appUpdate = io.github.artcraftandroid.wordcraft.updates.AppUpdates.check(context, force = manual)
                 updateStatus = if (appUpdate == null) "Your app is up to date" else "An update is available"
-                appUpdate?.let { io.github.artcraftandroid.wordcraft.updates.AppUpdates.notify(context, it) }
-                if (manual) dismissedUpdate = null
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (_: Exception) {

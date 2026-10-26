@@ -503,5 +503,6 @@
   "Couldn't check for updates. Try again when connected.": "تعذر التحقق من التحديثات. أعد المحاولة عند الاتصال بالإنترنت.",
   "View release": "عرض الإصدار",
   "Later": "لاحقًا",
-  "Engine": "المحرك"
+  "Engine": "المحرك",
+  "App version": "إصدار التطبيق"
 }

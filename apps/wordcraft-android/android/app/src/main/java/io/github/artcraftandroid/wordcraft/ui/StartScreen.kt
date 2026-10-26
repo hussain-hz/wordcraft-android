@@ -58,6 +58,9 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
     var searching by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
+    var showingUpdate by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val update = vm.appUpdate
+    androidx.activity.compose.BackHandler(enabled = showingUpdate) { showingUpdate = false }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(searching) { if (searching) focus.requestFocus() }
     androidx.activity.compose.BackHandler(enabled = searching) { searching = false; query = "" }
@@ -81,6 +84,12 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
                     StartIcon(LucideIcons.X, "Close") { searching = false; query = "" }
                 } else {
                     Text("WordCraft", color = WordColors.Accent, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (update != null) {
+                        Box(Modifier.size(48.dp).clickable { showingUpdate = !showingUpdate }, contentAlignment = Alignment.Center) {
+                            Icon(HomeIcons.Update, contentDescription = uiText("An update is available"), tint = WordColors.Accent, modifier = Modifier.size(26.dp))
+                            Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(6.dp).clip(CircleShape).background(WordColors.Accent))
+                        }
+                    }
                     StartIcon(LucideIcons.Search, "Search") { searching = true }
                 }
                 Box(Modifier.size(48.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(0xFFE0E0E0)).clickable(onClick = vm::openSettings), contentAlignment = Alignment.Center) {
@@ -102,6 +111,19 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
             }
         }
         if (creating) NewSheet(vm, onClose = { creating = false })
+        if (showingUpdate && update != null) {
+            Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable { showingUpdate = false }) {
+                Column(Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp)).background(WordColors.Sheet).clickable {}.padding(20.dp)) {
+                    Text(uiText("A WordCraft update is available"), color = WordColors.OnPill, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(uiText("Version %1\$s", update.version), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                        androidx.compose.material3.TextButton(onClick = { showingUpdate = false }) { Text(uiText("Close"), color = WordColors.SettingsValue) }
+                        androidx.compose.material3.TextButton(onClick = { vm.openUpdate(); showingUpdate = false }) { Text(uiText("View release"), color = WordColors.Accent) }
+                    }
+                }
+            }
+        }
     }
 }
 

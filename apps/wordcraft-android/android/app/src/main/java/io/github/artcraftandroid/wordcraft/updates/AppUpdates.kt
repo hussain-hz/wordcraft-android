@@ -1,22 +1,10 @@
 package io.github.artcraftandroid.wordcraft.updates
 
-import android.Manifest
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.Context
 import android.content.ComponentName
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
-import io.github.artcraftandroid.wordcraft.R
-import io.github.artcraftandroid.wordcraft.ui.localizedUiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -36,6 +24,11 @@ object AppUpdates {
 
     /** Persisted daily job: Android controls the actual execution time and requires a network. */
     fun schedule(context: Context) {
+        // Remove the previous release's system notification and channel when upgrading.
+        context.getSystemService(NotificationManager::class.java).apply {
+            cancel(NOTIFICATION)
+            deleteNotificationChannel(CHANNEL)
+        }
         val scheduler = context.getSystemService(JobScheduler::class.java)
         if (scheduler.getPendingJob(JOB) == null) {
             scheduler.schedule(JobInfo.Builder(JOB, ComponentName(context, UpdateJobService::class.java))
@@ -93,34 +86,11 @@ object AppUpdates {
                 else -> error("Release check failed: HTTP ${connection.responseCode}")
             }
             p.edit().putLong("checked", now).putString("version", update?.version).putString("url", update?.pageUrl).apply()
-            if (update == null) NotificationManagerCompat.from(context).cancel(NOTIFICATION)
+            if (update == null) context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION)
             update
         } finally {
             connection.disconnect()
         }
     }
 
-    /** Notify once per release, only after Android's notification permission is granted. */
-    fun notify(context: Context, update: AppUpdate) {
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
-        val manager = context.getSystemService(NotificationManager::class.java)
-        val language = context.getSharedPreferences("settings", Context.MODE_PRIVATE).getString("interfaceLanguage", "").orEmpty()
-        val localized = if (language.isEmpty()) context else context.createConfigurationContext(android.content.res.Configuration(context.resources.configuration).apply {
-            setLocale(java.util.Locale.forLanguageTag(language))
-        })
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, localizedUiText(localized, "App updates"), NotificationManager.IMPORTANCE_DEFAULT))
-        if (!NotificationManagerCompat.from(context).areNotificationsEnabled() || manager.getNotificationChannel(CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE) return
-        if (prefs(context).getString("notified", null) == update.version) return
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl))
-        val pending = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_update_notification)
-            .setContentTitle(localizedUiText(localized, "A WordCraft update is available"))
-            .setContentText(localizedUiText(localized, "Version %1\$s", update.version))
-            .setContentIntent(pending).setAutoCancel(true).build()
-        try {
-            manager.notify(NOTIFICATION, notification)
-            prefs(context).edit().putString("notified", update.version).apply()
-        } catch (_: SecurityException) { /* Permission may have changed while checking. */ }
-    }
 }

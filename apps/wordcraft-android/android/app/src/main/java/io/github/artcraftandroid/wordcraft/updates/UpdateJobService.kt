@@ -19,7 +19,7 @@ class UpdateJobService : JobService() {
         job = scope.launch {
             var retry = false
             try {
-                AppUpdates.check(this@UpdateJobService)?.let { AppUpdates.notify(this@UpdateJobService, it) }
+                AppUpdates.check(this@UpdateJobService)
             } catch (_: IOException) { retry = true
             } catch (_: Exception) { /* Malformed API response: try again at the next interval. */ }
             if (isActive) jobFinished(params, retry)

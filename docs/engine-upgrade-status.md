@@ -1,6 +1,6 @@
 # Engine 0.11 Android integration
 
-Current app: 0.0.1, version code 1990. Engine: 0.11.0.
+Current app: 0.0.2, version code 2990. Engine: 0.11.0.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
@@ -12,14 +12,17 @@ Android picture framing still stores document properties without modifying sourc
 
 Validation: 3217 Rust tests (18 targets, serialized shared-dictionary fixtures),
 22 Kotlin tests, 4 Arabic resource tests; signed universal Release + compatibility
-Debug build; Lint 0 errors / 36 warnings / 8 hints. APK signatures, ABIs and checksums
+Debug build; Lint 0 errors / 33 warnings / 8 hints. APK signatures, ABIs and checksums
 verified. Emulator x86_64 UI/update checks do not imply physical ARM-phone testing.
 
 The app checks its own GitHub Releases for newer stable APKs, with manual checks,
-a six-hour foreground cache, a daily persisted network job, a themed in-app notice,
-and one system notification per release (permission required). It opens the release
+a six-hour foreground cache, a daily persisted network job, a themed in-app notice
+opened only by tapping a circular update icon on Home. No Android notification
+permission is requested and no system notifications are posted. It opens the release
 page for download and does not install updates automatically.
 
 See [the Arabic 0.0.1 release report](RELEASE-0.0.1-ar.md) for artifacts, signing,
 upgrade compatibility, implementation details and validation limits. The beta5 and
 beta6 reports remain historical reports of those earlier builds.
+
+See [the 0.0.2 UI update report](RELEASE-0.0.2-ar.md) for the circular icon and settings sections.

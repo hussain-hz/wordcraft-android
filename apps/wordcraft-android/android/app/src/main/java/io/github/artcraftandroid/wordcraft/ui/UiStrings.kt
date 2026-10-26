@@ -59,6 +59,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft." -> R.string.ui_8bbaaa91a691
     "An update is available" -> R.string.ui_caa6a5920fe4
     "App updates" -> R.string.ui_5808deaecd58
+    "App version" -> R.string.ui_80a7db3b236f
     "Area" -> R.string.ui_024dc204d7ba
     "Arrange" -> R.string.ui_d557a972ab06
     "Author" -> R.string.ui_d95082a2ee57

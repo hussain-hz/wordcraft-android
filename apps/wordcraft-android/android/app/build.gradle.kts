@@ -48,11 +48,19 @@ val appVersionCode: Int = run {
 }
 
 // The release key, when the build is given one (the release workflow passes it from the repository's
-// secrets). Without one a release build is signed with the debug key: it installs, but it can't
-// update a published release; or, with -Pwordcraft.unsigned=true (F-Droid's build), not signed at
-// all, so the published APK's signature can be checked against it.
+// secrets). A publishable release requires that key; -Pwordcraft.unsigned=true produces an
+// explicitly unsigned build (for F-Droid/reproducibility checks), never a debug-signed release.
 val releaseKeystore: String? = providers.environmentVariable("WORDCRAFT_KEYSTORE").orNull
 val unsignedRelease: Boolean = providers.gradleProperty("wordcraft.unsigned").orNull == "true"
+tasks.matching { it.name == "validateSigningRelease" }.configureEach {
+    val signingConfigured = unsignedRelease || releaseKeystore != null
+    outputs.upToDateWhen { false }
+    doFirst {
+        check(signingConfigured) {
+            "Release signing requires WORDCRAFT_KEYSTORE and its password/alias environment variables. Use -Pwordcraft.unsigned=true only for an unsigned build."
+        }
+    }
+}
 
 /** rustup's `cargo` (Android Studio may not see rustup's PATH), else `cargo` from PATH; `CARGO` overrides. */
 val cargoExecutable: String = run {
@@ -326,6 +334,7 @@ android {
     buildFeatures {
         compose = true
     }
+    bundle { language { enableSplit = false } }
 }
 
 androidComponents {

@@ -25,6 +25,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "%1\$s of %2\$s" -> R.string.ui_8f4594535134
     "%1\$s: %2\$s" -> R.string.ui_13326cace603
     "A WordCraft template" -> R.string.ui_1bb3583d74db
+    "A WordCraft update is available" -> R.string.ui_a832a817d125
     "A, B, C, …" -> R.string.ui_68e8be91edf7
     "Aa" -> R.string.ui_81acaafba961
     "Abc" -> R.string.ui_06d90109c8cc
@@ -56,6 +57,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Alt Text" -> R.string.ui_77055f48eb4c
     "An empty page" -> R.string.ui_7d238e75e701
     "An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft." -> R.string.ui_8bbaaa91a691
+    "An update is available" -> R.string.ui_caa6a5920fe4
+    "App updates" -> R.string.ui_5808deaecd58
     "Area" -> R.string.ui_024dc204d7ba
     "Arrange" -> R.string.ui_d557a972ab06
     "Author" -> R.string.ui_d95082a2ee57
@@ -102,7 +105,10 @@ private fun labelResource(source: String): Int? = when (source) {
     "Characters (with spaces)" -> R.string.ui_26edfe8e1326
     "Chart" -> R.string.ui_3e5b90ae053f
     "Chart Title" -> R.string.ui_0e4485a648e3
+    "Check for updates" -> R.string.ui_f26f3275e735
+    "Checking for updates…" -> R.string.ui_497a19986d82
     "Choose an item" -> R.string.ui_11997590030a
+    "Choose the app language" -> R.string.ui_dbc72a80ad3e
     "Choose the encoding that makes the text read correctly." -> R.string.ui_2d062f090f13
     "Clear Formatting" -> R.string.ui_804cf3352c42
     "Close" -> R.string.ui_7d9eb7acb13e
@@ -121,6 +127,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Comments" -> R.string.ui_355f79f29d7d
     "Continuous" -> R.string.ui_04f13cecbc50
     "Copy" -> R.string.ui_e21f935f11d7
+    "Couldn't check for updates. Try again when connected." -> R.string.ui_db037a3559ae
     "Crop Graphic" -> R.string.ui_d235c78b73d3
     "Crop Picture" -> R.string.ui_b4db66a2b745
     "Crop Position" -> R.string.ui_19676013a0a9
@@ -167,6 +174,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Elements" -> R.string.ui_e1ff7a906103
     "Emphasis" -> R.string.ui_0ab4b2c43447
     "Endnote" -> R.string.ui_150c8fdadd59
+    "Engine" -> R.string.ui_8e75ebbdb215
     "Equation" -> R.string.ui_560fa5972253
     "Equation Shapes" -> R.string.ui_a29285c93777
     "Even Page" -> R.string.ui_9cb248d4dcc3
@@ -190,6 +198,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Go to Footnote" -> R.string.ui_65b35fa5b8e6
     "Graphics" -> R.string.ui_a874fca87cdd
     "Graphics Effects" -> R.string.ui_8a763140d74c
+    "Grayscale" -> R.string.ui_93638ea9e0b0
     "Hanging" -> R.string.ui_ebd52c8ba1fa
     "Header" -> R.string.ui_ba5caa4285a8
     "Header & Footer" -> R.string.ui_aaf783850031
@@ -239,6 +248,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Landscape" -> R.string.ui_e658d3ae034a
     "Language" -> R.string.ui_a4fe65264ef7
     "Last Column" -> R.string.ui_1f875464bfd5
+    "Later" -> R.string.ui_73b6e48a1b55
     "Layout" -> R.string.ui_a511909161e1
     "Left" -> R.string.ui_58eb9032e3bb
     "Left-to-Right Text Direction" -> R.string.ui_223e0fda7514
@@ -270,6 +280,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "More Colors" -> R.string.ui_42ef0e721fd2
     "More Formatting" -> R.string.ui_73ec32ba5069
     "More languages are coming." -> R.string.ui_2e7839d9a1e9
+    "More options" -> R.string.ui_bc79cdffbaa8
     "Narrow" -> R.string.ui_ba227109ba7e
     "New" -> R.string.ui_18fdd549b2ed
     "New Comment" -> R.string.ui_d244fabdef89
@@ -287,6 +298,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "No app on this phone can do that." -> R.string.ui_d38d7faf0624
     "No comments yet. Select some text and add one below." -> R.string.ui_e833cba0678d
     "No headings yet. Use the Heading styles to add some." -> R.string.ui_05580123d88b
+    "No matching documents" -> R.string.ui_4e0ae55148f9
     "No results" -> R.string.ui_a43619f32117
     "None" -> R.string.ui_dc937b598926
     "Normal" -> R.string.ui_a7248eeb45eb
@@ -331,6 +343,9 @@ private fun labelResource(source: String): Int? = when (source) {
     "Picture Position" -> R.string.ui_2f968713ffc5
     "Pictures" -> R.string.ui_1e6245009d67
     "Pie" -> R.string.ui_5c9659bd1a6d
+    "Pin" -> R.string.ui_ff1cee744146
+    "Pin documents to find them here." -> R.string.ui_6bcc94085099
+    "Pinned" -> R.string.ui_f20c87946555
     "Portrait" -> R.string.ui_f71094c30160
     "Post" -> R.string.ui_a5554622c655
     "Presets" -> R.string.ui_954f93fe1c66
@@ -353,6 +368,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Recent Styles" -> R.string.ui_40dfa346fd02
     "Recently Used" -> R.string.ui_d61031acb443
     "Rectangles" -> R.string.ui_183bc1aabbc9
+    "Redo" -> R.string.ui_74273989b096
     "Reflection" -> R.string.ui_7538c2135b03
     "Reflection Variations" -> R.string.ui_93f3d37260ee
     "Reject" -> R.string.ui_ab604a360777
@@ -392,6 +408,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Save changes?" -> R.string.ui_a241799a18cc
     "Scan Document" -> R.string.ui_fb2fb5787dcd
     "Scatter" -> R.string.ui_4720c0c3df2e
+    "Search documents" -> R.string.ui_62706a35ade9
     "Section Breaks" -> R.string.ui_4874d6ec8fd6
     "Send Backward" -> R.string.ui_64a872d15087
     "Send Behind Text" -> R.string.ui_dfb82074c192
@@ -403,17 +420,6 @@ private fun labelResource(source: String): Int? = when (source) {
     "Shape" -> R.string.ui_e0e492707f85
     "Shape Styles" -> R.string.ui_21bc23db20c2
     "Shapes" -> R.string.ui_75e8028a7913
-    "Undo" -> R.string.ui_a8283ade3185
-    "Redo" -> R.string.ui_74273989b096
-    "Pinned" -> R.string.ui_f20c87946555
-    "Pin" -> R.string.ui_ff1cee744146
-    "Unpin" -> R.string.ui_ee3c71613054
-    "Search documents" -> R.string.ui_62706a35ade9
-    "No matching documents" -> R.string.ui_4e0ae55148f9
-    "Pin documents to find them here." -> R.string.ui_6bcc94085099
-    "More options" -> R.string.ui_bc79cdffbaa8
-    "Choose the app language" -> R.string.ui_dbc72a80ad3e
-    "Grayscale" -> R.string.ui_93638ea9e0b0
     "Share" -> R.string.ui_29887a5ff984
     "Share as PDF" -> R.string.ui_ee00ac0fd74a
     "Show" -> R.string.ui_0df6f1cad36c
@@ -492,11 +498,14 @@ private fun labelResource(source: String): Int? = when (source) {
     "Two" -> R.string.ui_94a72c074cfe
     "Type" -> R.string.ui_baaddf70fb5d
     "Underline" -> R.string.ui_02f843261112
+    "Undo" -> R.string.ui_a8283ade3185
+    "Unpin" -> R.string.ui_ee3c71613054
     "Update" -> R.string.ui_c1c1009d3f37
     "Upper" -> R.string.ui_ada6d7a662f0
     "Venn" -> R.string.ui_faeee26be226
     "Version %1\$s" -> R.string.ui_b65bfa7f1eb0
     "View" -> R.string.ui_dcc839a4015c
+    "View release" -> R.string.ui_db51f7282b31
     "Voice" -> R.string.ui_87bf2bc08589
     "Waterfall" -> R.string.ui_6b53bc225e0a
     "Wed" -> R.string.ui_58339f45df96
@@ -511,6 +520,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Wrap Text" -> R.string.ui_bd4ea610add7
     "X Y (Scatter)" -> R.string.ui_81dbe633e0d7
     "Yesterday" -> R.string.ui_566181254b29
+    "Your app is up to date" -> R.string.ui_9ad8837fdf66
     "Zoom In" -> R.string.ui_5a982cf9dc11
     "Zoom Out" -> R.string.ui_24649ee0c7a9
     "cm" -> R.string.ui_b5039c325d71

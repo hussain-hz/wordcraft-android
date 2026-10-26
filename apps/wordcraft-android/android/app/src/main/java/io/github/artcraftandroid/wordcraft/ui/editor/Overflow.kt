@@ -188,7 +188,10 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
             SettingsSwitch("AutoSave", "Automatically save files", vm.autoSaveOn, vm::chooseAutoSave)
             SettingsLine()
             SettingsSection("About")
-            SettingsItem("WordCraft", uiText("Version %1\$s", engineVersion))
+            SettingsItem("WordCraft", uiText("Version %1\$s", io.github.artcraftandroid.wordcraft.updates.AppUpdates.installedVersion(androidx.compose.ui.platform.LocalContext.current)))
+            SettingsItem("Engine", engineVersion)
+            SettingsItem("Check for updates", vm.updateStatus.ifEmpty { "App updates" }) { vm.checkForUpdates(manual = true) }
+            if (vm.appUpdate != null) SettingsItem("View release", vm.appUpdate!!.version) { vm.openUpdate() }
             Text(uiText("An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft."),
                 color = WordColors.SettingsValue,
                 fontSize = 14.sp,

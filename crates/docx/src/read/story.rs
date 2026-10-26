@@ -1066,6 +1066,10 @@ impl Reader<'_> {
 
     // ---- drawings ----
 
+    /// Read a `w:drawing` frame and dispatch its payload to the picture, shape or graphic reader.
+    /// Frame dimensions are converted from EMUs to bounded point values; placement, alternative
+    /// text and drawing ids are carried into the object. Returns `None` when the frame or payload
+    /// cannot be read. Ink written by WordCraft keeps its tool's caps rather than an outline cap.
     fn read_drawing(&mut self, sc: &mut StoryCtx, d: &El, rels: &Rels) -> Option<InlineObject> {
         let (c, anchored) = match d.child("wp:inline") {
             Some(c) => (c, false),
@@ -1142,13 +1146,16 @@ impl Reader<'_> {
             let wsp = direct_shape.or_else(|| gd.find("wps:wsp"))?;
             let mut obj = self.read_wsp(sc, wsp, rels, w, h, float);
             // A freeform: whether it's ink WordCraft wrote.
-            if let InlineObject::Shape { freeform: Some(f), .. } = &mut obj
+            if let InlineObject::Shape { freeform: Some(f), extra, .. } = &mut obj
                 && let Some(name) = c.child("wp:docPr").and_then(|p| p.attr("name"))
                 && let Some(tool) = super::freeform::ink_tool(name)
             {
                 let f = Arc::make_mut(f);
                 f.ink = Some(tool);
                 f.order = super::freeform::ink_order(name);
+                // Ink's round ends belong to its tool, not the optional shape outline. Keep
+                // its canonical model unchanged when reading the round cap the writer adds.
+                extra.cap = Default::default();
             }
             obj
         };
@@ -1486,6 +1493,10 @@ impl Reader<'_> {
         }
     }
 
+    /// Build a shape from `wps:wsp`, using frame dimensions `w` and `h` in points and the caller's
+    /// placement. Reads geometry, paint, effects and connector ends, and creates a text-box story
+    /// when present within the nesting limit. Explicit outline caps are preserved; missing or
+    /// unknown caps use flat ends, without resolving theme-inherited caps.
     fn read_wsp(&mut self, sc: &mut StoryCtx, wsp: &El, rels: &Rels, w: f32, h: f32, mut float: Float) -> InlineObject {
         let sppr = wsp.child("wps:spPr");
         float.set_spin(xfrm_spin(sppr));
@@ -1500,15 +1511,6 @@ impl Reader<'_> {
         let paint = shape_paint(sppr, wsp.child("wps:style"), &self.doc.settings.theme_colors, &self.theme_fills, self.group_fill.as_ref());
         let (stroke, stroke_width) = (paint.stroke, paint.stroke_width);
         let fill = if kind.is_open() { None } else { paint.fill };
-        // its own fill's transparency (`a:alpha` in the colour, 100000ths of opaque)
-        let fill_alpha = sppr
-            .and_then(|s| s.child("a:solidFill"))
-            .and_then(|f| f.els().next())
-            .and_then(|c| c.child("a:alpha"))
-            .and_then(|a| a.attr("val"))
-            .and_then(int)
-            .map(|v| v.clamp(0, 100_000) as f32 / 1000.0)
-            .filter(|a| *a < 100.0);
         let ln = sppr.and_then(|s| s.child("a:ln"));
         let effects = sppr.and_then(|s| s.child("a:effectLst")).map(effect_list).unwrap_or_default();
         let story = match txbx {
@@ -1567,7 +1569,12 @@ impl Reader<'_> {
         {
             part.body.auto_color = Some(rgb);
         }
-        let mut extra = ShapeExtra { dash: super::shape_style::line_dash(ln), outline_fill: paint.outline_fill, ..ShapeExtra::default() };
+        let mut extra = ShapeExtra {
+            dash: super::shape_style::line_dash(ln),
+            cap: wordcraft_doc::connector::LineCap::from_ooxml(ln.and_then(|e| e.attr("cap")).unwrap_or("flat")),
+            outline_fill: paint.outline_fill,
+            ..ShapeExtra::default()
+        };
         // A rounded rectangle's own corner (`adj`, ECMA-376 §20.1.10.56); other presets drawn as
         // rounded rectangles keep the default.
         if prst == "roundRect" {
@@ -1782,6 +1789,15 @@ impl Reader<'_> {
         let stroke = on("stroked").then(|| attr("strokecolor").map_or(Some(Rgb::BLACK), vml_color)).flatten();
         let stroke_width = attr("strokeweight").and_then(|v| measure(v, 1.0)).unwrap_or(0.75).clamp(0.0, 100.0);
         let fill = vml_fill(shape, shapetype);
+        let endcap = shape
+            .child("v:stroke")
+            .and_then(|s| s.attr("endcap"))
+            .or_else(|| shapetype.and_then(|t| t.child("v:stroke")).and_then(|s| s.attr("endcap")));
+        let cap = match endcap {
+            Some("square") => wordcraft_doc::connector::LineCap::Square,
+            Some("round") => wordcraft_doc::connector::LineCap::Round,
+            _ => wordcraft_doc::connector::LineCap::Flat,
+        };
         let kind = match shape.local() {
             "line" => Some(ShapeKind::Line),
             "rect" => Some(ShapeKind::Rectangle),
@@ -1805,7 +1821,7 @@ impl Reader<'_> {
             let font = tp
                 .attr("style")
                 .and_then(|s| vml_style(s, "font-family"))
-                .map(|f| f.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).chars().take(100).collect::<String>())
+                .map(|f| css_string(f).chars().take(100).collect::<String>())
                 .filter(|f| !f.is_empty());
             // The shapetype's WordArt shape (`o:spt` 136-175) bends the text like DrawingML's warp.
             let warp = vml_spt(shape, shapetype, type_id)
@@ -1884,7 +1900,7 @@ impl Reader<'_> {
                 story,
                 freeform: None,
                 effects: Default::default(),
-                extra: Default::default(),
+                extra: ShapeExtra { cap, ..Default::default() },
             });
         }
         // A freeform: its `path`, in its `coordsize` space; a `v:fill` with no opacity
@@ -1913,11 +1929,11 @@ impl Reader<'_> {
                 story: None,
                 freeform: Some(Arc::new(f)),
                 effects: Default::default(),
-                extra: Default::default(),
+                extra: ShapeExtra { cap, ..Default::default() },
             });
         }
         let kind = kind?;
-        let mut extra = ShapeExtra::default();
+        let mut extra = ShapeExtra { cap, ..Default::default() };
         if kind == ShapeKind::Line {
             // Arrowheads (`v:stroke` startarrow / endarrow): any but `none` is drawn.
             let arrow = |name: &str| shape.child("v:stroke").and_then(|s| s.attr(name)).is_some_and(|v| v != "none");
@@ -2285,6 +2301,49 @@ fn vml_style<'a>(style: &'a str, key: &str) -> Option<&'a str> {
     style.rsplit(';').filter_map(|d| d.split_once(':')).find(|(k, _)| k.trim().eq_ignore_ascii_case(key)).map(|(_, v)| v.trim())
 }
 
+/// A `v:textpath` style value with one pair of surrounding quotes removed and the writer's CSS
+/// escapes mapped back: `\` + up to six hex digits + one optional space is that character, and
+/// `\x` is `x` (#3994; `write::watermark::run` writes them). Only the surrounding pair goes, so a
+/// font name that starts or ends with an apostrophe keeps it. Word writes font names raw, and a
+/// lone trailing `\` none of CSS would accept stays literal.
+fn css_string(v: &str) -> String {
+    let v = v.trim();
+    let v = ['"', '\''].into_iter().find_map(|q| v.strip_prefix(q)?.strip_suffix(q)).unwrap_or(v).trim();
+    let mut out = String::with_capacity(v.len());
+    let mut chars = v.chars();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        let mut hex = String::new();
+        while hex.len() < 6 {
+            match chars.clone().next() {
+                Some(h) if h.is_ascii_hexdigit() => {
+                    hex.push(h);
+                    chars.next();
+                }
+                _ => break,
+            }
+        }
+        if hex.is_empty() {
+            match chars.next() {
+                Some(e) => out.push(e),
+                None => out.push('\\'),
+            }
+        } else {
+            if let Some(d) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                out.push(d);
+            }
+            // One whitespace after the escape is its terminator, not part of the value.
+            if chars.clone().next().is_some_and(|w| w.is_whitespace()) {
+                chars.next();
+            }
+        }
+    }
+    out
+}
+
 /// Placement of a VML shape (ECMA-376 Part 4, VML): `position:absolute` in its style makes it
 /// float, offset by `left`/`margin-left` and `top`/`margin-top` from the area named by
 /// `mso-position-horizontal-relative` / `mso-position-vertical-relative` (unless aligned with
@@ -2386,7 +2445,7 @@ fn vml_watermark(shape: &El) -> Option<wordcraft_doc::Watermark> {
     let font = tp
         .attr("style")
         .and_then(|s| vml_style(s, "font-family"))
-        .map(|f| f.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).chars().take(100).collect::<String>())
+        .map(|f| css_string(f).chars().take(100).collect::<String>())
         .filter(|f| !f.is_empty())
         .unwrap_or(default.font);
     let color = shape.attr("fillcolor").and_then(vml_color).unwrap_or(default.color);
@@ -2551,23 +2610,4 @@ fn preset_adjs(geom: &El) -> Vec<(String, i64)> {
         })
         .take(wordcraft_doc::connector::MAX_ADJ)
         .collect()
-}
-
-fn gradient_fill(g: &El, theme: &[Rgb]) -> Option<wordcraft_doc::connector::ShapeGradient> {
-    let stops = g
-        .child("a:gsLst")?
-        .children("a:gs")
-        .take(wordcraft_doc::connector::MAX_GRADIENT_STOPS)
-        .filter_map(|gs| {
-            let color = super::drawing_color::color(gs, theme)?;
-            let pos = gs.attr("pos").and_then(int).map_or(0.0, |v| v.clamp(0, 100_000) as f32 / 1000.0);
-            let (_, transparency) = effect_color(gs);
-            Some(wordcraft_doc::wordart::GradStop { pos, color, transparency })
-        })
-        .collect();
-    let angle = match g.child("a:lin") {
-        Some(l) => l.attr("ang").and_then(int).map_or(0.0, |v| v.rem_euclid(21_600_000) as f32 / 60_000.0),
-        None => 90.0,
-    };
-    wordcraft_doc::connector::ShapeGradient { stops, angle }.sanitized()
 }

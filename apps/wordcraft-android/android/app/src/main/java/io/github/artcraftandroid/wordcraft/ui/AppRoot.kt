@@ -7,6 +7,16 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -66,5 +76,17 @@ private fun AppScreens(vm: AppViewModel, onOpen: () -> Unit) {
         }
         // a text file's encoding is chosen over whatever screen is showing
         if (vm.encodingChoice != null) TextEncodingScreen(vm)
+        val update = vm.appUpdate
+        if (update != null && update.version != vm.dismissedUpdate) {
+            Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp)
+                .clip(RoundedCornerShape(16.dp)).background(WordColors.Sheet).padding(16.dp)) {
+                Text(uiText("A WordCraft update is available"), color = WordColors.OnPill, fontSize = 17.sp)
+                Text(uiText("Version %1\$s", update.version), color = WordColors.SettingsValue, fontSize = 14.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = vm::dismissUpdate) { Text(uiText("Later"), color = WordColors.SettingsValue) }
+                    TextButton(onClick = vm::openUpdate) { Text(uiText("View release"), color = WordColors.Accent) }
+                }
+            }
+        }
     }
 }

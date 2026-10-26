@@ -5,6 +5,7 @@
     <string name="ui_8f4594535134">%1$s من %2$s</string>
     <string name="ui_13326cace603">%1$s: %2$s</string>
     <string name="ui_1bb3583d74db">قالب وردكرافت</string>
+    <string name="ui_a832a817d125">يتوفر تحديث جديد لوردكرافت</string>
     <string name="ui_68e8be91edf7">أ، ب، ج، …</string>
     <string name="ui_81acaafba961">أب</string>
     <string name="ui_06d90109c8cc">أبج</string>
@@ -36,6 +37,8 @@
     <string name="ui_77055f48eb4c">نص بديل</string>
     <string name="ui_7d238e75e701">صفحة فارغة</string>
     <string name="ui_8bbaaa91a691">معالج نصوص مفتوح المصدر لأندرويد، يعتمد على محرك WordCraft. لا يتبع Microsoft ولا يحظى باعتمادها؛ Word علامة تجارية لشركة Microsoft.</string>
+    <string name="ui_caa6a5920fe4">يتوفر تحديث جديد</string>
+    <string name="ui_5808deaecd58">تحديثات التطبيق</string>
     <string name="ui_024dc204d7ba">المساحة</string>
     <string name="ui_d557a972ab06">الترتيب</string>
     <string name="ui_d95082a2ee57">الكاتب</string>
@@ -82,7 +85,10 @@
     <string name="ui_26edfe8e1326">الأحرف (مع مسافات)</string>
     <string name="ui_3e5b90ae053f">مخطط</string>
     <string name="ui_0e4485a648e3">عنوان المخطط</string>
+    <string name="ui_f26f3275e735">التحقق من التحديثات</string>
+    <string name="ui_497a19986d82">جارٍ التحقق من التحديثات…</string>
     <string name="ui_11997590030a">اختر عنصرًا</string>
+    <string name="ui_dbc72a80ad3e">اختر لغة التطبيق</string>
     <string name="ui_2d062f090f13">اختر الترميز الذي يعرض النص بصورة صحيحة.</string>
     <string name="ui_804cf3352c42">مسح التنسيق</string>
     <string name="ui_7d9eb7acb13e">إغلاق</string>
@@ -101,6 +107,7 @@
     <string name="ui_355f79f29d7d">التعليقات</string>
     <string name="ui_04f13cecbc50">مستمر</string>
     <string name="ui_e21f935f11d7">نسخ</string>
+    <string name="ui_db037a3559ae">تعذر التحقق من التحديثات. أعد المحاولة عند الاتصال بالإنترنت.</string>
     <string name="ui_d235c78b73d3">اقتصاص الرسم</string>
     <string name="ui_b4db66a2b745">اقتصاص الصورة</string>
     <string name="ui_19676013a0a9">موضع الاقتصاص</string>
@@ -147,6 +154,7 @@
     <string name="ui_e1ff7a906103">العناصر</string>
     <string name="ui_0ab4b2c43447">التأكيد</string>
     <string name="ui_150c8fdadd59">حاشية ختامية</string>
+    <string name="ui_8e75ebbdb215">المحرك</string>
     <string name="ui_560fa5972253">معادلة</string>
     <string name="ui_a29285c93777">أشكال المعادلات</string>
     <string name="ui_9cb248d4dcc3">حتى الصفحة</string>
@@ -170,6 +178,7 @@
     <string name="ui_65b35fa5b8e6">الانتقال إلى الحاشية السفلية</string>
     <string name="ui_a874fca87cdd">الرسومات</string>
     <string name="ui_8a763140d74c">تأثيرات الرسومات</string>
+    <string name="ui_93638ea9e0b0">درجات الرمادي</string>
     <string name="ui_ebd52c8ba1fa">معلّقة</string>
     <string name="ui_ba5caa4285a8">الرأس</string>
     <string name="ui_aaf783850031">رأس وتذييل الصفحة</string>
@@ -219,6 +228,7 @@
     <string name="ui_e658d3ae034a">أفقي</string>
     <string name="ui_a4fe65264ef7">اللغة</string>
     <string name="ui_1f875464bfd5">العمود الأخير</string>
+    <string name="ui_73b6e48a1b55">لاحقًا</string>
     <string name="ui_a511909161e1">تخطيط</string>
     <string name="ui_58eb9032e3bb">يسار</string>
     <string name="ui_223e0fda7514">اتجاه من اليسار إلى اليمين</string>
@@ -250,6 +260,7 @@
     <string name="ui_42ef0e721fd2">ألوان إضافية</string>
     <string name="ui_73ec32ba5069">تنسيقات إضافية</string>
     <string name="ui_2e7839d9a1e9">ستُضاف لغات أخرى لاحقًا.</string>
+    <string name="ui_bc79cdffbaa8">المزيد من الخيارات</string>
     <string name="ui_ba227109ba7e">ضيق</string>
     <string name="ui_18fdd549b2ed">جديد</string>
     <string name="ui_d244fabdef89">تعليق جديد</string>
@@ -267,6 +278,7 @@
     <string name="ui_d38d7faf0624">لا يوجد تطبيق على الهاتف لتنفيذ هذا الإجراء.</string>
     <string name="ui_e833cba0678d">لا توجد تعليقات بعد. حدد نصًا وأضف تعليقًا أدناه.</string>
     <string name="ui_05580123d88b">لا توجد عناوين بعد. استخدم أنماط العناوين لإضافتها.</string>
+    <string name="ui_4e0ae55148f9">لا توجد مستندات مطابقة</string>
     <string name="ui_a43619f32117">لا توجد نتائج</string>
     <string name="ui_dc937b598926">بلا</string>
     <string name="ui_a7248eeb45eb">عادي</string>
@@ -311,6 +323,9 @@
     <string name="ui_2f968713ffc5">موضع الصورة</string>
     <string name="ui_1e6245009d67">الصور</string>
     <string name="ui_5c9659bd1a6d">فطيرة</string>
+    <string name="ui_ff1cee744146">تثبيت</string>
+    <string name="ui_6bcc94085099">ثبّت مستنداتك لتجدها هنا.</string>
+    <string name="ui_f20c87946555">المثبّتة</string>
     <string name="ui_f71094c30160">عمودي</string>
     <string name="ui_a5554622c655">إرسال</string>
     <string name="ui_954f93fe1c66">الإعدادات المسبقة</string>
@@ -333,6 +348,7 @@
     <string name="ui_40dfa346fd02">الأنماط الحديثة</string>
     <string name="ui_d61031acb443">المستخدمة مؤخرًا</string>
     <string name="ui_183bc1aabbc9">مستطيلات</string>
+    <string name="ui_74273989b096">إعادة</string>
     <string name="ui_7538c2135b03">انعكاس</string>
     <string name="ui_93f3d37260ee">خيارات الانعكاس</string>
     <string name="ui_ab604a360777">رفض</string>
@@ -372,6 +388,7 @@
     <string name="ui_a241799a18cc">هل تريد حفظ التغييرات؟</string>
     <string name="ui_fb2fb5787dcd">مسح مستند بالكاميرا</string>
     <string name="ui_4720c0c3df2e">مبعثر</string>
+    <string name="ui_62706a35ade9">بحث في المستندات</string>
     <string name="ui_4874d6ec8fd6">فواصل المقاطع</string>
     <string name="ui_64a872d15087">إرسال للخلف</string>
     <string name="ui_dfb82074c192">خلف النص</string>
@@ -461,11 +478,14 @@
     <string name="ui_94a72c074cfe">اثنان</string>
     <string name="ui_baaddf70fb5d">النوع</string>
     <string name="ui_02f843261112">تسطير</string>
+    <string name="ui_a8283ade3185">تراجع</string>
+    <string name="ui_ee3c71613054">إلغاء التثبيت</string>
     <string name="ui_c1c1009d3f37">تحديث</string>
     <string name="ui_ada6d7a662f0">علوي</string>
     <string name="ui_faeee26be226">مخطط فن</string>
     <string name="ui_b65bfa7f1eb0">الإصدار %1$s</string>
     <string name="ui_dcc839a4015c">عرض</string>
+    <string name="ui_db51f7282b31">عرض الإصدار</string>
     <string name="ui_87bf2bc08589">صوت</string>
     <string name="ui_6b53bc225e0a">مخطط شلالي</string>
     <string name="ui_58339f45df96">الأربعاء</string>
@@ -480,19 +500,9 @@
     <string name="ui_bd4ea610add7">التفاف النص</string>
     <string name="ui_81dbe633e0d7">مخطط مبعثر (س، ص)</string>
     <string name="ui_566181254b29">أمس</string>
+    <string name="ui_9ad8837fdf66">لديك أحدث إصدار من التطبيق</string>
     <string name="ui_5a982cf9dc11">تكبير</string>
     <string name="ui_24649ee0c7a9">تصغير</string>
     <string name="ui_b5039c325d71">سم</string>
     <string name="ui_582967534d0f">بوصة</string>
-    <string name="ui_a8283ade3185">تراجع</string>
-    <string name="ui_74273989b096">إعادة</string>
-    <string name="ui_f20c87946555">المثبّتة</string>
-    <string name="ui_ff1cee744146">تثبيت</string>
-    <string name="ui_ee3c71613054">إلغاء التثبيت</string>
-    <string name="ui_62706a35ade9">بحث في المستندات</string>
-    <string name="ui_4e0ae55148f9">لا توجد مستندات مطابقة</string>
-    <string name="ui_6bcc94085099">ثبّت مستنداتك لتجدها هنا.</string>
-    <string name="ui_bc79cdffbaa8">المزيد من الخيارات</string>
-    <string name="ui_dbc72a80ad3e">اختر لغة التطبيق</string>
-    <string name="ui_93638ea9e0b0">درجات الرمادي</string>
 </resources>

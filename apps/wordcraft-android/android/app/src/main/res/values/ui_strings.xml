@@ -5,6 +5,7 @@
     <string name="ui_8f4594535134">%1$s of %2$s</string>
     <string name="ui_13326cace603">%1$s: %2$s</string>
     <string name="ui_1bb3583d74db">A WordCraft template</string>
+    <string name="ui_a832a817d125">A WordCraft update is available</string>
     <string name="ui_68e8be91edf7">A, B, C, …</string>
     <string name="ui_81acaafba961">Aa</string>
     <string name="ui_06d90109c8cc">Abc</string>
@@ -36,6 +37,8 @@
     <string name="ui_77055f48eb4c">Alt Text</string>
     <string name="ui_7d238e75e701">An empty page</string>
     <string name="ui_8bbaaa91a691">An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft.</string>
+    <string name="ui_caa6a5920fe4">An update is available</string>
+    <string name="ui_5808deaecd58">App updates</string>
     <string name="ui_024dc204d7ba">Area</string>
     <string name="ui_d557a972ab06">Arrange</string>
     <string name="ui_d95082a2ee57">Author</string>
@@ -82,7 +85,10 @@
     <string name="ui_26edfe8e1326">Characters (with spaces)</string>
     <string name="ui_3e5b90ae053f">Chart</string>
     <string name="ui_0e4485a648e3">Chart Title</string>
+    <string name="ui_f26f3275e735">Check for updates</string>
+    <string name="ui_497a19986d82">Checking for updates…</string>
     <string name="ui_11997590030a">Choose an item</string>
+    <string name="ui_dbc72a80ad3e">Choose the app language</string>
     <string name="ui_2d062f090f13">Choose the encoding that makes the text read correctly.</string>
     <string name="ui_804cf3352c42">Clear Formatting</string>
     <string name="ui_7d9eb7acb13e">Close</string>
@@ -101,6 +107,7 @@
     <string name="ui_355f79f29d7d">Comments</string>
     <string name="ui_04f13cecbc50">Continuous</string>
     <string name="ui_e21f935f11d7">Copy</string>
+    <string name="ui_db037a3559ae">Couldn\'t check for updates. Try again when connected.</string>
     <string name="ui_d235c78b73d3">Crop Graphic</string>
     <string name="ui_b4db66a2b745">Crop Picture</string>
     <string name="ui_19676013a0a9">Crop Position</string>
@@ -147,6 +154,7 @@
     <string name="ui_e1ff7a906103">Elements</string>
     <string name="ui_0ab4b2c43447">Emphasis</string>
     <string name="ui_150c8fdadd59">Endnote</string>
+    <string name="ui_8e75ebbdb215">Engine</string>
     <string name="ui_560fa5972253">Equation</string>
     <string name="ui_a29285c93777">Equation Shapes</string>
     <string name="ui_9cb248d4dcc3">Even Page</string>
@@ -170,6 +178,7 @@
     <string name="ui_65b35fa5b8e6">Go to Footnote</string>
     <string name="ui_a874fca87cdd">Graphics</string>
     <string name="ui_8a763140d74c">Graphics Effects</string>
+    <string name="ui_93638ea9e0b0">Grayscale</string>
     <string name="ui_ebd52c8ba1fa">Hanging</string>
     <string name="ui_ba5caa4285a8">Header</string>
     <string name="ui_aaf783850031">Header &amp; Footer</string>
@@ -219,6 +228,7 @@
     <string name="ui_e658d3ae034a">Landscape</string>
     <string name="ui_a4fe65264ef7">Language</string>
     <string name="ui_1f875464bfd5">Last Column</string>
+    <string name="ui_73b6e48a1b55">Later</string>
     <string name="ui_a511909161e1">Layout</string>
     <string name="ui_58eb9032e3bb">Left</string>
     <string name="ui_223e0fda7514">Left-to-Right Text Direction</string>
@@ -250,6 +260,7 @@
     <string name="ui_42ef0e721fd2">More Colors</string>
     <string name="ui_73ec32ba5069">More Formatting</string>
     <string name="ui_2e7839d9a1e9">More languages are coming.</string>
+    <string name="ui_bc79cdffbaa8">More options</string>
     <string name="ui_ba227109ba7e">Narrow</string>
     <string name="ui_18fdd549b2ed">New</string>
     <string name="ui_d244fabdef89">New Comment</string>
@@ -267,6 +278,7 @@
     <string name="ui_d38d7faf0624">No app on this phone can do that.</string>
     <string name="ui_e833cba0678d">No comments yet. Select some text and add one below.</string>
     <string name="ui_05580123d88b">No headings yet. Use the Heading styles to add some.</string>
+    <string name="ui_4e0ae55148f9">No matching documents</string>
     <string name="ui_a43619f32117">No results</string>
     <string name="ui_dc937b598926">None</string>
     <string name="ui_a7248eeb45eb">Normal</string>
@@ -311,6 +323,9 @@
     <string name="ui_2f968713ffc5">Picture Position</string>
     <string name="ui_1e6245009d67">Pictures</string>
     <string name="ui_5c9659bd1a6d">Pie</string>
+    <string name="ui_ff1cee744146">Pin</string>
+    <string name="ui_6bcc94085099">Pin documents to find them here.</string>
+    <string name="ui_f20c87946555">Pinned</string>
     <string name="ui_f71094c30160">Portrait</string>
     <string name="ui_a5554622c655">Post</string>
     <string name="ui_954f93fe1c66">Presets</string>
@@ -333,6 +348,7 @@
     <string name="ui_40dfa346fd02">Recent Styles</string>
     <string name="ui_d61031acb443">Recently Used</string>
     <string name="ui_183bc1aabbc9">Rectangles</string>
+    <string name="ui_74273989b096">Redo</string>
     <string name="ui_7538c2135b03">Reflection</string>
     <string name="ui_93f3d37260ee">Reflection Variations</string>
     <string name="ui_ab604a360777">Reject</string>
@@ -372,6 +388,7 @@
     <string name="ui_a241799a18cc">Save changes?</string>
     <string name="ui_fb2fb5787dcd">Scan Document</string>
     <string name="ui_4720c0c3df2e">Scatter</string>
+    <string name="ui_62706a35ade9">Search documents</string>
     <string name="ui_4874d6ec8fd6">Section Breaks</string>
     <string name="ui_64a872d15087">Send Backward</string>
     <string name="ui_dfb82074c192">Send Behind Text</string>
@@ -461,11 +478,14 @@
     <string name="ui_94a72c074cfe">Two</string>
     <string name="ui_baaddf70fb5d">Type</string>
     <string name="ui_02f843261112">Underline</string>
+    <string name="ui_a8283ade3185">Undo</string>
+    <string name="ui_ee3c71613054">Unpin</string>
     <string name="ui_c1c1009d3f37">Update</string>
     <string name="ui_ada6d7a662f0">Upper</string>
     <string name="ui_faeee26be226">Venn</string>
     <string name="ui_b65bfa7f1eb0">Version %1$s</string>
     <string name="ui_dcc839a4015c">View</string>
+    <string name="ui_db51f7282b31">View release</string>
     <string name="ui_87bf2bc08589">Voice</string>
     <string name="ui_6b53bc225e0a">Waterfall</string>
     <string name="ui_58339f45df96">Wed</string>
@@ -480,19 +500,9 @@
     <string name="ui_bd4ea610add7">Wrap Text</string>
     <string name="ui_81dbe633e0d7">X Y (Scatter)</string>
     <string name="ui_566181254b29">Yesterday</string>
+    <string name="ui_9ad8837fdf66">Your app is up to date</string>
     <string name="ui_5a982cf9dc11">Zoom In</string>
     <string name="ui_24649ee0c7a9">Zoom Out</string>
     <string name="ui_b5039c325d71">cm</string>
     <string name="ui_582967534d0f">in</string>
-    <string name="ui_a8283ade3185">Undo</string>
-    <string name="ui_74273989b096">Redo</string>
-    <string name="ui_f20c87946555">Pinned</string>
-    <string name="ui_ff1cee744146">Pin</string>
-    <string name="ui_ee3c71613054">Unpin</string>
-    <string name="ui_62706a35ade9">Search documents</string>
-    <string name="ui_4e0ae55148f9">No matching documents</string>
-    <string name="ui_6bcc94085099">Pin documents to find them here.</string>
-    <string name="ui_bc79cdffbaa8">More options</string>
-    <string name="ui_dbc72a80ad3e">Choose the app language</string>
-    <string name="ui_93638ea9e0b0">Grayscale</string>
 </resources>

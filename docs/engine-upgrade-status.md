@@ -1,61 +1,25 @@
-# Engine 0.10 Android integration
+# Engine 0.11 Android integration
 
-Upstream target: WordCraft v0.10.0, released 2026-10-22,
-commit `9130181a5fdaee2293e67756fd5458c601489f3c`.
-Source: https://github.com/storytold/wordcraft/releases/tag/v0.10.0
+Current app: 0.0.1, version code 1990. Engine: 0.11.0.
+Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
+Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
-The workspace now builds against the merged 0.10 engine. This is an Android
-integration of that release, retaining the fork's features, not an unmodified
-upstream checkout. Validation and universal APK build are complete. Current app version: 0.0.1-beta.6; engine: 0.10.0.
-Later UI changes and validation are documented in [the beta5 Arabic report](UPDATE-REPORT-ar.md)
-and [the beta6 gallery fix report](BETA6-ar.md).
+The 0.10 → 0.11 changes were three-way merged into the Android integration,
+retaining Android picture frames/effects, original SVGs, chart tools, gradients,
+opacity, mobile view and Arabic/English UI. No existing command IDs were removed.
+The 0.11 bounded picture decoder and raster-edit allocation checks are retained;
+Android picture framing still stores document properties without modifying source pixels.
 
-## Preserved Android features
+Validation: 3217 Rust tests (18 targets, serialized shared-dictionary fixtures),
+22 Kotlin tests, 4 Arabic resource tests; signed universal Release + compatibility
+Debug build; Lint 0 errors / 36 warnings / 8 hints. APK signatures, ABIs and checksums
+verified. Emulator x86_64 UI/update checks do not imply physical ARM-phone testing.
 
-- Picture frames, shadows, reflection, soft edges and SVG originals.
-- Chart palettes, radar and stock chart tools, labels and chart styles.
-- Shape presets and adjustments; legacy gradients and transparency are converted
-  into the 0.10 fill model for rendering and DOCX export.
-- Original/markup views, word highlighting during speech, mobile reflow.
-- Text encoding selection and Android document reads.
-- Arabic UI resources, RTL navigation and localized command search.
+The app checks its own GitHub Releases for newer stable APKs, with manual checks,
+a six-hour foreground cache, a daily persisted network job, a themed in-app notice,
+and one system notification per release (permission required). It opens the release
+page for download and does not install updates automatically.
 
-## Integration fixes
-
-- Adapted shared drawing commands to the upstream paint, outline and tagging APIs.
-- Connected the native Android image style commands rather than baking borders
-  into image pixels; undo retains the original bitmap.
-- Preserved SVG drawing in raster rendering and PDF export.
-- Restored Android-only command registrations and removed a duplicate arrange command.
-- Included original revision view in layout cache invalidation.
-- Radar markers respect explicit per-series suppression.
-- Kept forms-protection restrictions from the newer implementation.
-
-## Validation
-
-Passed checks (logs are in the workspace outputs directory):
-- Core libraries and Android bridge: 1988 tests, all passed.
-- PDF and raster rendering: 59 + 55 tests, all passed.
-- Android compatibility round trips: 2 tests, all passed (one overlaps the core run).
-- Regular-file read regression: 1 test, passed.
-- Arabic resources: 4 tests; Android JVM tests: 12 tests, all passed.
-- Universal debug APK: arm64-v8a and x86_64.
-- Emulator visual checks: Arabic home, new document menu, sample document with
-  table, live Arabic keyboard input, Arabic RTL/English LTR table settings.
-
-ARM-only builds, including the previous 0.7-based APK, abort in this x86 emulator's
-ARM translation layer while drawing. The native x86_64 build opens and edits the
-same sample successfully. The delivered universal APK uses the emulator's native
-ABI and retains arm64 for phones. Physical ARM hardware was not tested. The
-experimental scalar-renderer workaround was reverted because it did not help.
-
-The Android panic logger records future native failures in logcat. The renderer
-keeps the original SIMD/performance settings.
-
-The previous APK named
-`WordCraft-Compose-Arabic-Compatible-Updates.apk` is the older partial-backport
-build, not this upgraded engine. Do not confuse the two artifacts.
-
-This document records the engine integration checks. Repository publication and later
-UI releases are described in the Arabic update report; physical-phone testing is not
-implied by APK delivery.
+See [the Arabic 0.0.1 release report](RELEASE-0.0.1-ar.md) for artifacts, signing,
+upgrade compatibility, implementation details and validation limits. The beta5 and
+beta6 reports remain historical reports of those earlier builds.

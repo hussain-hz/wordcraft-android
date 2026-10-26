@@ -409,15 +409,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
 
 [[package]]
-name = "core_maths"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77745e017f5edba1a9c1d854f6f3a52dac8a12dd5af5d2f54aecf61e43d80d30"
-dependencies = [
- "libm",
-]
-
-[[package]]
 name = "cpubits"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -435,7 +426,7 @@ dependencies = [
 [[package]]
 name = "craft-pdf"
 version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=c3487320b2d1de657b860b3c8abb44e1f2b32bd8#c3487320b2d1de657b860b3c8abb44e1f2b32bd8"
+source = "git+https://github.com/storytold/craft-libs?rev=17744430be327d0257496a6a31c8d38fe20a6756#17744430be327d0257496a6a31c8d38fe20a6756"
 dependencies = [
  "krilla",
  "thiserror",
@@ -994,7 +985,7 @@ dependencies = [
 [[package]]
 name = "krilla"
 version = "0.8.2"
-source = "git+https://github.com/storytold/craft-libs?rev=c3487320b2d1de657b860b3c8abb44e1f2b32bd8#c3487320b2d1de657b860b3c8abb44e1f2b32bd8"
+source = "git+https://github.com/storytold/craft-libs?rev=17744430be327d0257496a6a31c8d38fe20a6756#17744430be327d0257496a6a31c8d38fe20a6756"
 dependencies = [
  "base64",
  "bumpalo",
@@ -1007,7 +998,6 @@ dependencies = [
  "pdf-writer",
  "png",
  "rustc-hash",
- "rustybuzz",
  "siphasher",
  "skrifa 0.42.1",
  "smallvec",
@@ -1036,12 +1026,6 @@ name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
-
-[[package]]
-name = "libm"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "linebender_resource_handle"
@@ -1503,24 +1487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustybuzz"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd3c7c96f8a08ee34eff8857b11b49b07d71d1c3f4e88f8a88d4c9e9f90b1702"
-dependencies = [
- "bitflags",
- "bytemuck",
- "core_maths",
- "log",
- "smallvec",
- "ttf-parser",
- "unicode-bidi-mirroring",
- "unicode-ccc",
- "unicode-properties",
- "unicode-script",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1852,6 +1818,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tinyvec"
+version = "1.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
+
+[[package]]
 name = "toml"
 version = "1.1.6+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1891,15 +1863,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
 
 [[package]]
-name = "ttf-parser"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
-dependencies = [
- "core_maths",
-]
-
-[[package]]
 name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1918,18 +1881,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c1cb5db39152898a79168971543b1cb5020dff7fe43c8dc468b0885f5e29df5"
 
 [[package]]
-name = "unicode-bidi-mirroring"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dfa6e8c60bb66d49db113e0125ee8711b7647b5579dc7f5f19c42357ed039fe"
-
-[[package]]
-name = "unicode-ccc"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce61d488bcdc9bc8b5d1772c404828b17fc481c0a582b5581e95fb233aef503e"
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1942,10 +1893,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b09c83c3c29d37506a3e260c08c03743a6bb66a9cd432c6934ab501a190571f"
 
 [[package]]
-name = "unicode-properties"
-version = "0.1.4"
+name = "unicode-normalization"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7df058c713841ad818f1dc5d3fd88063241cc61f49f5fbea4b951e8cf5a8d71d"
+checksum = "75cd3fb03d5288b3ba9a1ee103ac7e9cbb59f0b03d64f8ddfcc04dd42758a85d"
+dependencies = [
+ "tinyvec",
+]
 
 [[package]]
 name = "unicode-script"
@@ -2249,7 +2203,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wordcraft-android"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "android_logger",
  "log",
@@ -2262,14 +2216,14 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-android-bindgen"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "uniffi",
 ]
 
 [[package]]
 name = "wordcraft-doc"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "base64",
  "proptest",
@@ -2282,7 +2236,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-docbin"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "cfb",
  "chrono",
@@ -2299,7 +2253,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-docx"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "aes",
  "base64",
@@ -2323,7 +2277,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-engine"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "cfb",
  "chrono",
@@ -2354,7 +2308,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-fonts"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "harfrust",
  "kurbo",
@@ -2367,7 +2321,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-formats"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "cfb",
  "chardetng",
@@ -2385,14 +2339,15 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-geom"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
+ "image",
  "serde",
 ]
 
 [[package]]
 name = "wordcraft-layout"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "image",
  "js-sys",
@@ -2412,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-metafile"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "kurbo",
  "quick-xml",
@@ -2421,7 +2376,7 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-pdf"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "chrono",
  "craft-pdf",
@@ -2442,16 +2397,17 @@ dependencies = [
 
 [[package]]
 name = "wordcraft-proof"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "log",
  "miniz_oxide 0.8.9",
  "proptest",
+ "unicode-normalization",
 ]
 
 [[package]]
 name = "wordcraft-render"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "image",
  "log",

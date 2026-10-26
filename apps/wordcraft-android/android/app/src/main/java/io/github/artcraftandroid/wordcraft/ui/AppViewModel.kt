@@ -64,6 +64,41 @@ const val ACTION_OPEN_PINNED = "io.github.artcraftandroid.wordcraft.action.OPEN_
 
 /** The app's state: which screen shows, the open document, and the engine's view of it. */
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+    var appUpdate by mutableStateOf<io.github.artcraftandroid.wordcraft.updates.AppUpdate?>(null)
+        private set
+    var checkingUpdates by mutableStateOf(false)
+        private set
+    var updateStatus by mutableStateOf("")
+        private set
+    var dismissedUpdate by mutableStateOf<String?>(null)
+        private set
+
+    fun dismissUpdate() { dismissedUpdate = appUpdate?.version }
+
+    fun checkForUpdates(manual: Boolean = false) {
+        if (checkingUpdates) return
+        checkingUpdates = true
+        updateStatus = "Checking for updates…"
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            try {
+                appUpdate = io.github.artcraftandroid.wordcraft.updates.AppUpdates.check(context, force = manual)
+                updateStatus = if (appUpdate == null) "Your app is up to date" else "An update is available"
+                appUpdate?.let { io.github.artcraftandroid.wordcraft.updates.AppUpdates.notify(context, it) }
+                if (manual) dismissedUpdate = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                appUpdate = io.github.artcraftandroid.wordcraft.updates.AppUpdates.cached(context)
+                updateStatus = "Couldn't check for updates. Try again when connected."
+            } finally { checkingUpdates = false }
+        }
+    }
+
+    fun openUpdate() {
+        appUpdate?.let { linkRequests.trySend(it.pageUrl) }
+    }
+
     private fun messageText(source: String, vararg args: Any) = localizedUiText(getApplication<Application>(), source, *args)
     private val engineAsync = (app as WordcraftApplication).engine
 

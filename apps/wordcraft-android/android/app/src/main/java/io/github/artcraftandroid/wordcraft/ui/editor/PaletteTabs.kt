@@ -524,7 +524,7 @@ private fun ProofingPanel(vm: AppViewModel) {
     var hideAll by remember { mutableStateOf(false) }
     Scrolling {
         Caption("Language")
-        PaletteRow(Locale.getDefault().displayName, null, onClick = { vm.tell("More languages are coming.") }, chevron = true)
+        PaletteRow(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].displayName, null, onClick = { vm.tell("More languages are coming.") }, chevron = true)
         CheckboxRow("Hide All Proofing Marks", hideAll) {
             hideAll = it
             vm.command("review.proofing", json("value" to !it))

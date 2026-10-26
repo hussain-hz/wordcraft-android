@@ -272,9 +272,6 @@ fn is_zero(v: &f32) -> bool {
 fn is_false(v: &bool) -> bool {
     !*v
 }
-fn is_zero_u32(v: &u32) -> bool {
-    *v == 0
-}
 
 impl Float {
     pub fn stacking(&self) -> (bool, i64) { (self.z == 0, self.z) }
@@ -316,7 +313,14 @@ pub enum ShapeKind {
     RightTriangle,
     Diamond,
     Line,
+    /// A block arrow pointing right (`rightArrow`; also stands for the double-headed arrows).
     Arrow,
+    /// A block arrow pointing left (`leftArrow`).
+    ArrowLeft,
+    /// A block arrow pointing up (`upArrow`).
+    ArrowUp,
+    /// A block arrow pointing down (`downArrow`).
+    ArrowDown,
     Star,
     Heart,
     /// A text box (rectangle with a text story).

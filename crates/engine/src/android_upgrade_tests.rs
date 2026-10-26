@@ -1,4 +1,4 @@
-//! Regression coverage for Android features across the 0.10 engine migration.
+//! Regression coverage for Android features across upstream engine migrations.
 use serde_json::json;
 use wordcraft_doc::{Document, InlineObject, Rgb};
 use wordcraft_doc::fill::Fill;

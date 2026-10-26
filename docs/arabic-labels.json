@@ -493,5 +493,15 @@
   "Pin documents to find them here.": "ثبّت مستنداتك لتجدها هنا.",
   "More options": "المزيد من الخيارات",
   "Choose the app language": "اختر لغة التطبيق",
-  "Grayscale": "درجات الرمادي"
+  "Grayscale": "درجات الرمادي",
+  "App updates": "تحديثات التطبيق",
+  "A WordCraft update is available": "يتوفر تحديث جديد لوردكرافت",
+  "Check for updates": "التحقق من التحديثات",
+  "Checking for updates…": "جارٍ التحقق من التحديثات…",
+  "Your app is up to date": "لديك أحدث إصدار من التطبيق",
+  "An update is available": "يتوفر تحديث جديد",
+  "Couldn't check for updates. Try again when connected.": "تعذر التحقق من التحديثات. أعد المحاولة عند الاتصال بالإنترنت.",
+  "View release": "عرض الإصدار",
+  "Later": "لاحقًا",
+  "Engine": "المحرك"
 }

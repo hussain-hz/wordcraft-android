@@ -190,7 +190,7 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
             SettingsSection("App updates")
             SettingsItem("App version", io.github.artcraftandroid.wordcraft.updates.AppUpdates.installedVersion(androidx.compose.ui.platform.LocalContext.current))
             SettingsItem("Check for updates", vm.updateStatus.ifEmpty { "App updates" }) { vm.checkForUpdates(manual = true) }
-            if (vm.appUpdate != null) SettingsItem("View release", vm.appUpdate!!.version) { vm.openUpdate() }
+            if (vm.appUpdate != null) SettingsItem("Update details", vm.appUpdate!!.version) { vm.showingUpdate = true }
             SettingsLine()
             SettingsSection("About")
             SettingsItem("Engine", engineVersion)

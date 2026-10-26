@@ -58,6 +58,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "An empty page" -> R.string.ui_7d238e75e701
     "An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft." -> R.string.ui_8bbaaa91a691
     "An update is available" -> R.string.ui_caa6a5920fe4
+    "Android may ask you to allow updates from WordCraft. Your documents and settings will be kept." -> R.string.ui_0668a5e3f5db
     "App updates" -> R.string.ui_5808deaecd58
     "App version" -> R.string.ui_80a7db3b236f
     "Area" -> R.string.ui_024dc204d7ba
@@ -96,6 +97,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Callouts" -> R.string.ui_e7aae9333ef2
     "Camera" -> R.string.ui_03494b0d1f80
     "Cancel" -> R.string.ui_19766ed6ccb2
+    "Cancel download" -> R.string.ui_de5b23e69cd1
     "Capitalize Each Word" -> R.string.ui_b50e0a3cb3d9
     "Carlito and Caladea typefaces: SIL Open Font License 1.1" -> R.string.ui_f137bacf1e8d
     "Center" -> R.string.ui_d946067427e9
@@ -129,6 +131,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Continuous" -> R.string.ui_04f13cecbc50
     "Copy" -> R.string.ui_e21f935f11d7
     "Couldn't check for updates. Try again when connected." -> R.string.ui_db037a3559ae
+    "Couldn't download or verify the update. Please try again." -> R.string.ui_b63c7ea6144b
     "Crop Graphic" -> R.string.ui_d235c78b73d3
     "Crop Picture" -> R.string.ui_b4db66a2b745
     "Crop Position" -> R.string.ui_19676013a0a9
@@ -164,6 +167,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Documents you open show here." -> R.string.ui_526a8ed429fa
     "Don't Save" -> R.string.ui_20961bde9480
     "Doughnut" -> R.string.ui_5d821b815f53
+    "Download update" -> R.string.ui_4f494b22379b
+    "Downloading update: %1\$d%%" -> R.string.ui_9437db71b92f
     "Draw" -> R.string.ui_61517c08b3bf
     "Draw with Pen" -> R.string.ui_a16bcc337125
     "Draw with Touch" -> R.string.ui_40dbfbab7d57
@@ -193,6 +198,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Font Size" -> R.string.ui_4dd6ff92e0d9
     "Footer" -> R.string.ui_26c87bb51e69
     "Footnote" -> R.string.ui_aa8885bcba3b
+    "For more details, " -> R.string.ui_6b30cb1b6d6c
     "Funnel" -> R.string.ui_fc063af055a3
     "General" -> R.string.ui_c910d474dcd7
     "Go to Endnote" -> R.string.ui_41a1b0d65eb6
@@ -237,6 +243,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Insert Rows and Columns" -> R.string.ui_6c0125167d16
     "Insert Table" -> R.string.ui_7660cc9246f7
     "Inside" -> R.string.ui_123a3ebc57e3
+    "Install update" -> R.string.ui_cada4215d344
     "Intense Emphasis" -> R.string.ui_e50e9fc6c20d
     "Intense Quote" -> R.string.ui_b4d82d8253a0
     "Intense Reference" -> R.string.ui_1002c6ef0436
@@ -375,6 +382,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Reject" -> R.string.ui_ab604a360777
     "Reject All Changes" -> R.string.ui_e445fc8ed6c0
     "Reject and Move to Next" -> R.string.ui_67dae4ca2958
+    "Release notes are not available." -> R.string.ui_644d0520a9b5
     "Remove Footer" -> R.string.ui_c61ab19c1753
     "Remove Header" -> R.string.ui_2f2f09b9ec77
     "Remove Link" -> R.string.ui_e3e0591b816f
@@ -502,6 +510,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Undo" -> R.string.ui_a8283ade3185
     "Unpin" -> R.string.ui_ee3c71613054
     "Update" -> R.string.ui_c1c1009d3f37
+    "Update details" -> R.string.ui_91ea7f2353f6
     "Upper" -> R.string.ui_ada6d7a662f0
     "Venn" -> R.string.ui_faeee26be226
     "Version %1\$s" -> R.string.ui_b65bfa7f1eb0
@@ -511,6 +520,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Waterfall" -> R.string.ui_6b53bc225e0a
     "Wed" -> R.string.ui_58339f45df96
     "West" -> R.string.ui_41a6741e9a0f
+    "What's new" -> R.string.ui_135e912e8905
     "Wide" -> R.string.ui_147170e793c6
     "Width" -> R.string.ui_3019947b6daf
     "Word Count" -> R.string.ui_dfe17006f6a2
@@ -524,6 +534,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Your app is up to date" -> R.string.ui_9ad8837fdf66
     "Zoom In" -> R.string.ui_5a982cf9dc11
     "Zoom Out" -> R.string.ui_24649ee0c7a9
+    "click here" -> R.string.ui_9e1e4d616556
     "cm" -> R.string.ui_b5039c325d71
     "in" -> R.string.ui_582967534d0f
     else -> null

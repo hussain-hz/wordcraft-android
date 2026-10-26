@@ -504,5 +504,16 @@
   "View release": "عرض الإصدار",
   "Later": "لاحقًا",
   "Engine": "المحرك",
-  "App version": "إصدار التطبيق"
+  "App version": "إصدار التطبيق",
+  "Update details": "تفاصيل التحديث",
+  "What's new": "ما الجديد؟",
+  "Release notes are not available.": "لا توجد ملاحظات لهذا الإصدار.",
+  "Downloading update: %1$d%%": "جارٍ تنزيل التحديث: %1$d%%",
+  "Cancel download": "إلغاء التنزيل",
+  "Couldn't download or verify the update. Please try again.": "تعذّر تنزيل التحديث أو التحقق منه. حاول مرة أخرى.",
+  "Install update": "تثبيت التحديث",
+  "Download update": "تنزيل التحديث",
+  "Android may ask you to allow updates from WordCraft. Your documents and settings will be kept.": "قد يطلب Android السماح بتثبيت تحديثات من ووردكرافت. ستبقى مستنداتك وإعداداتك محفوظة.",
+  "For more details, ": "لمزيد من التفاصيل ",
+  "click here": "اضغط هنا"
 }

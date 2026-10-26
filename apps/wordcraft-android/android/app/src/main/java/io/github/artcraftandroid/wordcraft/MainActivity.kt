@@ -23,6 +23,10 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
+    private val allowUpdateInstall = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (packageManager.canRequestPackageInstalls()) vm.installDownloadedUpdate()
+    }
+
     private val openDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             // keep the right to write back to it
@@ -113,6 +117,20 @@ class MainActivity : ComponentActivity() {
                     } else {
                         replacing = kind == "replace"
                         pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            for (file in vm.updateInstallRequests) {
+                launchSafely {
+                    if (!packageManager.canRequestPackageInstalls()) {
+                        allowUpdateInstall.launch(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            android.net.Uri.parse("package:$packageName")))
+                    } else {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", file)
+                        startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
                     }
                 }
             }

@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit
 
 object AppUpdates {
     private const val API = "https://api.github.com/repos/hussain-hz/wordcraft-android/releases/latest"
-    private const val RELEASE_PREFIX = "https://github.com/hussain-hz/wordcraft-android/releases/"
     private const val CHANNEL = "app_updates"
     private const val JOB = 19110
     private const val NOTIFICATION = 19111
@@ -39,10 +38,22 @@ object AppUpdates {
     }
 
     fun cached(context: Context): AppUpdate? {
-        val p = prefs(context)
-        val version = p.getString("version", null) ?: return null
-        val url = p.getString("url", null) ?: return null
-        return if (url.startsWith(RELEASE_PREFIX) && newerRelease(version, installedVersion(context), false, false, true)) AppUpdate(version, url) else null
+        val raw = prefs(context).getString("release", null) ?: return null
+        return runCatching { parse(JSONObject(raw), installedVersion(context)) }.getOrNull()
+    }
+
+    internal fun parse(json: JSONObject, installed: String): AppUpdate? {
+        val tag = json.optString("tag_name")
+        val url = json.optString("html_url")
+        val assets = json.optJSONArray("assets")
+        val asset = (0 until (assets?.length() ?: 0)).mapNotNull { i ->
+            val a = assets!!.optJSONObject(i) ?: return@mapNotNull null
+            if (a.optString("state") != "uploaded") return@mapNotNull null
+            UpdateAsset(a.optString("name"), a.optString("browser_download_url"), a.optLong("size"),
+                a.optString("digest").removePrefix("sha256:")).takeIf(::validAsset)
+        }.firstOrNull()
+        if (!url.startsWith(RELEASE_PREFIX + "tag/") || !newerRelease(tag, installed, json.optBoolean("draft"), json.optBoolean("prerelease"), asset != null)) return null
+        return AppUpdate(tag, url, json.optString("body").take(100_000), asset)
     }
 
     /** No tokens, document data or identifiers are sent; only the public latest-release API. */
@@ -50,7 +61,7 @@ object AppUpdates {
         val p = prefs(context)
         val now = System.currentTimeMillis()
         val elapsed = now - p.getLong("checked", 0)
-        if (!force && elapsed in 0 until TimeUnit.HOURS.toMillis(6)) return@withContext cached(context)
+        if (!force && p.getInt("format", 0) == 2 && elapsed in 0 until TimeUnit.HOURS.toMillis(6)) return@withContext cached(context)
         val connection = URL(API).openConnection() as HttpURLConnection
         connection.connectTimeout = 15_000
         connection.readTimeout = 15_000
@@ -72,20 +83,13 @@ object AppUpdates {
                     }
                     check(bytes.size <= 2_000_000) { "Release response too large" }
                     val json = JSONObject(bytes.toString(Charsets.UTF_8))
-                    val tag = json.optString("tag_name")
-                    val url = json.optString("html_url")
-                    val assets = json.optJSONArray("assets")
-                    val hasApk = (0 until (assets?.length() ?: 0)).any { i ->
-                        val asset = assets!!.optJSONObject(i)
-                        asset != null && asset.optString("state") == "uploaded" && asset.optLong("size") > 0 &&
-                            asset.optString("name").endsWith(".apk", ignoreCase = true) &&
-                            asset.optString("browser_download_url").startsWith(RELEASE_PREFIX + "download/")
-                    }
-                    if (url.startsWith(RELEASE_PREFIX + "tag/") && newerRelease(tag, installedVersion(context), json.optBoolean("draft"), json.optBoolean("prerelease"), hasApk)) AppUpdate(tag, url) else null
+                    p.edit().putString("release", json.toString()).apply()
+                    parse(json, installedVersion(context))
                 }
                 else -> error("Release check failed: HTTP ${connection.responseCode}")
             }
-            p.edit().putLong("checked", now).putString("version", update?.version).putString("url", update?.pageUrl).apply()
+            p.edit().putLong("checked", now).putInt("format", 2).apply()
+            if (update == null) p.edit().remove("release").apply()
             if (update == null) context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION)
             update
         } finally {

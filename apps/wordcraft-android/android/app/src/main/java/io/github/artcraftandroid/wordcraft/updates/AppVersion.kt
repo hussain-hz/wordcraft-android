@@ -35,7 +35,25 @@ data class AppVersion(val major: Long, val minor: Long, val patch: Long, val pre
     }
 }
 
-data class AppUpdate(val version: String, val pageUrl: String)
+data class UpdateAsset(val name: String, val url: String, val size: Long, val sha256: String)
+data class AppUpdate(val version: String, val pageUrl: String, val notes: String = "", val asset: UpdateAsset? = null)
+
+internal const val RELEASE_PREFIX = "https://github.com/hussain-hz/wordcraft-android/releases/"
+internal const val MAX_APK_SIZE = 350L * 1024 * 1024
+
+internal fun validAsset(asset: UpdateAsset): Boolean =
+    asset.name.matches(Regex("WordCraft-[0-9A-Za-z.+-]+-release\\.apk")) &&
+        asset.url.startsWith(RELEASE_PREFIX + "download/") &&
+        runCatching { java.net.URI(asset.url).let { it.host == "github.com" && it.userInfo == null && it.fragment == null && it.query == null } }.getOrDefault(false) &&
+        asset.size in 1..MAX_APK_SIZE && asset.sha256.matches(Regex("[0-9a-fA-F]{64}"))
+
+/** Bilingual release bodies use explicit section markers; never guess a translation. */
+internal fun releaseNotes(body: String, arabic: Boolean): String {
+    val ar = "<!-- lang:ar -->"; val en = "<!-- lang:en -->"
+    if (!body.contains(ar) || !body.contains(en)) return body.trim()
+    val marker = if (arabic) ar else en
+    return body.substringAfter(marker).substringBefore("<!-- lang:").trim()
+}
 
 internal fun newerRelease(tag: String, current: String, draft: Boolean, prerelease: Boolean, hasApk: Boolean): Boolean {
     if (draft || prerelease || !hasApk) return false

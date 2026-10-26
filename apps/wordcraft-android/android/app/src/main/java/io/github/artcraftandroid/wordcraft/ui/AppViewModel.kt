@@ -65,6 +65,7 @@ const val ACTION_OPEN_PINNED = "io.github.artcraftandroid.wordcraft.action.OPEN_
 
 /** The app's state: which screen shows, the open document, and the engine's view of it. */
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+    var showingUpdate by mutableStateOf(false)
     var startTab by mutableStateOf(StartTab.Home)
     var appUpdate by mutableStateOf<io.github.artcraftandroid.wordcraft.updates.AppUpdate?>(null)
         private set
@@ -79,7 +80,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val context = getApplication<Application>()
             try {
-                appUpdate = io.github.artcraftandroid.wordcraft.updates.AppUpdates.check(context, force = manual)
+                val found = io.github.artcraftandroid.wordcraft.updates.AppUpdates.check(context, force = manual)
+                if (!downloadingUpdate) {
+                    if (downloadedRelease?.version != found?.version) {
+                        downloadedUpdate?.delete(); downloadedUpdate = null; downloadedRelease = null
+                        updateDownloadError = false
+                    }
+                    appUpdate = found
+                }
                 updateStatus = if (appUpdate == null) "Your app is up to date" else "An update is available"
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -92,6 +100,53 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openUpdate() {
         appUpdate?.let { linkRequests.trySend(it.pageUrl) }
+    }
+
+    var updateBytes by mutableStateOf(0L)
+        private set
+    var updateTotal by mutableStateOf(0L)
+        private set
+    var downloadingUpdate by mutableStateOf(false)
+        private set
+    var updateDownloadError by mutableStateOf(false)
+        private set
+    var downloadedUpdate by mutableStateOf<java.io.File?>(null)
+        private set
+    private var downloadJob: kotlinx.coroutines.Job? = null
+    private var downloadedRelease: io.github.artcraftandroid.wordcraft.updates.AppUpdate? = null
+    val updateInstallRequests = Channel<java.io.File>(Channel.BUFFERED)
+
+    fun downloadUpdate() {
+        val release = appUpdate ?: return
+        if (downloadJob != null || release.asset == null) return
+        downloadingUpdate = true; updateDownloadError = false; downloadedUpdate = null
+        updateBytes = 0; updateTotal = release.asset.size
+        downloadJob = viewModelScope.launch {
+            try {
+                val file = io.github.artcraftandroid.wordcraft.updates.UpdateDownload.download(getApplication(), release) { bytes, total ->
+                    withContext(Dispatchers.Main) { updateBytes = bytes; updateTotal = total }
+                }
+                downloadedRelease = release; downloadedUpdate = file
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                android.util.Log.w("AppUpdates", "Download or verification failed", e)
+                updateDownloadError = true
+            } finally { downloadingUpdate = false; downloadJob = null }
+        }
+    }
+
+    fun cancelUpdateDownload() { downloadJob?.cancel() }
+
+    fun installDownloadedUpdate() {
+        val file = downloadedUpdate ?: return
+        val release = downloadedRelease ?: return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { io.github.artcraftandroid.wordcraft.updates.UpdateDownload.verifyPackage(getApplication(), file, release) }
+                updateInstallRequests.send(file)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (_: Exception) { updateDownloadError = true; downloadedUpdate = null; file.delete() }
+        }
     }
 
     private fun messageText(source: String, vararg args: Any) = localizedUiText(getApplication<Application>(), source, *args)

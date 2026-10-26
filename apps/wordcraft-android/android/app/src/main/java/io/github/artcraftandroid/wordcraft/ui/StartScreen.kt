@@ -59,7 +59,7 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
     var pinned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var searching by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
-    var showingUpdate by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var showingUpdate by vm::showingUpdate
     val update = vm.appUpdate
     val newTab = vm.startTab == StartTab.New
     androidx.activity.compose.BackHandler(enabled = newTab && !showingUpdate && !searching) { vm.startTab = StartTab.Home }
@@ -116,19 +116,7 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
                 BottomTab("Open", LucideIcons.FolderOpen, false, Modifier.weight(1f), onOpen)
             }
         }
-        if (showingUpdate && update != null) {
-            Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable { showingUpdate = false }) {
-                Column(Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp)).background(WordColors.Sheet).clickable {}.padding(20.dp)) {
-                    Text(uiText("A WordCraft update is available"), color = WordColors.OnPill, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    Text(uiText("Version %1\$s", update.version), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
-                        androidx.compose.material3.TextButton(onClick = { showingUpdate = false }) { Text(uiText("Close"), color = WordColors.SettingsValue) }
-                        androidx.compose.material3.TextButton(onClick = { vm.openUpdate(); showingUpdate = false }) { Text(uiText("View release"), color = WordColors.Accent) }
-                    }
-                }
-            }
-        }
+
     }
 }
 

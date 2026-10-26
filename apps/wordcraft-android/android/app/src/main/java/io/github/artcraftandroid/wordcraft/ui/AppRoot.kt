@@ -66,5 +66,6 @@ private fun AppScreens(vm: AppViewModel, onOpen: () -> Unit) {
         }
         // a text file's encoding is chosen over whatever screen is showing
         if (vm.encodingChoice != null) TextEncodingScreen(vm)
+        if (vm.showingUpdate && vm.appUpdate != null) UpdateDetails(vm)
     }
 }

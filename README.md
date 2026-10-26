@@ -4,17 +4,18 @@
 
 <h1 align="center">WordCraft for Android</h1>
 
-## النسخة العربية — Release 0.0.4
+## النسخة العربية — Release 0.0.5
 
 المحرك **0.11.0** مع الاحتفاظ بأدوات Android، واجهة عربية/إنجليزية واتجاه تلقائي، رئيسية جديدة للأخيرة والمثبتة، واختيار اللغة من الإعدادات. أُصلحت المشاركة وأضيف زر إعادة بجانب التراجع.
 
+- [إصدار 0.0.5: تنزيل التحديثات داخل التطبيق باللغتين](docs/RELEASE-0.0.5-ar.md)
 - [إصدار 0.0.4: إصلاح تداخل الكتابة وتكرار الكلمات](docs/RELEASE-0.0.4-ar.md)
 - [إصدار 0.0.3: تبويب جديد المستقل](docs/RELEASE-0.0.3-ar.md)
 - [إصدار 0.0.2: أيقونة التحديث وتنظيم الإعدادات](docs/RELEASE-0.0.2-ar.md)
 - [تقرير إصدار 0.0.1: دمج المحرك وإشعارات تحديث التطبيق](docs/RELEASE-0.0.1-ar.md)
 - [إصلاح معارض الألوان والأشكال والنماذج في beta6](docs/BETA6-ar.md)
 - [تقرير beta5 بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
-- [تحميل التطبيق](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.4)
+- [تحميل التطبيق](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.5)
 - [فهرس الملفات المعدلة في هذا التحديث](docs/CHANGE-MAP-ar.md)
 - [المسار إلى تطبيق Android](apps/wordcraft-android/android)
 

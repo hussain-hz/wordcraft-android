@@ -1,6 +1,6 @@
 # Engine 0.11 Android integration
 
-Current app: 0.0.4, version code 4990. Engine: 0.11.0.
+Current app: 0.0.5, version code 5990. Engine: 0.11.0.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
@@ -19,7 +19,10 @@ The app checks its own GitHub Releases for newer stable APKs, with manual checks
 a six-hour foreground cache, a daily persisted network job, a themed in-app notice
 opened only by tapping a circular update icon on Home. No Android notification
 permission is requested and no system notifications are posted. It opens the release
-page for download and does not install updates automatically.
+page as an optional details link. Version 0.0.5 downloads a matching Release APK
+in-app, verifies its SHA-256, package, newer version and signing certificate, then
+opens Android installation only after the user taps Install. It does not install
+updates automatically.
 
 See [the Arabic 0.0.1 release report](RELEASE-0.0.1-ar.md) for artifacts, signing,
 upgrade compatibility, implementation details and validation limits. The beta5 and
@@ -34,3 +37,6 @@ existing-word replacement and removal of the overlapping composition overlay.
 This release passed 53 Android Rust bridge tests, 29 Kotlin tests and 4 Arabic
 resource tests. The earlier 3217-test engine run above belongs to the engine merge;
 the full engine suite was not rerun for this bridge/input fix.
+
+See [the 0.0.5 report](RELEASE-0.0.5-ar.md) for bilingual release details, cancellable
+in-app downloads and the Android installer handoff.

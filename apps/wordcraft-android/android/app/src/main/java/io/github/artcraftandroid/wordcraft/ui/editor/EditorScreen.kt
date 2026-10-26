@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -266,7 +267,7 @@ fun EditorScreen(vm: AppViewModel) {
                         title = title,
                         onClose = vm::close,
                         onEdit = vm::startEditing,
-                        onShare = vm::save,
+                        onShare = { vm.share(asPdf = false) },
                         onFind = vm::openFind,
                         onMore = { vm.overflowOpen = true },
                     )
@@ -275,16 +276,18 @@ fun EditorScreen(vm: AppViewModel) {
                 AnimatedVisibility(visible = vm.editing && !vm.paletteOpen && !vm.findSettingsOpen && !(landscape && imeBottom > 0), enter = HEADER_IN, exit = HEADER_OUT) {
                     EditTopBar(
                         canUndo = info.canUndo,
+                        canRedo = info.canRedo,
                         mobileView = mobile,
                         onDone = vm::stopEditing,
                         onShowCommands = {
                             if (vm.findOpen) vm.closeFind()
                             vm.togglePalette()
                         },
-                        onShare = vm::save,
+                        onShare = { vm.share(asPdf = false) },
                         onFind = vm::openFind,
                         onMobileView = vm::toggleMobileView,
                         onUndo = vm::undo,
+                        onRedo = vm::redo,
                         onMore = { vm.overflowOpen = true },
                     )
                 }
@@ -424,7 +427,7 @@ fun EditorScreen(vm: AppViewModel) {
                             onToggleView = vm::toggleMobileView,
                             onReadAloud = vm::startReadAloud,
                             onComments = { vm.commentsOpen = true },
-                            onShare = vm::save,
+                            onShare = { vm.share(asPdf = false) },
                             modifier = if (landscape) Modifier.align(Alignment.BottomStart).padding(start = 30.dp, bottom = 12.dp) else Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
                         )
                     }
@@ -529,13 +532,13 @@ fun EditorScreen(vm: AppViewModel) {
             if (vm.confirmClose) {
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = { vm.confirmClose = false },
-                    title = { Text("Save changes?") },
-                    text = { Text("Do you want to keep the changes to ${titleOf(vm.document?.name.orEmpty())}?") },
-                    confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.answerClose(save = true) }) { Text("Save") } },
+                    title = { Text(uiText("Save changes?")) },
+                    text = { Text(uiText("Do you want to keep the changes to %1\$s?", titleOf(vm.document?.name.orEmpty()))) },
+                    confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.answerClose(save = true) }) { Text(uiText("Save")) } },
                     dismissButton = {
                         Row {
-                            androidx.compose.material3.TextButton(onClick = { vm.confirmClose = false }) { Text("Cancel") }
-                            androidx.compose.material3.TextButton(onClick = { vm.answerClose(save = false) }) { Text("Don't Save") }
+                            androidx.compose.material3.TextButton(onClick = { vm.confirmClose = false }) { Text(uiText("Cancel")) }
+                            androidx.compose.material3.TextButton(onClick = { vm.answerClose(save = false) }) { Text(uiText("Don't Save")) }
                         }
                     },
                     containerColor = WordColors.Surface,
@@ -592,7 +595,7 @@ private fun MessageBar(text: String, onPrintLayout: () -> Unit, onClose: () -> U
     Column(Modifier.fillMaxWidth().background(WordColors.Strip).topEdge(WordColors.BarEdge)) {
         Row(Modifier.fillMaxWidth().height(if (open) 60.dp else 42.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text,
+                uiText(text),
                 color = WordColors.OnBar,
                 fontSize = 16.sp,
                 maxLines = if (open) 2 else 1,
@@ -603,8 +606,8 @@ private fun MessageBar(text: String, onPrintLayout: () -> Unit, onClose: () -> U
         }
         if (open) {
             Row(Modifier.fillMaxWidth().padding(end = 8.dp, bottom = 4.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
-                Text("Print Layout", color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onPrintLayout).padding(12.dp))
-                Text("Close", color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onClose).padding(12.dp))
+                Text(uiText("Print Layout"), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onPrintLayout).padding(12.dp))
+                Text(uiText("Close"), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onClose).padding(12.dp))
             }
         }
     }
@@ -631,7 +634,7 @@ private fun AudioSettingsSheet(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth().heightIn(max = 320.dp).background(WordColors.Surface).topEdge(WordColors.StripMore).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
         Caption("Reading Speed")
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Slow", color = WordColors.OnSurface, fontSize = 14.sp)
+            Text(uiText("Slow"), color = WordColors.OnSurface, fontSize = 14.sp)
             androidx.compose.material3.Slider(
                 value = rate,
                 onValueChange = { rate = it },
@@ -641,7 +644,7 @@ private fun AudioSettingsSheet(vm: AppViewModel) {
                 colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = WordColors.Accent, activeTrackColor = WordColors.Accent),
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             )
-            Text("Fast", color = WordColors.OnSurface, fontSize = 14.sp)
+            Text(uiText("Fast"), color = WordColors.OnSurface, fontSize = 14.sp)
         }
         if (vm.readingVoices.isNotEmpty()) {
             Caption("Voice")
@@ -687,7 +690,7 @@ private fun ContextBar(
         Row(Modifier.height(41.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             @Composable
             fun item(label: String, onClick: () -> Unit) {
-                Text(label, color = WordColors.OnPill, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp))
+                Text(uiText(label), color = WordColors.OnPill, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp))
             }
             if (equation) {
                 // the equation being edited: built up, or as a line of text
@@ -783,10 +786,10 @@ private fun FindBar(vm: AppViewModel, modifier: Modifier = Modifier) {
                     val current = view.current
                     val label = when {
                         count == 0 -> "No results"
-                        current != null -> "${current.toInt() + 1} of $count"
-                        else -> "$count results"
+                        current != null -> uiText("%1\$s of %2\$s", current.toInt() + 1, count)
+                        else -> uiText("Results: %1\$s", count)
                     }
-                    Text(label, color = WordColors.OnStrip, fontSize = 14.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 6.dp))
+                    Text(uiText(label), color = WordColors.OnStrip, fontSize = 14.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 6.dp))
                 }
                 if (vm.findQuery.isNotEmpty()) BarButton(LucideIcons.X.glyph(), WordColors.OnStrip, { vm.findSearch("") }, width = 30.dp, height = 32.dp, iconSize = 20.dp)
                 BarButton(LucideIcons.Search.glyph(), WordColors.OnStrip, { vm.findStep(1) }, width = 30.dp, height = 32.dp, iconSize = 20.dp)
@@ -805,9 +808,9 @@ private fun FindBar(vm: AppViewModel, modifier: Modifier = Modifier) {
                     FindField(value = vm.replaceText, hint = "Replace...", onValueChange = { vm.replaceText = it }, imeAction = ImeAction.Next, onAction = { vm.replaceOne() })
                 }
                 val tint = if (hasQuery) WordColors.OnStrip else WordColors.Disabled
-                Text("Replace", color = tint, fontSize = 16.sp, modifier = Modifier.clickable(enabled = hasQuery) { vm.replaceOne() }.padding(horizontal = 8.dp, vertical = 8.dp))
+                Text(uiText("Replace"), color = tint, fontSize = 16.sp, modifier = Modifier.clickable(enabled = hasQuery) { vm.replaceOne() }.padding(horizontal = 8.dp, vertical = 8.dp))
                 Box(Modifier.size(1.dp, 15.dp).background(WordColors.Disabled))
-                Text("Replace All", color = tint, fontSize = 16.sp, modifier = Modifier.clickable(enabled = hasQuery) { vm.replaceAll() }.padding(horizontal = 8.dp, vertical = 8.dp))
+                Text(uiText("Replace All"), color = tint, fontSize = 16.sp, modifier = Modifier.clickable(enabled = hasQuery) { vm.replaceAll() }.padding(horizontal = 8.dp, vertical = 8.dp))
             }
         }
     }
@@ -817,7 +820,7 @@ private fun FindBar(vm: AppViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun FindField(value: String, hint: String, onValueChange: (String) -> Unit, imeAction: ImeAction, onAction: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.padding(start = 6.dp), contentAlignment = Alignment.CenterStart) {
-        if (value.isEmpty()) Text(hint, color = WordColors.FindHint, fontSize = 16.sp, maxLines = 1)
+        if (value.isEmpty()) Text(uiText(hint), color = WordColors.FindHint, fontSize = 16.sp, maxLines = 1)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -836,7 +839,7 @@ private fun FindField(value: String, hint: String, onValueChange: (String) -> Un
 private fun FindSettingsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
     Column(modifier.background(WordColors.Surface)) {
         Row(Modifier.fillMaxWidth().height(48.dp).background(WordColors.Strip).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-            Text("Find settings", color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
+            Text(uiText("Find settings"), color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
             BarButton(LucideIcons.X.glyph(), WordColors.OnSurface, { vm.findSettingsOpen = false }, width = 56.dp, height = 48.dp)
         }
         Spacer(Modifier.height(8.dp))
@@ -862,7 +865,7 @@ private fun CheckRow(label: String, on: Boolean, onChange: (Boolean) -> Unit) {
             if (on) GlyphIcon(LucideIcons.Check.glyph(), androidx.compose.ui.graphics.Color.White, size = 14.dp)
         }
         Spacer(Modifier.width(9.dp))
-        Text(label, color = WordColors.OnSurface, fontSize = 17.sp)
+        Text(uiText(label), color = WordColors.OnSurface, fontSize = 17.sp)
     }
 }
 
@@ -887,7 +890,7 @@ private fun FormPicker(vm: AppViewModel, control: io.github.artcraftandroid.word
     }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = vm::cancelFormPick,
-        title = { Text(control.title.ifBlank { "Choose an item" }) },
+        title = { Text(control.title.ifBlank { uiText("Choose an item") }) },
         text = {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                 for ((i, item) in control.items.withIndex()) {
@@ -902,7 +905,7 @@ private fun FormPicker(vm: AppViewModel, control: io.github.artcraftandroid.word
                 }
             }
         },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = vm::cancelFormPick) { Text("Cancel") } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = vm::cancelFormPick) { Text(uiText("Cancel")) } },
         containerColor = WordColors.Surface,
         titleContentColor = WordColors.OnSurface,
     )

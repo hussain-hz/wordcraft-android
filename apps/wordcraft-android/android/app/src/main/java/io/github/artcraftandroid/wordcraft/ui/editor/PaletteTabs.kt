@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -115,7 +116,7 @@ private fun SimpleChoices(items: List<Pair<String, () -> Unit>>) {
 @Composable
 internal fun Caption(text: String) {
     Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.BottomStart) {
-        Text(text, color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
+        Text(uiText(text), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
     }
 }
 
@@ -125,7 +126,7 @@ internal fun CheckboxRow(label: String, checked: Boolean, onChange: (Boolean) ->
     Row(Modifier.fillMaxWidth().height(ROW + 1.dp).bottomEdge(WordColors.Divider).clickable { onChange(!checked) }, verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(4.dp))
         Checkbox(checked, onCheckedChange = onChange, colors = CheckboxDefaults.colors(checkedColor = WordColors.Accent))
-        Text(label, color = WordColors.OnSurface, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -160,7 +161,7 @@ private fun StepperRow(label: String, glyph: Glyph, value: Int, range: IntRange,
         Spacer(Modifier.width(16.dp))
         GlyphIcon(glyph, WordColors.OnStrip)
         Spacer(Modifier.width(16.dp))
-        Text(label, color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.weight(1f))
         BarButton(Glyph.Letters("−"), WordColors.AccentLight, { onChange((value - 1).coerceIn(range)) }, enabled = value > range.first, width = 48.dp, height = ROW, iconSize = 30.dp)
         Text("$value", color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.width(40.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         BarButton(Glyph.Letters("+"), WordColors.AccentLight, { onChange((value + 1).coerceIn(range)) }, enabled = value < range.last, width = 48.dp, height = ROW, iconSize = 30.dp)
@@ -175,7 +176,7 @@ private fun WideButton(label: String, onClick: () -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(36.dp).clip(RoundedCornerShape(4.dp)).background(WordColors.Accent).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = Color.White, fontSize = 16.sp)
+        Text(uiText(label), color = Color.White, fontSize = 16.sp)
     }
 }
 
@@ -338,7 +339,7 @@ private fun ThicknessPanel(vm: AppViewModel) {
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("${sizeLabel(mm)} mm", color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.width(96.dp).padding(start = 16.dp))
+                Text(uiText("%1\$s mm", sizeLabel(mm)), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.width(96.dp).padding(start = 16.dp))
                 Box(Modifier.weight(1f).padding(end = 24.dp).height((pt * 1.2f).coerceAtLeast(1f).dp).background(color))
             }
         }
@@ -417,7 +418,7 @@ private fun CustomMarginsPanel(vm: AppViewModel) {
                     }),
                     modifier = Modifier.weight(1f).border(1.dp, WordColors.Pressed).padding(8.dp),
                 )
-                Text(if (usesInches) "in" else "cm", color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                Text(uiText(if (usesInches) "in" else "cm"), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -541,7 +542,7 @@ private fun WordCountPanel(vm: AppViewModel) {
         val c = counts
         for ((label, key) in listOf("Pages" to "pages", "Words" to "words", "Characters (no spaces)" to "characters", "Characters (with spaces)" to "charactersWithSpaces")) {
             Row(Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text(uiText(label), color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 Text(c?.optLong(key)?.let { "%,d".format(it) } ?: "", color = WordColors.OnSurface, fontSize = 15.sp)
             }
         }
@@ -620,7 +621,7 @@ fun HeadingsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
     Column(modifier.background(WordColors.Surface)) {
         Row(Modifier.fillMaxWidth().height(50.dp).topEdge(WordColors.StripMore).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-            Text("Headings", color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
+            Text(uiText("Headings"), color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
             BarButton(LucideIcons.X.glyph(), WordColors.OnStrip, { vm.headingsOpen = false }, width = 56.dp, height = 50.dp)
         }
         androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f)) {
@@ -643,7 +644,7 @@ fun HeadingsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
                 }
             }
             if (headings.isEmpty()) item {
-                Text("No headings yet. Use the Heading styles to add some.", color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
+                Text(uiText("No headings yet. Use the Heading styles to add some."), color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
             }
         }
         // lines that look like headings, in a document without heading styles
@@ -651,7 +652,7 @@ fun HeadingsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
             Modifier.fillMaxWidth().height(50.dp).topEdge(WordColors.Divider).clickable { vm.chooseAutoHeadings(!vm.autoHeadings) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Auto-Detected Headings", color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 40.dp))
+            Text(uiText("Auto-Detected Headings"), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 40.dp))
             SmallSwitch(vm.autoHeadings, Modifier.padding(end = 20.dp))
         }
     }
@@ -666,13 +667,13 @@ fun FormPane(title: String, action: String, fields: List<String>, onDone: (List<
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(modifier.background(WordColors.Divider)) {
         Row(Modifier.fillMaxWidth().height(48.dp).background(WordColors.Bar).bottomEdge(WordColors.Strip), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
+            Text(uiText(title), color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
             val ready = values.last().value.isNotBlank()
-            Text(action, color = if (ready) WordColors.Accent else WordColors.Disabled, fontSize = 16.sp, modifier = Modifier.clickable(enabled = ready) { onDone(values.map { it.value }) }.padding(12.dp))
-            Text("Cancel", color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onCancel).padding(12.dp))
+            Text(uiText(action), color = if (ready) WordColors.Accent else WordColors.Disabled, fontSize = 16.sp, modifier = Modifier.clickable(enabled = ready) { onDone(values.map { it.value }) }.padding(12.dp))
+            Text(uiText("Cancel"), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.clickable(onClick = onCancel).padding(12.dp))
         }
         for ((i, label) in fields.withIndex()) {
-            Text(label, color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 23.dp, top = 16.dp, bottom = 4.dp))
+            Text(uiText(label), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 23.dp, top = 16.dp, bottom = 4.dp))
             androidx.compose.foundation.text.BasicTextField(
                 value = values[i].value,
                 onValueChange = { values[i].value = it },

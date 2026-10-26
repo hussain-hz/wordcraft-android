@@ -77,12 +77,17 @@ pub enum WrapText {
 impl WrapText {
     /// From the OOXML value (`bothSides`, `left`, `right`, `largest`).
     pub fn from_ooxml(v: &str) -> Option<WrapText> {
-        match v {
-            "bothSides" => Some(WrapText::BothSides),
-            "left" => Some(WrapText::Left),
-            "right" => Some(WrapText::Right),
-            "largest" => Some(WrapText::Largest),
-            _ => None,
+        let v = v.trim();
+        if v.eq_ignore_ascii_case("bothSides") || v.eq_ignore_ascii_case("both") {
+            Some(WrapText::BothSides)
+        } else if v.eq_ignore_ascii_case("left") {
+            Some(WrapText::Left)
+        } else if v.eq_ignore_ascii_case("right") {
+            Some(WrapText::Right)
+        } else if v.eq_ignore_ascii_case("largest") {
+            Some(WrapText::Largest)
+        } else {
+            None
         }
     }
 
@@ -216,18 +221,14 @@ pub struct Float {
     /// laid out, as Word for Windows does (Word for Mac draws hidden VML shapes).
     #[serde(skip_serializing_if = "is_false")]
     pub hidden: bool,
-    /// Stacking order among floating objects (`wp:anchor/@relativeHeight`): a higher one is drawn
-    /// over a lower one. 0 = not set: drawn over every object that has one, in document order.
+    /// Anchored in a table cell but placed on the page, not in the cell (`wp:anchor/@layoutInCell`
+    /// off, any VML shape in a header or footer): a picture watermark in a header that starts with a table.
+    #[serde(skip_serializing_if = "is_false")]
+    pub outside_cell: bool,
+    /// Stacking order among floating objects (`wp:anchor/@relativeHeight`): higher is drawn on
+    /// top. 0 = unknown, drawn in document order (objects inserted here, or from other formats).
     #[serde(skip_serializing_if = "is_zero_i64")]
     pub z: i64,
-}
-
-impl Float {
-    /// How floating objects are stacked, lowest first: the ones with a stacking order by it, then
-    /// the ones without (in document order, which the caller keeps by sorting stably).
-    pub fn stacking(&self) -> (bool, i64) {
-        (self.z == 0, self.z)
-    }
 }
 
 /// Longest alternative text kept (characters): hostile files and commands are capped.
@@ -271,8 +272,12 @@ fn is_zero(v: &f32) -> bool {
 fn is_false(v: &bool) -> bool {
     !*v
 }
+fn is_zero_u32(v: &u32) -> bool {
+    *v == 0
+}
 
 impl Float {
+    pub fn stacking(&self) -> (bool, i64) { (self.z == 0, self.z) }
     /// The rotation and flips, the angle normalised to `0..360` (a NaN angle is no rotation).
     pub fn spin(&self) -> wordcraft_geom::Spin {
         wordcraft_geom::Spin::new(self.rot, self.flip_h, self.flip_v)
@@ -330,6 +335,60 @@ pub enum NoteKind {
     #[default]
     Footnote,
     Endnote,
+}
+
+/// Where a positional tab ([`InlineObject::PositionalTab`]) lands on its line, and how the text
+/// after it lines up there (ECMA-376 `ST_PTabAlignment`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum PTabAlign {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
+impl PTabAlign {
+    pub const ALL: [PTabAlign; 3] = [PTabAlign::Left, PTabAlign::Center, PTabAlign::Right];
+
+    /// The OOXML name (`left`, `center`, `right`).
+    pub fn ooxml(self) -> &'static str {
+        match self {
+            PTabAlign::Left => "left",
+            PTabAlign::Center => "center",
+            PTabAlign::Right => "right",
+        }
+    }
+
+    pub fn from_ooxml(v: &str) -> Option<PTabAlign> {
+        PTabAlign::ALL.into_iter().find(|a| a.ooxml() == v)
+    }
+}
+
+/// What a positional tab's place is measured against (ECMA-376 `ST_PTabRelativeTo`): the text
+/// margins, or the paragraph's indents.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum PTabBase {
+    #[default]
+    Margin,
+    Indent,
+}
+
+impl PTabBase {
+    pub const ALL: [PTabBase; 2] = [PTabBase::Margin, PTabBase::Indent];
+
+    /// The OOXML name (`margin`, `indent`).
+    pub fn ooxml(self) -> &'static str {
+        match self {
+            PTabBase::Margin => "margin",
+            PTabBase::Indent => "indent",
+        }
+    }
+
+    pub fn from_ooxml(v: &str) -> Option<PTabBase> {
+        PTabBase::ALL.into_iter().find(|a| a.ooxml() == v)
+    }
 }
 
 /// How ruby (phonetic guide) text lines up over its base text (ECMA-376 `ST_RubyAlign`).
@@ -398,8 +457,9 @@ pub enum InlineObject {
         /// Crop (left, top, right, bottom) fractions 0..1.
         #[serde(default)]
         crop: [f32; 4],
-        /// The OLE object (embedded or linked file) this picture shows, as read from a file:
-        /// saving writes the object back, not only its picture. See [`crate::graphic::Embedded`].
+        /// The OLE object (embedded or linked file) or Word signature line this picture shows, as
+        /// read from a file: saving writes the object back, not only its picture. See
+        /// [`crate::graphic::Embedded`].
         #[serde(default, skip_serializing_if = "Option::is_none")]
         ole: Option<std::sync::Arc<crate::graphic::Embedded>>,
         /// Shadow, glow and soft edges (Picture Effects), as a shape's.
@@ -427,7 +487,7 @@ pub enum InlineObject {
         kind: ShapeKind,
         w: f32,
         h: f32,
-        fill: Option<crate::props::Rgb>,
+        fill: Option<crate::fill::Fill>,
         stroke: Option<crate::props::Rgb>,
         #[serde(default)]
         stroke_width: f32,
@@ -575,6 +635,17 @@ pub enum InlineObject {
         #[serde(default, skip_serializing_if = "CharProps::is_empty")]
         props: Box<CharProps>,
     },
+    /// A positional tab (Word's alignment tab, `w:ptab`): it goes to the left edge, centre or
+    /// right edge of the margins or of the indents, whatever the paragraph's tab stops, and the
+    /// text after it lines up there. Text already past that place sends it to the next line.
+    PositionalTab {
+        #[serde(default)]
+        align: PTabAlign,
+        #[serde(default)]
+        relative_to: PTabBase,
+        #[serde(default)]
+        leader: crate::props::TabLeader,
+    },
     /// Something we don't model, kept for round-trip (raw XML of the source format).
     Opaque {
         format: String,
@@ -598,10 +669,10 @@ pub struct GroupChild {
 pub const MAX_GROUP_CHILDREN: usize = 1000;
 
 /// The background fill and outline of a Drawing Canvas (an [`InlineObject::Group`] with `canvas`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CanvasStyle {
-    pub fill: Option<crate::props::Rgb>,
+    pub fill: Option<crate::fill::Fill>,
     pub stroke: Option<crate::props::Rgb>,
     /// Outline width, points.
     pub stroke_width: f32,
@@ -704,6 +775,14 @@ impl InlineObject {
             })
             .collect()
     }
+    /// A legacy form field's definition (`FORMCHECKBOX`, `FORMTEXT`, `FORMDROPDOWN`), read from
+    /// the `w:ffData` it keeps; `None` for anything else.
+    pub fn legacy_form(&self) -> Option<crate::legacy_form::LegacyForm> {
+        match self {
+            InlineObject::Field { form, .. } if !form.is_empty() => crate::legacy_form::LegacyForm::parse(form),
+            _ => None,
+        }
+    }
     /// Zero-width markers don't take part in layout.
     pub fn is_marker(&self) -> bool {
         matches!(
@@ -782,6 +861,7 @@ impl InlineObject {
             InlineObject::Field { result, .. } => result,
             InlineObject::Equation { linear, .. } => linear,
             InlineObject::Ruby { base, .. } => base,
+            InlineObject::PositionalTab { .. } => "\t",
             InlineObject::Opaque { text, .. } => text,
             _ => "",
         }
@@ -896,7 +976,7 @@ impl Paragraph {
                 k += 1;
                 continue;
             }
-            let font = runs.peek().filter(|(r, _)| r.contains(&i)).and_then(|(_, p)| p.font.as_deref());
+            let font = runs.peek().filter(|(r, _)| r.contains(&i)).and_then(|(_, p)| p.shown_font());
             out.push(font.and_then(|f| crate::symbol_fonts::symbol_char(f, c)).unwrap_or(c));
         }
         out
@@ -1348,7 +1428,7 @@ impl Paragraph {
         let mut a = 0;
         let mut prev_end = false;
         for (i, c) in t.char_indices() {
-            if i >= off {
+            if i > off {
                 break;
             }
             if prev_end && c != ' ' {
@@ -1361,7 +1441,9 @@ impl Paragraph {
             }
         }
         let mut b = t.len();
-        let mut ended = false;
+        // A caret on the space right after a sentence's end belongs to that sentence; a terminator
+        // directly followed by text ("Hello.World") doesn't end the sentence the caret is in.
+        let mut ended = t.get(..off).unwrap_or("").ends_with(['.', '!', '?']) && t.get(off..).unwrap_or("").starts_with(' ');
         for (i, c) in t.get(off..).unwrap_or("").char_indices() {
             if ended && c != ' ' {
                 b = off + i;
@@ -1378,6 +1460,19 @@ impl Paragraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sentence_at_sentence_start() {
+        let p = Paragraph::with_text("Hello. World", CharProps::default());
+        assert_eq!(p.sentence_at(0), (0, 7));
+        assert_eq!(p.sentence_at(6), (0, 7));
+        assert_eq!(p.sentence_at(7), (7, 12));
+        assert_eq!(p.sentence_at(8), (7, 12));
+        assert_eq!(p.sentence_at(99), (7, 12));
+        let p = Paragraph::with_text("Hello.World", CharProps::default());
+        assert_eq!(p.sentence_at(6), (6, 11));
+        assert_eq!(p.sentence_at(8), (6, 11));
+    }
 
     fn bold() -> CharProps {
         CharProps { bold: Some(true), ..Default::default() }

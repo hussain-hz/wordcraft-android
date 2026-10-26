@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -68,7 +69,7 @@ internal fun StyleRow(l: StyleLook, selected: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
-            l.name,
+            uiText(l.name),
             color = l.color?.let(::styleColor) ?: WordColors.OnSurface,
             fontSize = (l.size * 1.6f).coerceIn(10f, 26f).sp,
             fontFamily = fontKind(l.font),
@@ -114,7 +115,7 @@ internal fun ListTile(w: Dp, h: Dp, selected: Boolean, onClick: () -> Unit, cont
 /** A tile's label: None, or a bullet. */
 @Composable
 internal fun TileText(text: String, size: TextUnit) {
-    Text(text, color = WordColors.OnSurface, fontSize = size, textAlign = TextAlign.Center)
+    Text(uiText(text), color = WordColors.OnSurface, fontSize = size, textAlign = TextAlign.Center)
 }
 
 /** A numbered list in small: three numbers, each with a line, the numbers right-aligned in their column. */
@@ -137,10 +138,10 @@ internal fun NumberPreview(labels: List<String>) {
 @Composable
 internal fun MarginRow(name: String, m: List<Float>, mirrored: Boolean, selected: Boolean, length: (Float) -> String, onClick: () -> Unit) {
     PresetRow(selected, onClick, icon = { MarginIcon(m, mirrored) }) {
-        Text(name, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
+        Text(uiText(name), color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
         val (l, r) = if (mirrored) "Inside" to "Outside" else "Left" to "Right"
-        TwoColumns("Top: ${length(m[0])}", "Bottom: ${length(m[1])}")
-        TwoColumns("$l: ${length(m[2])}", "$r: ${length(m[3])}")
+        TwoColumns(uiText("Top: %1\$s", length(m[0])), uiText("Bottom: %1\$s", length(m[1])))
+        TwoColumns(uiText("%1\$s: %2\$s", uiText(l), length(m[2])), uiText("%1\$s: %2\$s", uiText(r), length(m[3])))
     }
 }
 
@@ -148,7 +149,7 @@ internal fun MarginRow(name: String, m: List<Float>, mirrored: Boolean, selected
 @Composable
 internal fun PaperRow(name: String, w: Float, h: Float, selected: Boolean, size: String, onClick: () -> Unit) {
     PresetRow(selected, onClick, icon = { PaperIcon(w, h) }) {
-        Text(name, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
+        Text(uiText(if (name == "Letter") "Letter (paper)" else name), color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
         Text(size, color = WordColors.OnSurface, fontSize = 14.sp, lineHeight = 18.sp)
     }
 }
@@ -458,7 +459,7 @@ private fun SizeField(label: String, points: Float, onFocus: (Boolean) -> Unit, 
     fun shown(pt: Float) = String.format(Locale.US, "%.2f", pt / 72f).trimEnd('0').trimEnd('.') + " in"
     var text by remember(points) { mutableStateOf(shown(points)) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text(label, color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
         Row(Modifier.fillMaxWidth().height(32.dp).border(1.dp, WordColors.CheckEdge).background(WordColors.FindField), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = text,

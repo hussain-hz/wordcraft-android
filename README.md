@@ -4,14 +4,24 @@
 
 <h1 align="center">WordCraft for Android</h1>
 
+## النسخة العربية — beta5
+
+المحرك **0.10.0** مع الاحتفاظ بأدوات Android، واجهة عربية/إنجليزية واتجاه تلقائي، رئيسية جديدة للأخيرة والمثبتة، واختيار اللغة من الإعدادات. أُصلحت المشاركة وأضيف زر إعادة بجانب التراجع.
+
+- [التقرير الكامل بالعربية: التغييرات والاختبارات وحدودها](docs/UPDATE-REPORT-ar.md)
+- [تحميل APK التجريبي الأخير](https://github.com/hussain-hz/wordcraft-android/releases/tag/v0.0.1-beta.5)
+- [المسار إلى تطبيق Android](apps/wordcraft-android/android)
+
+
+
 <p align="center">
   <b>WordCraft-android is an open-source reimplementation of the Microsoft Word Android app, created using the same Rust engine, <a href="https://github.com/storytold/wordcraft">WordCraft</a>, as the desktop app, and built with a Kotlin/Jetpack Compose UI framework.</b><br>
   Many credits to the original maintainers, <a href="https://github.com/storytold">storytold</a>.
 </p>
 
 <p align="center">
-  <a href="https://github.com/artcraft-android/wordcraft-android/releases"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"></a>
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/artcraft-android/wordcraft-android"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"></a>
+  <a href="https://github.com/hussain-hz/wordcraft-android/releases"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/hussain-hz/wordcraft-android"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"></a>
 </p>
 
 <p align="center">

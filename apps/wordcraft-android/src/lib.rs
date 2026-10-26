@@ -283,7 +283,13 @@ pub fn engine_version() -> String {
 #[uniffi::export]
 pub fn init_logging() {
     #[cfg(target_os = "android")]
-    android_logger::init_once(android_logger::Config::default().with_max_level(log::LevelFilter::Info).with_tag("wordcraft"));
+    {
+        android_logger::init_once(android_logger::Config::default().with_max_level(log::LevelFilter::Info).with_tag("wordcraft"));
+        static PANIC_LOG: std::sync::Once = std::sync::Once::new();
+        PANIC_LOG.call_once(|| {
+            std::panic::set_hook(Box::new(|info| log::error!("native engine panic: {info}")));
+        });
+    }
 }
 
 /// A picture in a gallery: what choosing it applies (`id`) and the picture.

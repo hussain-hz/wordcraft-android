@@ -279,7 +279,7 @@ abstract class DocumentFontsTask : DefaultTask() {
 android {
     namespace = "io.github.artcraftandroid.wordcraft"
     compileSdk = 37
-    ndkVersion = "29.0.14206865"
+    ndkVersion = providers.gradleProperty("wordcraft.ndkVersion").getOrElse("29.0.14206865")
 
     defaultConfig {
         applicationId = "io.github.artcraftandroid.wordcraft"

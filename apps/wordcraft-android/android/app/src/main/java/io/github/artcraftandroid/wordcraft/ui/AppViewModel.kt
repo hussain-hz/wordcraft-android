@@ -64,6 +64,7 @@ const val ACTION_OPEN_PINNED = "io.github.artcraftandroid.wordcraft.action.OPEN_
 
 /** The app's state: which screen shows, the open document, and the engine's view of it. */
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+    private fun messageText(source: String, vararg args: Any) = localizedUiText(getApplication<Application>(), source, *args)
     private val engineAsync = (app as WordcraftApplication).engine
 
     var screen by mutableStateOf(Screen.Start)
@@ -167,7 +168,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val uri = Uri.parse(r.uri)
         val readable = runCatching { getApplication<Application>().contentResolver.openInputStream(uri)?.close() }.isSuccess
         if (!readable) {
-            message = "${r.name} can't be opened any more."
+            message = messageText("%1\$s can't be opened any more.", r.name)
             removeRecent(r.uri)
             return
         }
@@ -178,7 +179,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun pinToHome(r: io.github.artcraftandroid.wordcraft.engine.RecentFile) {
         val ctx = getApplication<Application>()
         if (!androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(ctx)) {
-            message = "This home screen doesn't take shortcuts."
+            message = messageText("This home screen doesn't take shortcuts.")
             return
         }
         val label = r.name.substringBeforeLast('.', r.name)
@@ -196,7 +197,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun openPinned(uri: Uri) {
         val readable = runCatching { getApplication<Application>().contentResolver.openInputStream(uri)?.close() }.isSuccess
         if (!readable) {
-            message = "That document can't be opened any more."
+            message = messageText("That document can't be opened any more.")
             return
         }
         open(uri, writable = true)
@@ -206,7 +207,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         loadRecent()
         DocumentFiles.clearCache(app)
         viewModelScope.launch {
-            engineAsync.await().onSuccess { engine = it }.onFailure { message = "WordCraft couldn't start: ${it.userMessage}" }
+            engineAsync.await().onSuccess { engine = it }.onFailure { message = messageText("WordCraft couldn't start: %1\$s", it.userMessage) }
         }
     }
 
@@ -378,7 +379,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         commitComposing(e)
         val list = e.command { readAloudSentences(false) }.ifEmpty { e.command { readAloudSentences(true) } }
         if (list.isEmpty()) {
-            message = "There's nothing to read."
+            message = messageText("There's nothing to read.")
             return@withEngine
         }
         sentences = list
@@ -397,7 +398,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         loadVoices()
                         if (reading) speakCurrent()
                     } else {
-                        message = "Speech isn't available on this phone."
+                        message = messageText("Speech isn't available on this phone.")
                         stopReadAloud()
                     }
                 }
@@ -509,6 +510,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Settings, kept between runs.
 
     private val prefs = app.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+
+    var pinnedDocuments by mutableStateOf(prefs.getStringSet("pinnedDocuments", emptySet()).orEmpty().toSet())
+        private set
+
+    fun togglePinned(uri: String) {
+        pinnedDocuments = if (uri in pinnedDocuments) pinnedDocuments - uri else pinnedDocuments + uri
+        prefs.edit().putStringSet("pinnedDocuments", pinnedDocuments).apply()
+    }
+
+    /** An empty tag follows the phone; explicit tags affect interface labels only. */
+    var languageChoice by mutableStateOf(prefs.getString("interfaceLanguage", "").orEmpty())
+        private set
+
+    fun chooseLanguage(tag: String) {
+        if (tag !in setOf("", "ar", "en")) return
+        languageChoice = tag
+        prefs.edit().putString("interfaceLanguage", tag).apply()
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            getApplication<Application>().getSystemService(android.app.LocaleManager::class.java)?.applicationLocales = android.os.LocaleList.forLanguageTags(tag)
+        }
+    }
 
     /** Theme: `system` (follow the phone), `light` or `dark`. */
     var themeChoice by mutableStateOf(prefs.getString("theme", "system") ?: "system")
@@ -933,7 +955,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (ok) {
                 info = e.command { documentInfo() }
             } else {
-                message = "Changes couldn't be saved to ${doc.name}. Use Save As to keep them."
+                message = messageText("Changes couldn't be saved to %1\$s. Use Save As to keep them.", doc.name)
             }
         }
     }
@@ -983,7 +1005,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val file = try {
             withContext(Dispatchers.IO) { DocumentFiles.copyToCache(ctx, uri, name) }
         } catch (t: Throwable) {
-            message = "The document can't be opened: ${t.userMessage}"
+            message = messageText("The document can't be opened: %1\$s", t.userMessage)
             return@withEngine
         }
         // a text file that isn't Unicode: its encoding is chosen first
@@ -997,7 +1019,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try {
             e.command { open(file.absolutePath, null) }
         } catch (_: MobileException.NeedsPassword) {
-            message = "This document is protected with a password."
+            message = messageText("This document is protected with a password.")
             return@withEngine
         }
         remember(uri, name)
@@ -1324,7 +1346,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         commitComposing(e)
         val out = runCatching { e.command { execute("edit.replaceAll", findParams().put("with", replaceText).toString()) } }.getOrNull()
         val n = runCatching { JSONObject(out ?: "{}").optInt("replaced") }.getOrDefault(0)
-        message = if (n == 1) "Replaced 1 item." else "Replaced $n items."
+        message = messageText("Replaced items: %1\$s", n)
         findView = runCatching { e.command { findAgain(findParams().toString()) } }.getOrElse { e.command { findView() } }
         refresh(e)
     }
@@ -1549,7 +1571,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             remember(uri, name)
             refresh(e)
         } else {
-            message = "The document can't be saved there."
+            message = messageText("The document can't be saved there.")
         }
     }
 

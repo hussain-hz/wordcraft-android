@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,16 +52,14 @@ fun TextEncodingScreen(vm: AppViewModel) {
     Column(Modifier.fillMaxSize().background(WordColors.StatusBand).statusBarsPadding().background(WordColors.SettingsBack).navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.Bar), verticalAlignment = Alignment.CenterVertically) {
             BarButton(LucideIcons.X.glyph(), WordColors.OnBar, { vm.cancelEncoding() }, width = 56.dp, height = 56.dp)
-            Text("Text Encoding", color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
-            Text(
-                "Open",
+            Text(uiText("Text Encoding"), color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+            Text(uiText("Open"),
                 color = WordColors.Accent,
                 fontSize = 16.sp,
                 modifier = Modifier.clickable { vm.openInEncoding() }.padding(horizontal = 16.dp, vertical = 16.dp),
             )
         }
-        Text(
-            "Choose the encoding that makes the text read correctly.",
+        Text(uiText("Choose the encoding that makes the text read correctly."),
             color = WordColors.SettingsValue,
             fontSize = 14.sp,
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),

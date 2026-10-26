@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -170,7 +171,7 @@ fun TabSwitcher(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Modifier.fillMaxWidth().height(ROW).background(if (current) WordColors.PopupCurrent else WordColors.PopupFill).clickable { vm.showTab(tab) },
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(tab, color = if (current) WordColors.OnPopupCurrent else WordColors.OnPopup, fontSize = 18.sp, modifier = Modifier.padding(start = 16.dp))
+                Text(uiText(tab), color = if (current) WordColors.OnPopupCurrent else WordColors.OnPopup, fontSize = 18.sp, modifier = Modifier.padding(start = 16.dp))
             }
         }
     }
@@ -184,7 +185,7 @@ private fun TabHeader(vm: AppViewModel, tab: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.widthIn(min = 112.dp).fillMaxHeight().clickable { vm.toggleTabs() }.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tab, color = WordColors.Accent, fontSize = 18.sp, maxLines = 1)
+            Text(uiText(tab), color = WordColors.Accent, fontSize = 18.sp, maxLines = 1)
             Spacer(Modifier.width(12.dp).weight(1f, fill = false))
             GlyphIcon(LucideIcons.ChevronsUpDown.glyph(), WordColors.Accent, size = 20.dp)
             Spacer(Modifier.width(10.dp))
@@ -207,7 +208,7 @@ private fun PanelHeader(title: String, onBack: () -> Unit, onClose: () -> Unit) 
     ) {
         BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.Accent, onBack, width = 56.dp, height = ROW)
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
-        Text(title, color = WordColors.Accent, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp))
+        Text(uiText(title), color = WordColors.Accent, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp))
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
         BarButton(Glyph.Triangle(up = false), WordColors.AccentDark, onClose, width = 43.dp, height = ROW)
     }
@@ -236,7 +237,7 @@ internal fun PaletteRow(
             Spacer(Modifier.width(16.dp))
             Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { if (glyph != null) GlyphIcon(glyph, if (enabled) iconTint else WordColors.Disabled) }
             Spacer(Modifier.width(10.dp))
-            Text(label, color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(uiText(label), color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (chevron && onOpen == null) {
                 GlyphIcon(LucideIcons.ChevronRight.glyph(), WordColors.OnStrip, size = 20.dp)
                 Spacer(Modifier.width(15.dp))
@@ -328,7 +329,7 @@ private fun HomeTab(vm: AppViewModel, onFind: () -> Unit) {
 @Composable
 private fun TabNotYet(tab: String) {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Text("The $tab tab is on its way.", color = WordColors.OnSurface, fontSize = 15.sp)
+        Text(uiText("The %1\$s tab is on its way.", uiText(tab)), color = WordColors.OnSurface, fontSize = 15.sp)
     }
 }
 
@@ -336,7 +337,7 @@ private fun TabNotYet(tab: String) {
 @Composable
 internal fun SectionBand(title: String) {
     Box(Modifier.fillMaxWidth().height(26.dp).background(WordColors.Section), contentAlignment = Alignment.CenterStart) {
-        Text(title, color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
+        Text(uiText(title), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
     }
 }
 
@@ -347,7 +348,7 @@ internal fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit, tr
         Modifier.fillMaxWidth().height(LIST_ROW).background(if (selected) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider).clickable(enabled = enabled, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = size.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = indent))
+        Text(uiText(label), color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = size.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = indent))
         if (trailing != null) Text(trailing, color = WordColors.OnSurface, fontSize = size.sp, modifier = Modifier.padding(end = 16.dp))
     }
 }
@@ -433,7 +434,7 @@ internal fun NoColorRow(label: String, selected: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Box(Modifier.size(24.dp).background(Color.White).border(1.dp, WordColors.Pressed))
         Spacer(Modifier.width(10.dp))
-        Text(label, color = WordColors.OnSurface, fontSize = 16.sp)
+        Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp)
     }
 }
 
@@ -551,7 +552,7 @@ private fun ParagraphPanel(vm: AppViewModel) {
     Scrolling {
         PaletteRow("Special Indent", null, onClick = { vm.pushPanel("specialIndent") }, chevron = true)
         Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.BottomStart) {
-            Text("Line Spacing:", color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
+            Text(uiText("Line Spacing:"), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
         }
         PaletteRow(f?.lineSpacing ?: "1.0", null, onClick = { vm.pushPanel("lineSpacing") }, chevron = true)
         val before = (f?.spaceBefore ?: 0f) > 0f

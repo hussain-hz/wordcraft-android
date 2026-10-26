@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,13 +45,13 @@ fun CommentsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
     var replyTo by remember { mutableStateOf<Int?>(null) }
     Column(modifier.background(WordColors.Surface)) {
         Row(Modifier.fillMaxWidth().height(50.dp).topEdge(WordColors.StripMore).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-            Text("Comments", color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
+            Text(uiText("Comments"), color = WordColors.OnSurface, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 16.dp))
             BarButton(LucideIcons.X.glyph(), WordColors.OnStrip, { vm.commentsOpen = false }, width = 56.dp, height = 50.dp)
         }
         val threads = vm.comments.filter { it.parent == null }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (threads.isEmpty()) item {
-                Text("No comments yet. Select some text and add one below.", color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
+                Text(uiText("No comments yet. Select some text and add one below."), color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
             }
             items(threads, key = { it.id }) { c ->
                 Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).border(1.dp, WordColors.Divider).background(if (c.resolved) WordColors.Divider else WordColors.Surface).clickable { vm.goToComment(c) }.padding(12.dp)) {
@@ -72,11 +73,10 @@ fun CommentsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         Row(Modifier.fillMaxWidth().topEdge(WordColors.Divider).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).border(1.dp, WordColors.Pressed).padding(10.dp)) {
-                if (draft.isEmpty()) Text(if (replyTo != null) "Reply" else "New comment", color = WordColors.Disabled, fontSize = 16.sp)
+                if (draft.isEmpty()) Text(uiText(if (replyTo != null) "Reply" else "New comment"), color = WordColors.Disabled, fontSize = 16.sp)
                 BasicTextField(draft, onValueChange = { draft = it }, textStyle = TextStyle(color = WordColors.OnSurface, fontSize = 16.sp), modifier = Modifier.fillMaxWidth())
             }
-            Text(
-                "Post",
+            Text(uiText("Post"),
                 color = if (draft.isNotBlank()) WordColors.Accent else WordColors.Disabled,
                 fontSize = 16.sp,
                 modifier = Modifier.clickable(enabled = draft.isNotBlank()) {
@@ -93,12 +93,12 @@ fun CommentsSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
 
 @Composable
 private fun CommentBody(c: AppViewModel.CommentItem) {
-    Text(c.author.ifBlank { "Author" }, color = WordColors.OnPill, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    Text(c.author.ifBlank { uiText("Author") }, color = WordColors.OnPill, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     if (c.date.isNotBlank()) Text(c.date.take(10), color = WordColors.OnSurface, fontSize = 12.sp)
     Text(c.text, color = WordColors.OnPill, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
 }
 
 @Composable
 private fun Action(label: String, onClick: () -> Unit) {
-    Text(label, color = WordColors.Accent, fontSize = 14.sp, modifier = Modifier.clickable(onClick = onClick).padding(vertical = 4.dp))
+    Text(uiText(label), color = WordColors.Accent, fontSize = 14.sp, modifier = Modifier.clickable(onClick = onClick).padding(vertical = 4.dp))
 }

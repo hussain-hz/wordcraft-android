@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -27,6 +28,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -48,9 +51,11 @@ fun BarButton(
     iconSize: Dp = 24.dp,
     pressed: Boolean = false,
     disabledTint: Color = WordColors.Disabled,
+    label: String? = null,
 ) {
     Box(
         modifier
+            .semantics { label?.let { contentDescription = it } }
             .size(width, height)
             .background(if (pressed) WordColors.Pressed else Color.Transparent)
             .clickable(enabled = enabled, onClick = onClick),
@@ -74,19 +79,17 @@ fun ViewTopBar(title: String, onClose: () -> Unit, onEdit: () -> Unit, onShare: 
         BarButton(LucideIcons.X.glyph(), WordColors.OnBar, onClose, width = BAR_HEIGHT, height = BAR_HEIGHT)
         Text(title, color = WordColors.OnBar, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         BarButton(LucideIcons.PenLine.glyph(), WordColors.OnBar, onEdit, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT)
+        BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT, label = uiText("Share"))
         BarButton(LucideIcons.Search.glyph(), WordColors.OnBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT)
         BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT)
     }
 }
 
-/**
- * Editing: Done at the left, then Show Commands, Share, Find, Mobile View, Undo and More at the
- * right, one 56 dp row with a faint shadow under it.
- */
+/** Editing actions stay in one row, with Undo and Redo available together. */
 @Composable
 fun EditTopBar(
     canUndo: Boolean,
+    canRedo: Boolean,
     mobileView: Boolean,
     onDone: () -> Unit,
     onShowCommands: () -> Unit,
@@ -94,18 +97,22 @@ fun EditTopBar(
     onFind: () -> Unit,
     onMobileView: () -> Unit,
     onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onMore: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().height(BAR_HEIGHT).shadow(2.dp).background(WordColors.Bar).padding(end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarButton(LucideIcons.Check.glyph(), WordColors.OnBar, onDone, width = BAR_HEIGHT, height = BAR_HEIGHT)
-        Spacer(Modifier.weight(1f))
-        BarButton(LucideIcons.PenTool.glyph(), WordColors.OnBar, onShowCommands, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Search.glyph(), WordColors.OnBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT)
-        // it shows the other view: the pages while in Mobile View, Mobile View while on the pages
-        BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnBar, onMobileView, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Undo2.glyph(), WordColors.OnBar, onUndo, enabled = canUndo, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT)
+    BoxWithConstraints(Modifier.fillMaxWidth().shadow(2.dp).background(WordColors.Bar)) {
+        val buttonWidth = minOf(BAR_BUTTON, maxWidth / 8)
+        Row(Modifier.fillMaxWidth().height(BAR_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
+            BarButton(LucideIcons.Check.glyph(), WordColors.OnBar, onDone, width = buttonWidth, height = BAR_HEIGHT)
+            Spacer(Modifier.weight(1f))
+            BarButton(LucideIcons.PenTool.glyph(), WordColors.OnBar, onShowCommands, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Share2.glyph(), WordColors.OnBar, onShare, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Share"))
+            BarButton(LucideIcons.Search.glyph(), WordColors.OnBar, onFind, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnBar, onMobileView, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Undo2.glyph(), WordColors.OnBar, onUndo, enabled = canUndo, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Undo"))
+            BarButton(LucideIcons.Redo2.glyph(), WordColors.OnBar, onRedo, enabled = canRedo, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Redo"))
+            BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnBar, onMore, width = buttonWidth, height = BAR_HEIGHT)
+        }
     }
 }
 
@@ -236,7 +243,7 @@ fun ViewPill(mobileView: Boolean, onToggleView: () -> Unit, onReadAloud: () -> U
             BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnPill, onToggleView, width = 55.dp, height = 56.dp)
             BarButton(LucideIcons.AudioLines.glyph(), WordColors.OnPill, onReadAloud, width = 55.dp, height = 56.dp)
             BarButton(LucideIcons.MessageSquare.glyph(), WordColors.OnPill, onComments, width = 55.dp, height = 56.dp)
-            BarButton(LucideIcons.Share2.glyph(), WordColors.OnPill, onShare, width = 55.dp, height = 56.dp)
+            BarButton(LucideIcons.Share2.glyph(), WordColors.OnPill, onShare, width = 55.dp, height = 56.dp, label = uiText("Share"))
         }
     }
 }
@@ -248,8 +255,8 @@ fun ResumeCallout(page: Int, onGo: () -> Unit, onClose: () -> Unit, modifier: Mo
         Row(Modifier.height(64.dp).padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlyphIcon(LucideIcons.BookOpenText.glyph(), WordColors.Accent, size = 24.dp)
             Column(Modifier.padding(start = 14.dp, end = 8.dp)) {
-                Text("Pick up where you left off", color = WordColors.OnPill, fontSize = 15.sp)
-                Text("Page $page", color = WordColors.Accent, fontSize = 14.sp)
+                Text(uiText("Pick up where you left off"), color = WordColors.OnPill, fontSize = 15.sp)
+                Text(uiText("Page %1\$s", page), color = WordColors.Accent, fontSize = 14.sp)
             }
             BarButton(LucideIcons.X.glyph(), WordColors.OnPill, onClose, width = 48.dp, height = 64.dp, iconSize = 20.dp)
         }

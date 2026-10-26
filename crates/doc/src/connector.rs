@@ -54,6 +54,13 @@ pub struct ShapeExtra {
     /// for it where gradients aren't drawn.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fill_gradient: Option<ShapeGradient>,
+    /// The outline dash pattern; absent in older saved documents means solid.
+    #[serde(skip_serializing_if = "crate::line_dash::LineDash::is_solid")]
+    pub dash: crate::line_dash::LineDash,
+    /// The outline's gradient (`a:ln/a:gradFill`), kept for saving; the outline is drawn in its
+    /// main colour (the shape's `stroke`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outline_fill: Option<crate::fill::Fill>,
 }
 
 /// Most stops kept in a shape's gradient.
@@ -109,6 +116,24 @@ fn is_false(v: &bool) -> bool {
 impl ShapeExtra {
     pub fn is_empty(&self) -> bool {
         *self == ShapeExtra::default()
+    }
+    /// Convert Android's legacy shape-style fill to the shared 0.10 fill model.
+    pub fn effective_fill(&self, fill: Option<&crate::fill::Fill>) -> Option<crate::fill::Fill> {
+        use crate::fill::{Fill, Gradient, GradientKind};
+        let mut fill = self.fill_gradient.as_ref().and_then(|g| g.sanitized()).map(|g| {
+            Fill::Gradient(std::sync::Arc::new(Gradient {
+                stops: g.stops, kind: GradientKind::Linear { angle: g.angle, scaled: false },
+                tile: None, rot_with_shape: true, flip: Default::default(),
+            }))
+        }).or_else(|| fill.cloned())?;
+        let opacity = self.fill_opacity();
+        if opacity == 1.0 { return fill.sanitized(); }
+        let fade = |t: f32| 100.0 * (1.0 - (1.0 - t / 100.0) * opacity);
+        match &mut fill {
+            Fill::Solid { transparency, .. } => *transparency = fade(*transparency),
+            Fill::Gradient(g) => for stop in &mut std::sync::Arc::make_mut(g).stops { stop.transparency = fade(stop.transparency); },
+        }
+        fill.sanitized()
     }
     /// The fill's opacity, 0 to 1, from [`ShapeExtra::fill_transparency`].
     pub fn fill_opacity(&self) -> f32 {

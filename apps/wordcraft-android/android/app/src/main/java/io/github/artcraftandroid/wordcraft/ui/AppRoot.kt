@@ -21,10 +21,30 @@ import io.github.artcraftandroid.wordcraft.ui.editor.TextEncodingScreen
  */
 @Composable
 fun AppRoot(vm: AppViewModel, onOpen: () -> Unit) {
+    val base = LocalContext.current
+    val current = androidx.compose.ui.platform.LocalConfiguration.current
+    val configuration = androidx.compose.runtime.remember(current, vm.languageChoice) {
+        android.content.res.Configuration(current).apply {
+            if (vm.languageChoice.isNotEmpty()) setLocale(java.util.Locale.forLanguageTag(vm.languageChoice))
+        }
+    }
+    val localized = androidx.compose.runtime.remember(base, configuration) { base.createConfigurationContext(configuration) }
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalContext provides localized,
+        androidx.compose.ui.platform.LocalConfiguration provides configuration,
+        androidx.compose.ui.platform.LocalLayoutDirection provides if (configuration.layoutDirection == android.view.View.LAYOUT_DIRECTION_RTL) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr,
+    ) {
+        AppScreens(vm, onOpen)
+    }
+}
+
+@Composable
+private fun AppScreens(vm: AppViewModel, onOpen: () -> Unit) {
     val context = LocalContext.current
+    val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     LaunchedEffect(vm.message) {
         vm.message?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, localizedUiText(context, it), Toast.LENGTH_LONG).show()
             vm.message = null
         }
     }
@@ -32,7 +52,7 @@ fun AppRoot(vm: AppViewModel, onOpen: () -> Unit) {
         AnimatedContent(
             targetState = vm.screen,
             transitionSpec = {
-                val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                val dir = (if (targetState.ordinal > initialState.ordinal) 1 else -1) * (if (rtl) -1 else 1)
                 slideInHorizontally(tween(Motion.BASIC, easing = Motion.EaseOutSharp)) { it * dir } togetherWith
                     slideOutHorizontally(tween(Motion.BASIC, easing = Motion.EaseOutSharp)) { -it * dir }
             },

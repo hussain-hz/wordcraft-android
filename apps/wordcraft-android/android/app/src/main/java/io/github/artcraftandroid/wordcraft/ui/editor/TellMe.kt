@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -184,7 +185,7 @@ internal fun TellMeHeader(vm: AppViewModel, query: String, onQuery: (String) -> 
         BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.Accent, { vm.tellMeOpen = false }, width = 56.dp, height = ROW)
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
         Box(Modifier.weight(1f).padding(start = 16.dp, end = 4.dp), contentAlignment = Alignment.CenterStart) {
-            if (query.isEmpty()) Text("Tell me what you want to do", color = WordColors.HeaderIconDisabled, fontSize = 16.sp, maxLines = 1)
+            if (query.isEmpty()) Text(uiText("Tell me what you want to do"), color = WordColors.HeaderIconDisabled, fontSize = 16.sp, maxLines = 1)
             BasicTextField(
                 value = query,
                 onValueChange = onQuery,
@@ -206,7 +207,14 @@ internal fun TellMeHeader(vm: AppViewModel, query: String, onQuery: (String) -> 
 @Composable
 internal fun TellMeSheet(vm: AppViewModel, onFind: () -> Unit, modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
-    val matches = remember(query) { tellMeMatches(query) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val matches = remember(query, configuration) {
+        val translated = TELL_ME_ITEMS.filter {
+            io.github.artcraftandroid.wordcraft.ui.localizedUiText(context, it.label).contains(query.trim(), ignoreCase = true)
+        }
+        (tellMeMatches(query) + translated).distinctBy { it.label }
+    }
     val pick = { item: TellMeItem ->
         vm.noteTellMe(item.label)
         vm.tellMeOpen = false
@@ -226,7 +234,7 @@ internal fun TellMeSheet(vm: AppViewModel, onFind: () -> Unit, modifier: Modifie
                 item { Caption("Suggested") }
                 items(suggested.size) { i -> TellMeRow(suggested[i], pick) }
             } else if (matches.isEmpty()) {
-                item { Text("Nothing matches “${query.trim()}”.", color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp)) }
+                item { Text(uiText("Nothing matches “%1\$s”.", query.trim()), color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.padding(16.dp)) }
             } else {
                 items(matches.size) { i -> TellMeRow(matches[i], pick) }
             }

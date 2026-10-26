@@ -86,19 +86,14 @@ pub fn decode(b: &[u8]) -> String {
 /// Most bytes looked at to guess a legacy encoding.
 const SNIFF: usize = 1 << 20;
 
-/// The legacy encoding bytes that aren't UTF-8 look like (chardetng, the detector Firefox uses
-/// for unlabelled pages).
-fn guess(b: &[u8]) -> &'static encoding_rs::Encoding {
+/// Bytes that aren't UTF-8 in the legacy encoding they look like (chardetng, the detector
+/// Firefox uses for unlabelled pages): GBK/GB18030 for Simplified Chinese, Big5, Shift_JIS or
+/// EUC-JP, EUC-KR, or a single-byte Windows / ISO code page; Windows-1252 as before when the
+/// guess is a single-byte Western one.
+pub fn legacy(b: &[u8]) -> String {
     let mut det = chardetng::EncodingDetector::new(chardetng::Iso2022JpDetection::Deny);
     det.feed(b.get(..SNIFF).unwrap_or(b), b.len() <= SNIFF);
-    det.guess(None, chardetng::Utf8Detection::Deny)
-}
-
-/// Bytes that aren't UTF-8 in the legacy encoding they look like ([`guess`]): GBK/GB18030 for
-/// Simplified Chinese, Big5, Shift_JIS or EUC-JP, EUC-KR, or a single-byte Windows / ISO code
-/// page; Windows-1252 as before when the guess is a single-byte Western one.
-pub fn legacy(b: &[u8]) -> String {
-    let enc = guess(b);
+    let enc = det.guess(None, chardetng::Utf8Detection::Deny);
     if enc == encoding_rs::WINDOWS_1252 {
         return b.iter().map(|c| cp1252(*c)).collect();
     }
@@ -110,76 +105,6 @@ pub fn legacy(b: &[u8]) -> String {
 pub fn decode_as(b: &[u8], label: &str) -> Option<String> {
     let enc = encoding_rs::Encoding::for_label(label.trim().as_bytes())?;
     Some(enc.decode(b).0.into_owned())
-}
-
-/// The encodings a text file can be read in when it isn't Unicode, so its encoding is a guess
-/// and can be chosen: each one's name and its Encoding Standard label. Every encoding [`guess`]
-/// answers is here.
-pub const ENCODINGS: &[(&str, &str)] = &[
-    ("Western (Windows-1252)", "windows-1252"),
-    ("Central European (Windows-1250)", "windows-1250"),
-    ("Cyrillic (Windows-1251)", "windows-1251"),
-    ("Greek (Windows-1253)", "windows-1253"),
-    ("Turkish (Windows-1254)", "windows-1254"),
-    ("Hebrew (Windows-1255)", "windows-1255"),
-    ("Arabic (Windows-1256)", "windows-1256"),
-    ("Baltic (Windows-1257)", "windows-1257"),
-    ("Vietnamese (Windows-1258)", "windows-1258"),
-    ("Thai (Windows-874)", "windows-874"),
-    ("Japanese (Shift_JIS)", "shift_jis"),
-    ("Japanese (EUC-JP)", "euc-jp"),
-    ("Chinese Simplified (GBK)", "gbk"),
-    ("Chinese Simplified (GB18030)", "gb18030"),
-    ("Chinese Traditional (Big5)", "big5"),
-    ("Korean (EUC-KR)", "euc-kr"),
-    ("Central European (ISO-8859-2)", "iso-8859-2"),
-    ("South European (ISO-8859-3)", "iso-8859-3"),
-    ("Baltic (ISO-8859-4)", "iso-8859-4"),
-    ("Cyrillic (ISO-8859-5)", "iso-8859-5"),
-    ("Arabic (ISO-8859-6)", "iso-8859-6"),
-    ("Greek (ISO-8859-7)", "iso-8859-7"),
-    ("Hebrew (ISO-8859-8)", "iso-8859-8"),
-    ("Baltic (ISO-8859-13)", "iso-8859-13"),
-    ("Western (ISO-8859-15)", "iso-8859-15"),
-    ("Cyrillic (KOI8-R)", "koi8-r"),
-    ("Cyrillic (KOI8-U)", "koi8-u"),
-    ("Cyrillic (DOS 866)", "ibm866"),
-    ("Western (Mac)", "macintosh"),
-    ("Unicode (UTF-8)", "utf-8"),
-    ("Unicode (UTF-16LE)", "utf-16le"),
-    ("Unicode (UTF-16BE)", "utf-16be"),
-];
-
-/// Whether a text file's encoding is a guess, so it can be chosen: it has no BOM, doesn't read
-/// as UTF-16 by its zero bytes and isn't UTF-8.
-pub fn encoding_is_guessed(b: &[u8]) -> bool {
-    let marked = b.starts_with(&[0xEF, 0xBB, 0xBF]) || b.starts_with(&[0xFF, 0xFE]) || b.starts_with(&[0xFE, 0xFF]);
-    !marked && unmarked_utf16(b).is_none() && std::str::from_utf8(b).is_err()
-}
-
-/// The label (one of [`ENCODINGS`]) of the encoding [`decode`] reads `b` in.
-pub fn detected_label(b: &[u8]) -> &'static str {
-    let enc = if b.starts_with(&[0xEF, 0xBB, 0xBF]) {
-        encoding_rs::UTF_8
-    } else if b.starts_with(&[0xFF, 0xFE]) {
-        encoding_rs::UTF_16LE
-    } else if b.starts_with(&[0xFE, 0xFF]) {
-        encoding_rs::UTF_16BE
-    } else if let Some(le) = unmarked_utf16(b) {
-        if le { encoding_rs::UTF_16LE } else { encoding_rs::UTF_16BE }
-    } else if std::str::from_utf8(b).is_ok() {
-        encoding_rs::UTF_8
-    } else {
-        guess(b)
-    };
-    ENCODINGS.iter().find(|(_, l)| encoding_rs::Encoding::for_label(l.as_bytes()) == Some(enc)).map_or("windows-1252", |(_, l)| l)
-}
-
-/// The start of text bytes read in encoding `label`: at most `chars` characters, from the
-/// first 64 KB. `None` when the label isn't known.
-pub fn preview(b: &[u8], label: &str, chars: usize) -> Option<String> {
-    let text = decode_as(b.get(..b.len().min(64 << 10)).unwrap_or(b), label)?;
-    Some(text.chars().take(chars).collect())
 }
 
 /// A document with one paragraph per line.
@@ -277,3 +202,71 @@ mod tests {
         assert!(doc.plain_text(wordcraft_doc::StoryRef::Body).starts_with("Caf\u{439}"));
     }
 }
+
+fn guess(b: &[u8]) -> &'static encoding_rs::Encoding {
+    let mut det = chardetng::EncodingDetector::new(chardetng::Iso2022JpDetection::Deny);
+    det.feed(b.get(..SNIFF).unwrap_or(b), b.len() <= SNIFF);
+    det.guess(None, chardetng::Utf8Detection::Deny)
+}
+
+pub fn encoding_is_guessed(b: &[u8]) -> bool {
+    let marked = b.starts_with(&[0xEF, 0xBB, 0xBF]) || b.starts_with(&[0xFF, 0xFE]) || b.starts_with(&[0xFE, 0xFF]);
+    !marked && unmarked_utf16(b).is_none() && std::str::from_utf8(b).is_err()
+}
+
+pub fn detected_label(b: &[u8]) -> &'static str {
+    let enc = if b.starts_with(&[0xEF, 0xBB, 0xBF]) {
+        encoding_rs::UTF_8
+    } else if b.starts_with(&[0xFF, 0xFE]) {
+        encoding_rs::UTF_16LE
+    } else if b.starts_with(&[0xFE, 0xFF]) {
+        encoding_rs::UTF_16BE
+    } else if let Some(le) = unmarked_utf16(b) {
+        if le { encoding_rs::UTF_16LE } else { encoding_rs::UTF_16BE }
+    } else if std::str::from_utf8(b).is_ok() {
+        encoding_rs::UTF_8
+    } else {
+        guess(b)
+    };
+    ENCODINGS.iter().find(|(_, l)| encoding_rs::Encoding::for_label(l.as_bytes()) == Some(enc)).map_or("windows-1252", |(_, l)| l)
+}
+
+pub fn preview(b: &[u8], label: &str, chars: usize) -> Option<String> {
+    let text = decode_as(b.get(..b.len().min(64 << 10)).unwrap_or(b), label)?;
+    Some(text.chars().take(chars).collect())
+}
+
+pub const ENCODINGS: &[(&str, &str)] = &[
+    ("Western (Windows-1252)", "windows-1252"),
+    ("Central European (Windows-1250)", "windows-1250"),
+    ("Cyrillic (Windows-1251)", "windows-1251"),
+    ("Greek (Windows-1253)", "windows-1253"),
+    ("Turkish (Windows-1254)", "windows-1254"),
+    ("Hebrew (Windows-1255)", "windows-1255"),
+    ("Arabic (Windows-1256)", "windows-1256"),
+    ("Baltic (Windows-1257)", "windows-1257"),
+    ("Vietnamese (Windows-1258)", "windows-1258"),
+    ("Thai (Windows-874)", "windows-874"),
+    ("Japanese (Shift_JIS)", "shift_jis"),
+    ("Japanese (EUC-JP)", "euc-jp"),
+    ("Chinese Simplified (GBK)", "gbk"),
+    ("Chinese Simplified (GB18030)", "gb18030"),
+    ("Chinese Traditional (Big5)", "big5"),
+    ("Korean (EUC-KR)", "euc-kr"),
+    ("Central European (ISO-8859-2)", "iso-8859-2"),
+    ("South European (ISO-8859-3)", "iso-8859-3"),
+    ("Baltic (ISO-8859-4)", "iso-8859-4"),
+    ("Cyrillic (ISO-8859-5)", "iso-8859-5"),
+    ("Arabic (ISO-8859-6)", "iso-8859-6"),
+    ("Greek (ISO-8859-7)", "iso-8859-7"),
+    ("Hebrew (ISO-8859-8)", "iso-8859-8"),
+    ("Baltic (ISO-8859-13)", "iso-8859-13"),
+    ("Western (ISO-8859-15)", "iso-8859-15"),
+    ("Cyrillic (KOI8-R)", "koi8-r"),
+    ("Cyrillic (KOI8-U)", "koi8-u"),
+    ("Cyrillic (DOS 866)", "ibm866"),
+    ("Western (Mac)", "macintosh"),
+    ("Unicode (UTF-8)", "utf-8"),
+    ("Unicode (UTF-16LE)", "utf-16le"),
+    ("Unicode (UTF-16BE)", "utf-16be"),
+];

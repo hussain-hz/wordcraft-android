@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -143,7 +144,7 @@ private fun OverflowRow(label: String, glyph: Glyph, enabled: Boolean = true, on
         Spacer(Modifier.width(20.dp))
         GlyphIcon(glyph, tint)
         Spacer(Modifier.width(29.dp))
-        Text(label, color = if (enabled) WordColors.OnPill else WordColors.Disabled, fontSize = 16.sp)
+        Text(uiText(label), color = if (enabled) WordColors.OnPill else WordColors.Disabled, fontSize = 16.sp)
         if (switch != null) {
             Spacer(Modifier.width(28.dp))
             SmallSwitch(switch)
@@ -171,35 +172,57 @@ internal fun SmallSwitch(on: Boolean, modifier: Modifier = Modifier) {
 fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
     androidx.activity.compose.BackHandler { vm.closeSettings() }
     var picking by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var pickingLanguage by remember { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(WordColors.StatusBand).statusBarsPadding().background(WordColors.SettingsBack).navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp).background(WordColors.Bar), verticalAlignment = Alignment.CenterVertically) {
             BarButton(LucideIcons.ArrowLeft.glyph(), WordColors.OnBar, { vm.closeSettings() }, width = 56.dp, height = 56.dp)
-            Text("Settings", color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.padding(start = 16.dp))
+            Text(uiText("Settings"), color = WordColors.OnBar, fontSize = 20.sp, modifier = Modifier.padding(start = 16.dp))
         }
         Column(Modifier.verticalScroll(rememberScrollState())) {
             SettingsSection("Display Preferences")
             SettingsItem("Theme", THEMES[vm.themeChoice] ?: "System Default") { picking = true }
+            SettingsItem("Language", when (vm.languageChoice) { "ar" -> "العربية"; "en" -> "English"; else -> "System Default" }) { pickingLanguage = true }
             SettingsLine()
             SettingsSection("General")
             SettingsSwitch("Default View", "Start WordCraft in Mobile View", vm.startInMobileView, vm::chooseStartInMobileView)
             SettingsSwitch("AutoSave", "Automatically save files", vm.autoSaveOn, vm::chooseAutoSave)
             SettingsLine()
             SettingsSection("About")
-            SettingsItem("WordCraft", "Version $engineVersion")
-            Text(
-                "An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft.",
+            SettingsItem("WordCraft", uiText("Version %1\$s", engineVersion))
+            Text(uiText("An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft."),
                 color = WordColors.SettingsValue,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             )
-            SettingsItem("Open material", OPEN_MATERIAL.joinToString("\n"))
+            SettingsItem("Open material", OPEN_MATERIAL.map { uiText(it) }.joinToString("\n"))
             Spacer(Modifier.height(24.dp))
+        }
+    }
+    if (pickingLanguage) {
+        androidx.activity.compose.BackHandler { pickingLanguage = false }
+        Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable { pickingLanguage = false }) {
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(WordColors.Sheet).clickable {}.navigationBarsPadding().padding(20.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(uiText("Language"), color = WordColors.OnPill, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    BarButton(LucideIcons.X.glyph(), WordColors.OnBar, { pickingLanguage = false }, label = uiText("Close"))
+                }
+                Text(uiText("Choose the app language"), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
+                for ((tag, label) in listOf("" to "System Default", "ar" to "العربية", "en" to "English")) {
+                    Row(Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(12.dp)).background(if (vm.languageChoice == tag) WordColors.Accent.copy(alpha = 0.12f) else Color.Transparent).clickable {
+                        pickingLanguage = false
+                        vm.chooseLanguage(tag)
+                    }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(uiText(label), color = WordColors.OnPill, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                        if (vm.languageChoice == tag) GlyphIcon(LucideIcons.Check.glyph(), WordColors.Accent)
+                    }
+                }
+            }
         }
     }
     if (picking) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { picking = false },
-            title = { Text("Theme") },
+            title = { Text(uiText("Theme")) },
             text = {
                 Column {
                     for ((key, label) in THEMES) {
@@ -218,12 +241,12 @@ fun SettingsScreen(vm: AppViewModel, engineVersion: String) {
                                 },
                                 colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = WordColors.Accent),
                             )
-                            Text(label, color = WordColors.OnSurface, fontSize = 16.sp)
+                            Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp)
                         }
                     }
                 }
             },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { picking = false }) { Text("Cancel") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { picking = false }) { Text(uiText("Cancel")) } },
             containerColor = WordColors.Surface,
             titleContentColor = WordColors.OnSurface,
         )
@@ -244,7 +267,7 @@ private val OPEN_MATERIAL = listOf(
 
 @Composable
 private fun SettingsSection(title: String) {
-    Text(title, color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 14.dp, bottom = 6.dp))
+    Text(uiText(title), color = WordColors.Accent, fontSize = 16.sp, modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 14.dp, bottom = 6.dp))
 }
 
 @Composable
@@ -256,8 +279,8 @@ private fun SettingsLine() {
 @Composable
 private fun SettingsItem(title: String, value: String, onClick: (() -> Unit)? = null) {
     Column(Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 10.dp, vertical = 8.dp)) {
-        Text(title, color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-        Text(value, color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(uiText(title), color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+        Text(uiText(value), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -265,10 +288,10 @@ private fun SettingsItem(title: String, value: String, onClick: (() -> Unit)? = 
 @Composable
 private fun SettingsSwitch(title: String, what: String, on: Boolean, onChange: (Boolean) -> Unit) {
     Column(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(horizontal = 10.dp, vertical = 8.dp)) {
-        Text(title, color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-        Text(what, color = WordColors.OnSettings, fontSize = 14.sp, modifier = Modifier.padding(start = 5.dp, top = 14.dp))
+        Text(uiText(title), color = WordColors.OnSettings, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+        Text(uiText(what), color = WordColors.OnSettings, fontSize = 14.sp, modifier = Modifier.padding(start = 5.dp, top = 14.dp))
         Row(Modifier.padding(start = 5.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (on) "On" else "Off", color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.width(56.dp))
+            Text(uiText(if (on) "On" else "Off"), color = WordColors.SettingsValue, fontSize = 14.sp, modifier = Modifier.width(56.dp))
             SmallSwitch(on)
         }
     }

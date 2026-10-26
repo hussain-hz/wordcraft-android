@@ -1,7 +1,13 @@
 package io.github.artcraftandroid.wordcraft.ui
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import android.text.format.DateUtils
 import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import io.github.artcraftandroid.wordcraft.R
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,65 +41,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.artcraftandroid.wordcraft.R
 import io.github.artcraftandroid.wordcraft.engine.RecentFile
 import io.github.artcraftandroid.wordcraft.ui.editor.bottomEdge
 import io.github.artcraftandroid.wordcraft.ui.editor.topEdge
 import java.util.Calendar
 
-/**
- * The landing page: the app's header (search, create new), the Recent list in date groups, and
- * a bottom bar with Recent and Open.
- */
+/** Home follows the document app layout, with recent and pinned lists above three actions. */
 @Composable
 fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
-    var tab by remember { mutableStateOf("Recent") }
-    var searching by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
+    var pinned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var searching by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
-    // Back ends a search before it leaves the app
-    androidx.activity.compose.BackHandler(enabled = searching) {
-        searching = false
-        query = ""
-    }
-    Box(Modifier.fillMaxSize().background(WordColors.Surface).statusBarsPadding().navigationBarsPadding()) {
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(searching) { if (searching) focus.requestFocus() }
+    androidx.activity.compose.BackHandler(enabled = searching) { searching = false; query = "" }
+    val homeBackground = if (WordColors.dark) androidx.compose.ui.graphics.Color.Black else WordColors.Surface
+    Box(Modifier.fillMaxSize().background(homeBackground).statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(R.drawable.ic_launcher_tile), contentDescription = null, modifier = Modifier.size(32.dp).clip(CircleShape))
-                Spacer(Modifier.width(14.dp))
+            Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.ic_launcher_tile), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+                Spacer(Modifier.width(12.dp))
                 if (searching) {
                     BasicTextField(
                         value = query,
                         onValueChange = { query = it },
                         singleLine = true,
-                        textStyle = TextStyle(color = WordColors.OnBar, fontSize = 18.sp),
-                        modifier = Modifier.weight(1f),
+                        textStyle = TextStyle(color = WordColors.OnPill, fontSize = 18.sp),
+                        modifier = Modifier.weight(1f).focusRequester(focus),
+                        decorationBox = { field ->
+                            Box { if (query.isEmpty()) Text(uiText("Search documents"), color = WordColors.SettingsValue, fontSize = 18.sp); field() }
+                        },
                     )
-                    StartIcon(LucideIcons.X) {
-                        searching = false
-                        query = ""
-                    }
+                    StartIcon(LucideIcons.X, "Close") { searching = false; query = "" }
                 } else {
-                    Text(tab, color = WordColors.OnPill, fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                    StartIcon(LucideIcons.Search) { searching = true }
-                    StartIcon(LucideIcons.Plus) { creating = true }
+                    Text("WordCraft", color = WordColors.Accent, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    StartIcon(LucideIcons.Search, "Search") { searching = true }
+                }
+                Box(Modifier.size(48.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(0xFFE0E0E0)).clickable(onClick = vm::openSettings), contentAlignment = Alignment.Center) {
+                    Icon(HomeIcons.User, contentDescription = uiText("Settings"), tint = androidx.compose.ui.graphics.Color(0xFF303030), modifier = Modifier.size(29.dp))
                 }
             }
+            Row(Modifier.fillMaxWidth().height(54.dp).bottomEdge(WordColors.Divider)) {
+                HomeListTab("Recent", LucideIcons.Clock, !pinned, Modifier.weight(1f)) { pinned = false }
+                HomeListTab("Pinned", HomeIcons.Star, pinned, Modifier.weight(1f)) { pinned = true }
+            }
+            val files = vm.recent.filter { (!pinned || it.uri in vm.pinnedDocuments) && (query.isBlank() || it.name.contains(query, ignoreCase = true)) }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                when (tab) {
-                    "Recent" -> RecentList(vm, vm.recent.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }, onOpen)
-                    else -> OpenList(vm, onOpen)
-                }
+                RecentList(vm, files, onOpen, when { query.isNotBlank() -> "No matching documents"; pinned -> "Pin documents to find them here."; else -> "Documents you open show here." })
             }
-            Row(Modifier.fillMaxWidth().height(56.dp).topEdge(WordColors.BarEdge)) {
-                BottomTab("Recent", LucideIcons.Clock, tab == "Recent", Modifier.weight(1f)) { tab = "Recent" }
-                BottomTab("Open", LucideIcons.FolderOpen, tab == "Open", Modifier.weight(1f)) { tab = "Open" }
+            Row(Modifier.fillMaxWidth().height(80.dp).topEdge(WordColors.Divider)) {
+                BottomTab("Home", HomeIcons.Home, true, Modifier.weight(1f)) { pinned = false; searching = false; query = "" }
+                BottomTab("New", HomeIcons.New, false, Modifier.weight(1f)) { creating = true }
+                BottomTab("Open", LucideIcons.FolderOpen, false, Modifier.weight(1f), onOpen)
             }
         }
         if (creating) NewSheet(vm, onClose = { creating = false })
@@ -101,18 +106,32 @@ fun StartScreen(vm: AppViewModel, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun StartIcon(icon: ImageVector, onClick: () -> Unit) {
+private fun StartIcon(icon: ImageVector, label: String? = null, onClick: () -> Unit) {
     Box(Modifier.size(48.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = null, tint = WordColors.OnBar)
+        Icon(icon, contentDescription = label?.let { uiText(it) }, tint = WordColors.OnBar, modifier = Modifier.size(26.dp))
+    }
+}
+
+@Composable
+private fun HomeListTab(label: String, icon: ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val tint = if (selected) WordColors.Accent else WordColors.OnBar
+    Box(modifier.fillMaxHeight().selectable(selected = selected, role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick)) {
+        Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(25.dp))
+            Text(uiText(label), color = tint, fontSize = 16.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)
+        }
+        if (selected) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(WordColors.Accent))
     }
 }
 
 @Composable
 private fun BottomTab(label: String, icon: ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val tint = if (selected) WordColors.Accent else WordColors.OnBar
-    Column(modifier.clickable(onClick = onClick).padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-        Text(label, color = tint, fontSize = 12.sp)
+    Column(modifier.fillMaxHeight().selectable(selected = selected, role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick).padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(64.dp, 32.dp).clip(RoundedCornerShape(18.dp)).background(if (selected) WordColors.Accent.copy(alpha = 0.18f) else androidx.compose.ui.graphics.Color.Transparent), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+        }
+        Text(uiText(label), color = tint, fontSize = 13.sp, maxLines = 1)
     }
 }
 
@@ -130,13 +149,12 @@ private fun groupOf(time: Long): String {
 }
 
 @Composable
-private fun RecentList(vm: AppViewModel, files: List<RecentFile>, onOpen: () -> Unit) {
+private fun RecentList(vm: AppViewModel, files: List<RecentFile>, onOpen: () -> Unit, emptyMessage: String) {
     if (files.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("Documents you open show here.", color = WordColors.OnSurface, fontSize = 16.sp)
+            Text(uiText(emptyMessage), color = WordColors.OnSurface, fontSize = 16.sp)
             Spacer(Modifier.height(16.dp))
-            Text(
-                "Open a document",
+            if (emptyMessage == "Documents you open show here.") Text(uiText("Open a document"),
                 color = androidx.compose.ui.graphics.Color.White,
                 fontSize = 16.sp,
                 modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(WordColors.Accent).clickable(onClick = onOpen).padding(horizontal = 20.dp, vertical = 10.dp),
@@ -149,7 +167,7 @@ private fun RecentList(vm: AppViewModel, files: List<RecentFile>, onOpen: () -> 
         for (g in listOf("Today", "Yesterday", "This week", "Earlier")) {
             val list = groups[g] ?: continue
             item(key = "h-$g") {
-                Text(g, color = WordColors.OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+                Text(uiText(g), color = WordColors.OnSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
             }
             items(list, key = { it.uri }) { r -> RecentRow(vm, r) }
         }
@@ -159,7 +177,7 @@ private fun RecentList(vm: AppViewModel, files: List<RecentFile>, onOpen: () -> 
 @Composable
 private fun RecentRow(vm: AppViewModel, r: RecentFile) {
     var menu by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().height(64.dp).clickable { vm.openRecent(r) }.bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().height(82.dp).clickable { vm.openRecent(r) }.bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(16.dp))
         Icon(LucideIcons.FileText, contentDescription = null, tint = WordColors.Accent, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(16.dp))
@@ -174,26 +192,23 @@ private fun RecentRow(vm: AppViewModel, r: RecentFile) {
             )
         }
         Box {
-            StartIcon(LucideIcons.EllipsisVertical) { menu = true }
-            DropdownMenu(menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("Add to Home screen") }, onClick = {
+            StartIcon(LucideIcons.EllipsisVertical, "More options") { menu = true }
+            DropdownMenu(menu, onDismissRequest = { menu = false }, containerColor = WordColors.Sheet, shape = RoundedCornerShape(16.dp)) {
+                val pinned = r.uri in vm.pinnedDocuments
+                DropdownMenuItem(text = { Text(uiText(if (pinned) "Unpin" else "Pin")) }, leadingIcon = { Icon(HomeIcons.Star, contentDescription = null, tint = WordColors.Accent) }, onClick = {
+                    menu = false
+                    vm.togglePinned(r.uri)
+                })
+                DropdownMenuItem(text = { Text(uiText("Add to Home screen")) }, leadingIcon = { Icon(HomeIcons.Home, contentDescription = null, tint = WordColors.OnBar) }, onClick = {
                     menu = false
                     vm.pinToHome(r)
                 })
-                DropdownMenuItem(text = { Text("Remove from list") }, onClick = {
+                DropdownMenuItem(text = { Text(uiText("Remove from list")) }, leadingIcon = { Icon(LucideIcons.X, contentDescription = null, tint = WordColors.OnBar) }, onClick = {
                     menu = false
                     vm.removeRecent(r.uri)
                 })
             }
         }
-    }
-}
-
-@Composable
-private fun OpenList(vm: AppViewModel, onOpen: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        OpenRow(LucideIcons.FolderOpen, "Browse", "Documents on this phone and in your file apps", onClick = onOpen)
-        OpenRow(LucideIcons.FilePlus2, "New blank document", "Start writing", enabled = vm.engine != null) { vm.newDocument("blank") }
     }
 }
 
@@ -204,8 +219,8 @@ private fun OpenRow(icon: ImageVector, title: String, detail: String, enabled: B
         Icon(icon, contentDescription = null, tint = WordColors.Accent, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(16.dp))
         Column {
-            Text(title, color = WordColors.OnPill, fontSize = 16.sp)
-            Text(detail, color = WordColors.OnSurface, fontSize = 13.sp)
+            Text(uiText(title), color = WordColors.OnPill, fontSize = 16.sp)
+            Text(uiText(detail), color = WordColors.OnSurface, fontSize = 13.sp)
         }
     }
 }
@@ -219,7 +234,7 @@ private fun NewSheet(vm: AppViewModel, onClose: () -> Unit) {
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(WordColors.Surface).clickable {}.padding(bottom = 12.dp),
         ) {
-            Text("New", color = WordColors.OnPill, fontSize = 20.sp, modifier = Modifier.padding(16.dp))
+            Text(uiText("New"), color = WordColors.OnPill, fontSize = 20.sp, modifier = Modifier.padding(16.dp))
             for ((label, template) in listOf("Blank document" to "blank", "Sample" to "sample", "Letter" to "letter", "Resume" to "resume", "Report" to "report")) {
                 OpenRow(if (template == "blank") LucideIcons.FilePlus2 else LucideIcons.FileText, label, if (template == "blank") "An empty page" else "A WordCraft template", enabled = vm.engine != null) {
                     onClose()

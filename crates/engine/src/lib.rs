@@ -178,3 +178,6 @@ mod tests_revision_checks;
 mod tests_typing;
 #[cfg(test)]
 mod tests_wordart;
+
+#[cfg(test)]
+mod android_upgrade_tests;

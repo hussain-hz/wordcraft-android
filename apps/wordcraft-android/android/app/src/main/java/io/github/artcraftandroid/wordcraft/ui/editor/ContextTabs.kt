@@ -1,5 +1,6 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -286,7 +287,7 @@ private fun StyleOptionsPanel(vm: AppViewModel) {
                     on = it
                     vm.command("table.look", json(key to it))
                 }, colors = CheckboxDefaults.colors(checkedColor = WordColors.Accent), modifier = Modifier.padding(start = 4.dp))
-                Text(label, color = WordColors.OnSurface, fontSize = 16.sp)
+                Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp)
             }
         }
         PaletteRow("Repeat Header Rows", null, onClick = { vm.command("table.repeatHeader") })
@@ -537,7 +538,7 @@ private fun StyleRow(keys: List<String>, look: (String) -> TileLook, text: Boole
                     }
                     l.edge?.let { drawRoundRect(it, cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx())) }
                 }
-                if (text) Text("Abc", color = l.text, fontSize = 19.sp)
+                if (text) Text(uiText("Abc"), color = l.text, fontSize = 19.sp)
             }
         }
     }

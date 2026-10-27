@@ -1,7 +1,7 @@
 # Engine 0.11 Android integration
 
-Latest stable app: 0.0.6, version code 6990. Engine: 0.11.0.
-Current test build: 0.0.7-beta.2, version code 7020.
+Latest stable app: 0.0.7, version code 7990. Engine: 0.11.0.
+Approved test build: 0.0.7-beta.2, version code 7020.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 
@@ -49,3 +49,5 @@ The user approved beta.2. Stable 0.0.6 contains the same implementation with the
 See [the 0.0.7-beta.1 test report](TEST-0.0.7-beta.1-ar.md) for physical versus logical paragraph alignment, inherited RTL styles, mixed-direction selections, and Arabic alignment controls. Version 0.0.6 remains stable while this correction is tested.
 
 See [the 0.0.7-beta.2 test report](TEST-0.0.7-beta.2-ar.md) for preserving Arabic-Indic, Western and Persian digits as written in Android display and PDF export. Explicit numeral-conversion modes retain their existing behavior.
+
+The user approved 0.0.7-beta.2. Stable 0.0.7 contains the same implementation, with final version metadata. See [the 0.0.7 release report](RELEASE-0.0.7-ar.md). Earlier test-status statements above describe the state at the time of those test builds.

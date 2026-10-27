@@ -612,6 +612,10 @@ impl Exclusion {
 
 struct Builder<'a> {
     env: &'a ParaEnv<'a>,
+    /// Visible paragraph text for joining across editing/formatting run boundaries.
+    context: std::borrow::Cow<'a, str>,
+    /// Original → visible byte offsets at the boundaries of omitted runs; empty in normal text.
+    context_map: Vec<(usize, usize)>,
     styles: Vec<StyleRun>,
     /// Hash of a style's format → (index in `styles`, small caps), see `style`.
     style_index: std::collections::HashMap<u64, Vec<(u32, bool)>>,
@@ -859,6 +863,11 @@ fn thai_or_latin(c: char) -> bool {
 }
 
 impl<'a> Builder<'a> {
+    fn context_offset(&self, original: usize) -> usize {
+        let i = self.context_map.partition_point(|(at, _)| *at <= original);
+        i.checked_sub(1).and_then(|i| self.context_map.get(i)).map_or(original, |(at, visible)| visible + original.saturating_sub(*at))
+    }
+
     /// Displayed form of `c` at run-relative byte `at` (Word › Numeral): one char in, one
     /// char out. `rtl` is the shaping direction; in Context mode `context` (from
     /// [`context_digit_dirs`], empty otherwise) gives each digit's surroundings, since European
@@ -1103,7 +1112,14 @@ impl<'a> Builder<'a> {
             let to = if ligatures.is_some() { all.len() } else { 1 };
             let features: &[wordcraft_fonts::Feature] = all.get(from..to).unwrap_or_default();
             let shaped = if use_levels {
-                wordcraft_fonts::shape_run(&st.face, shape_text, features, map, key.rtl)
+                let (before, after) = if matches!(dir, Dir::Para) {
+                    let start = self.context_offset(base + a);
+                    let end = self.context_offset(base + b);
+                    (self.context.get(..start).unwrap_or(""), self.context.get(end..).unwrap_or(""))
+                } else {
+                    (text.get(..a).unwrap_or(""), text.get(b..).unwrap_or(""))
+                };
+                wordcraft_fonts::shape_run_with_context(&st.face, shape_text, features, map, key.rtl, before, after)
             } else {
                 wordcraft_fonts::shape(&st.face, shape_text, features, map)
             };
@@ -1513,8 +1529,28 @@ pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
     }
     let resolve = |c: &CharProps| -> Arc<ResolvedChar> { Arc::new(doc.styles.resolve_char_in(para_style, table_chr, c)) };
     let levels = bidi_levels(&p.text, rp.bidi);
-    let mut b =
-        Builder { env, styles: Vec::new(), style_index: Default::default(), glyphs: Vec::new(), clusters: Vec::new(), levels, shown: Vec::new() };
+    // Hidden/deleted runs must not influence joining of the visible neighbors. Keep a compact
+    // boundary map only when text is omitted; ordinary paragraphs borrow their original text.
+    let mut context = String::new();
+    let mut context_map = Vec::new();
+    let mut copied = 0;
+    for (range, props) in p.run_ranges() {
+        if left_out(doc, &resolve(props), env.show_hidden, env.hide_deleted, env.hide_inserted) {
+            context.push_str(p.text.get(copied..range.start).unwrap_or(""));
+            context_map.push((range.start, context.len()));
+            context_map.push((range.end, context.len()));
+            copied = range.end;
+        }
+    }
+    let context = if context_map.is_empty() {
+        std::borrow::Cow::Borrowed(p.text.as_str())
+    } else {
+        context.push_str(p.text.get(copied..).unwrap_or(""));
+        std::borrow::Cow::Owned(context)
+    };
+    let mut b = Builder {
+        env, context, context_map, styles: Vec::new(), style_index: Default::default(), glyphs: Vec::new(), clusters: Vec::new(), levels, shown: Vec::new(),
+    };
     let mark_rc = resolve(&p.mark);
     let mark_style = b.style(&mark_rc, None, false);
     let mut has_page_fields = false;

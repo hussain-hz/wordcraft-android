@@ -24,6 +24,64 @@ fn para_layout(l: &DocLayout, i: u32) -> &ParaLayout {
     panic!("paragraph {i} not laid out");
 }
 
+/// Editing an imported word can leave separate runs even when their visible font is identical.
+/// A paint-only change must not reset the Arabic joining state at either side of the new letter.
+#[test]
+fn arabic_edits_join_across_run_boundaries() {
+    use wordcraft_doc::{CharProps, Paragraph, para_block};
+    use wordcraft_doc::props::{Rgb, TextColor};
+    let face = wordcraft_fonts::FontDb::global().fallback_for('ب', 0).expect("Arabic test font");
+    let props = CharProps { font: Some(face.family.clone()), font_cs: Some(face.family.clone()), lang: Some("ar".into()), ..Default::default() };
+    for (old, at) in [
+        ("فتحه", "فتح".len()), ("بيته", "بي".len()), ("ببه", "ب".len()),
+        ("فتحه", 0), ("فتحه", "فتحه".len()),
+        ("فت\u{200C}حه", "فت\u{200C}ح".len()), ("فتح ه", "فتح ".len()),
+    ] {
+        let mut p = Paragraph::with_text(old, props.clone());
+        let added = CharProps { color: Some(TextColor::Rgb(Rgb(200, 0, 0))), lang: Some("ar-SA".into()), ..props.clone() };
+        p.insert_text(at, "ت", &added).unwrap();
+        let mut edited = Document::new();
+        edited.body = vec![para_block(p.clone())];
+        let mut reference = Document::new();
+        reference.body = vec![para_block(Paragraph::with_text(&p.text, props.clone()))];
+        assert!(p.runs.len() > 1, "the edit must really create run boundaries");
+        for mobile in [false, true] {
+            let opts = LayoutOptions { view: if mobile { ViewMode::Web } else { ViewMode::Print }, mobile, web_width: 320.0, ..Default::default() };
+            let a = layout(&edited, &mut LayoutCache::new(), &opts);
+            let b = layout(&reference, &mut LayoutCache::new(), &opts);
+            let actual = para_layout(&a, 0);
+            let want = para_layout(&b, 0);
+            let ids = |p: &ParaLayout| p.glyphs.iter().map(|g| g.gid).collect::<Vec<_>>();
+            assert!(ids(want).iter().all(|g| *g != 0), "a real Arabic shaping font is required");
+            assert_eq!(ids(actual), ids(want), "joining after editing {old}, mobile={mobile}");
+            let width = |p: &ParaLayout| p.clusters.iter().map(|c| c.adv).sum::<f32>();
+            assert!((width(actual) - width(want)).abs() < 0.001, "no extra gap or overlap at the editing boundary");
+            assert!(actual.styles.iter().any(|s| s.rc.color == TextColor::Rgb(Rgb(200, 0, 0))), "keep the inserted letter's own formatting");
+        }
+    }
+}
+
+#[test]
+fn arabic_joining_ignores_hidden_runs_and_keeps_visible_offsets() {
+    use wordcraft_doc::{CharProps, Paragraph, para_block};
+    let face = wordcraft_fonts::FontDb::global().fallback_for('ب', 0).expect("Arabic test font");
+    let props = CharProps { font: Some(face.family.clone()), font_cs: Some(face.family.clone()), ..Default::default() };
+    // The visible prefix before the omitted run also exercises mapping before the first boundary.
+    let mut p = Paragraph::with_text("بب فتسحه", props.clone());
+    p.format("بب فت".len(), "بب فتس".len(), &|c| c.hidden = Some(true)).unwrap();
+    let mut edited = Document::new();
+    edited.body = vec![para_block(p)];
+    let mut reference = Document::new();
+    reference.body = vec![para_block(Paragraph::with_text("بب فتحه", props))];
+    for mobile in [false, true] {
+        let opts = LayoutOptions { view: if mobile { ViewMode::Web } else { ViewMode::Print }, mobile, web_width: 320.0, ..Default::default() };
+        let actual = layout(&edited, &mut LayoutCache::new(), &opts);
+        let want = layout(&reference, &mut LayoutCache::new(), &opts);
+        let ids = |l: &DocLayout| para_layout(l, 0).glyphs.iter().map(|g| g.gid).collect::<Vec<_>>();
+        assert_eq!(ids(&actual), ids(&want), "hidden text must not choose visible joining forms, mobile={mobile}");
+    }
+}
+
 /// "မြန်မာစာ": the syllables မြ | န် | မာ | စာ.
 const MYANMAR: &str = "\u{1019}\u{103C}\u{1014}\u{103A}\u{1019}\u{102C}\u{1005}\u{102C}";
 

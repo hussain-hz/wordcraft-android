@@ -839,6 +839,50 @@ fn arabic_and_western_digits_render_as_written_on_android_and_in_export_options(
     }
 }
 
+/// A real editor insertion with its own formatting must join both original neighbors, also
+/// after DOCX save/reopen and when switching between Print and Mobile View.
+#[test]
+fn arabic_inserted_letters_join_existing_text_and_survive_docx() {
+    let m = MobileSession::default();
+    m.type_text("فتحه".into()).unwrap();
+    m.execute("caret.set".into(), json!({"pos":{"block":0,"off":"فتح".len()}}).to_string()).unwrap();
+    m.execute("format.color".into(), json!({"color":"C80000"}).to_string()).unwrap();
+    m.type_text("ت".into()).unwrap();
+    assert_eq!(body_text(&m), "فتحته");
+    let reference = MobileSession::default();
+    reference.type_text("فتحته".into()).unwrap();
+    for session in [&m, &reference] {
+        session.execute("file.options".into(), json!({"checkSpelling":false,"markGrammar":false}).to_string()).unwrap();
+    }
+    let glyphs = |m: &MobileSession| {
+        let mut s = m.lock();
+        let l = s.layout();
+        l.pages.iter().flat_map(|p| p.items.iter()).filter_map(|i| match i {
+            wordcraft_engine::layout::Placed::Lines { para, .. } => Some(para.glyphs.iter().map(|g| g.gid)),
+            _ => None,
+        }).flatten().collect::<Vec<_>>()
+    };
+    for reopen in [false, true] {
+        if reopen {
+            let bytes = m.save_bytes("joining.docx".into()).unwrap();
+            let doc = io::open_bytes("joining.docx", &bytes).unwrap();
+            m.lock().set_document(doc);
+        }
+        for mode in ["print", "mobile"] {
+            m.set_view(mode.into(), 320.0).unwrap();
+            reference.set_view(mode.into(), 320.0).unwrap();
+            assert_eq!(glyphs(&m), glyphs(&reference), "connected forms: {mode}, reopened={reopen}");
+            let actual = m.render_page(0, 1.0).unwrap();
+            let expected = reference.render_page(0, 1.0).unwrap();
+            assert_eq!((actual.width, actual.height), (expected.width, expected.height));
+            // Red and black both have a zero green component: compare that channel to check the
+            // actual rasterized letter geometry while preserving the new letter's red formatting.
+            assert!(actual.rgba.chunks_exact(4).zip(expected.rgba.chunks_exact(4)).all(|(a, b)| a[1] == b[1]), "rendered joining geometry: {mode}, reopened={reopen}");
+            assert_eq!(body_text(&m), "فتحته");
+        }
+    }
+}
+
 
 #[test]
 fn a_picture_s_shadow_stays_dark_on_a_dark_page() {

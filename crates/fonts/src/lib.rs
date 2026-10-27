@@ -188,7 +188,21 @@ pub fn shape(face: &FontFace, text: &str, features: &[Feature], map: impl Fn(cha
 /// mark positioning. Glyphs come back in logical order like [`shape`]: clusters in text order,
 /// each cluster's glyphs in the shaper's (visual) order.
 pub fn shape_run(face: &FontFace, text: &str, features: &[Feature], map: impl Fn(char) -> char, rtl: bool) -> Vec<ShapedGlyph> {
-    let g = shape_dir(face, text, features, &map, rtl);
+    shape_run_with_context(face, text, features, map, rtl, "", "")
+}
+
+/// Shape only `text`, using surrounding visible Unicode text to choose joining forms. Context
+/// is neither drawn nor added to the clusters, and may belong to a differently formatted run.
+pub fn shape_run_with_context(
+    face: &FontFace,
+    text: &str,
+    features: &[Feature],
+    map: impl Fn(char) -> char,
+    rtl: bool,
+    before: &str,
+    after: &str,
+) -> Vec<ShapedGlyph> {
+    let g = shape_dir_with_context(face, text, features, &map, rtl, before, after);
     if !rtl {
         return g;
     }
@@ -205,6 +219,18 @@ pub fn shape_run(face: &FontFace, text: &str, features: &[Feature], map: impl Fn
 }
 
 fn shape_dir(face: &FontFace, text: &str, features: &[Feature], map: &impl Fn(char) -> char, rtl: bool) -> Vec<ShapedGlyph> {
+    shape_dir_with_context(face, text, features, map, rtl, "", "")
+}
+
+fn shape_dir_with_context(
+    face: &FontFace,
+    text: &str,
+    features: &[Feature],
+    map: &impl Fn(char) -> char,
+    rtl: bool,
+    before: &str,
+    after: &str,
+) -> Vec<ShapedGlyph> {
     let mut out = Vec::with_capacity(text.len());
     let shaped = face.hb().map(|hb| {
         let shaper = face.shaper.shaper(&hb).instance(face.instance.as_ref()).build();
@@ -217,6 +243,8 @@ fn shape_dir(face: &FontFace, text: &str, features: &[Feature], map: &impl Fn(ch
             for (i, c) in sub.char_indices() {
                 buf.add(map(c), (r.start + i) as u32);
             }
+            buf.set_pre_context(if r.start == 0 { before } else { text.get(..r.start).unwrap_or("") });
+            buf.set_post_context(if r.end == text.len() { after } else { text.get(r.end..).unwrap_or("") });
             buf.guess_segment_properties();
             buf.set_direction(if rtl { Direction::RightToLeft } else { Direction::LeftToRight });
             let gb = shaper.shape(buf, ShapeOptions::new().features(features));

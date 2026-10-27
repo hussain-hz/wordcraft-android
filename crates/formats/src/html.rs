@@ -734,9 +734,11 @@ fn apply_style(css: &str, f: &mut Fmt, align: &mut Option<Align>, preserve: &mut
             "text-align" => {
                 *align = match lv.as_str() {
                     "center" => Some(Align::Center),
-                    "right" | "end" => Some(Align::Right),
+                    "right" => Some(Align::PhysicalRight),
+                    "end" => Some(Align::Right),
                     "justify" => Some(Align::Justify),
-                    "left" | "start" => Some(Align::Left),
+                    "left" => Some(Align::PhysicalLeft),
+                    "start" => Some(Align::Left),
                     _ => *align,
                 }
             }
@@ -1255,9 +1257,9 @@ impl<'r> Builder<'r> {
         if let Some(a) = attr(attrs, "align").filter(|_| kind != ElKind::Table) {
             align = match a.to_ascii_lowercase().as_str() {
                 "center" | "middle" => Some(Align::Center),
-                "right" => Some(Align::Right),
+                "right" => Some(Align::PhysicalRight),
                 "justify" => Some(Align::Justify),
-                "left" => Some(Align::Left),
+                "left" => Some(Align::PhysicalLeft),
                 _ => None,
             };
         }
@@ -1624,8 +1626,9 @@ pub fn esc(s: &str) -> String {
 fn align_css(a: Option<Align>) -> Option<&'static str> {
     match a? {
         Align::Center => Some("text-align:center"),
-        Align::Right => Some("text-align:right"),
+        Align::Right | Align::PhysicalRight => Some("text-align:right"),
         Align::Justify | Align::Distribute => Some("text-align:justify"),
+        Align::PhysicalLeft => Some("text-align:left"),
         Align::Left => None,
     }
 }
@@ -2121,10 +2124,10 @@ mod tests {
              <td align=right>attr</td></tr><tr><td>body</td></tr></tbody><tr><td>table</td></tr></table>",
         );
         let rows = cell_paras(&f);
-        assert_eq!(rows[0][0][0].align, Some(Align::Right), "td style");
-        assert_eq!(rows[0][1][0].align, Some(Align::Right), "from tr");
+        assert_eq!(rows[0][0][0].align, Some(Align::PhysicalRight), "td style");
+        assert_eq!(rows[0][1][0].align, Some(Align::PhysicalRight), "from tr");
         assert_eq!(rows[0][2][0].align, Some(Align::Center), "own paragraph wins");
-        assert_eq!(rows[0][3][0].align, Some(Align::Right), "align attribute");
+        assert_eq!(rows[0][3][0].align, Some(Align::PhysicalRight), "align attribute");
         assert_eq!(rows[1][0][0].align, Some(Align::Justify), "from tbody");
         assert_eq!(rows[2][0][0].align, Some(Align::Center), "from table");
         // `align` on a table places the table; it doesn't align the text in its cells.
@@ -2140,7 +2143,7 @@ mod tests {
         );
         let rows = cell_paras(&f);
         assert!(all_bold(&rows[0][0][0]) && all_bold(&rows[0][1][0]), "{:?}", rows[0]);
-        assert_eq!(rows[1][1][0].align, Some(Align::Right));
+        assert_eq!(rows[1][1][0].align, Some(Align::PhysicalRight));
         assert_eq!(rows[1][0][0].align, None);
     }
 

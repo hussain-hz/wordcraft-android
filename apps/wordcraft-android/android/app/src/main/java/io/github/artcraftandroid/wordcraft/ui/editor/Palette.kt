@@ -256,6 +256,32 @@ internal fun PaletteRow(
     }
 }
 
+/** Alignment is a physical choice; localizing the UI must not swap the meaning of an edge. */
+internal fun alignmentChoices(rtl: Boolean, justify: Boolean = true): List<String> =
+    (if (rtl) listOf("right", "center", "left") else listOf("left", "center", "right")) + if (justify) listOf("justify") else emptyList()
+
+@Composable
+internal fun AlignmentRow(vm: AppViewModel, justify: Boolean = true) {
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    Row(Modifier.fillMaxWidth().height(ROW + 1.dp).bottomEdge(WordColors.Divider)) {
+        for (value in alignmentChoices(rtl, justify)) {
+            val (icon, label) = when (value) {
+                "left" -> LucideIcons.AlignLeft to "Align Left"
+                "right" -> LucideIcons.AlignRight to "Align Right"
+                "center" -> LucideIcons.AlignCenter to "Center"
+                else -> LucideIcons.AlignJustify to "Justify"
+            }
+            val selected = vm.format?.align == value || (value == "justify" && vm.format?.align == "distribute")
+            val description = uiText(label)
+            Box(Modifier.weight(1f).height(ROW).background(if (selected) WordColors.Pressed else WordColors.Surface)
+                .semantics { contentDescription = description }
+                .selectable(selected) { vm.command("para.align", json("value" to value)) }, contentAlignment = Alignment.Center) {
+                GlyphIcon(icon.glyph(), WordColors.OnStrip, size = 26.dp)
+            }
+        }
+    }
+}
+
 /** A row of equal cells (the toggles, the indents, the alignments). */
 @Composable
 internal fun CellRow(vararg cells: Triple<Glyph, Boolean, () -> Unit>) {
@@ -316,12 +342,7 @@ private fun HomeTab(vm: AppViewModel, onFind: () -> Unit) {
             Triple(Glyph.Letters("›¶"), f?.rtl == false) { vm.command("para.ltr") },
             Triple(Glyph.Letters("¶‹"), f?.rtl == true) { vm.command("para.rtl") },
         )
-        CellRow(
-            Triple(LucideIcons.AlignLeft.glyph(), f?.align == "left") { vm.command("para.alignLeft") },
-            Triple(LucideIcons.AlignCenter.glyph(), f?.align == "center") { vm.command("para.alignCenter") },
-            Triple(LucideIcons.AlignRight.glyph(), f?.align == "right") { vm.command("para.alignRight") },
-            Triple(LucideIcons.AlignJustify.glyph(), f?.align == "justify" || f?.align == "distribute") { vm.command("para.justify") },
-        )
+        AlignmentRow(vm)
         PaletteRow("Paragraph Formatting", null, onClick = { vm.pushPanel("paragraph") }, chevron = true)
         Band()
         PaletteRow("Styles", LucideIcons.Paintbrush.glyph(), onClick = { vm.pushPanel("styles") }, chevron = true)

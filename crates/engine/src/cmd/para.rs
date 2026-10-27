@@ -281,17 +281,25 @@ fn align(s: &mut Session, a: Align) -> CmdResult {
     // Clicking the active alignment again returns to the start edge (Word).
     let logical = a.visual(r.bidi);
     let target = if r.align == logical && logical != Align::Left { None } else { Some(a) };
-    let focus_rtl = r.bidi;
-    fmt(s, &|p| {
-        let rtl = p.bidi.unwrap_or(focus_rtl);
-        p.align = Some(target.map_or(Align::Left, |a| a.visual(rtl)));
-    })
+    set_each_align(s, target)
 }
 
 /// Set the alignment as seen on the page in every selected paragraph, in its own direction.
 fn set_align(s: &mut Session, a: Align) -> CmdResult {
-    let focus_rtl = cur(s).bidi;
-    fmt(s, &|p| p.align = Some(a.visual(p.bidi.unwrap_or(focus_rtl))))
+    set_each_align(s, Some(a))
+}
+
+/// Each paragraph resolves its own inherited direction, including based-on style chains.
+fn set_each_align(s: &mut Session, target: Option<Align>) -> CmdResult {
+    let story = s.sel.focus.story;
+    for path in super::selected_paths(s) {
+        let Some(para) = s.doc.para(story, &path) else { continue };
+        let rtl = s.doc.styles.resolve_para(&para.props).bidi;
+        let para = s.doc.para_mut(story, &path)?;
+        para.props.align = Some(target.map_or(Align::Left, |a| a.visual(rtl)));
+        para.touch();
+    }
+    sel_result(s)
 }
 
 /// Paragraph reading order (Word's Right-to-Left / Left-to-Right Text Direction buttons). Only

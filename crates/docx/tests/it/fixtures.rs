@@ -2093,7 +2093,7 @@ fn note_separators_and_continuation_notice_round_trip() {
         assert_eq!(cont.objects.iter().map(InlineObject::as_note_separator).collect::<Vec<_>>(), vec![Some(true)]);
         let notice = first(&s.continuation_notice);
         assert_eq!(notice.plain_text(), "(continued)");
-        assert_eq!(notice.props.align, Some(Align::Right));
+        assert_eq!(notice.props.align, Some(Align::PhysicalRight));
         assert!(d.endnote_separators.is_empty());
         // The note itself is read as before.
         let InlineObject::NoteRef { id, .. } = paras(d)[0].objects[0] else { panic!() };

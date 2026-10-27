@@ -187,9 +187,9 @@ pub fn rpr(w: &mut W, c: &CharProps) {
 
 pub fn align_val(a: Align) -> &'static str {
     match a {
-        Align::Left => "left",
+        Align::Left | Align::PhysicalLeft => "left",
         Align::Center => "center",
-        Align::Right => "right",
+        Align::Right | Align::PhysicalRight => "right",
         Align::Justify => "both",
         Align::Distribute => "distribute",
     }
@@ -407,7 +407,14 @@ pub fn ppr_inner(w: &mut W, p: &ParaProps, framed: bool, num_change: Option<&Cha
     toggle(w, "w:contextualSpacing", p.contextual_spacing);
     toggle(w, "w:mirrorIndents", p.mirror_indents);
     if let Some(a) = p.align {
-        w.val("w:jc", align_val(a));
+        w.val(
+            "w:jc",
+            match a {
+                Align::Left => "start",
+                Align::Right => "end",
+                other => align_val(other),
+            },
+        );
     }
     if let Some(l) = p.outline_level {
         w.val("w:outlineLvl", &n(l.min(9) as i64));

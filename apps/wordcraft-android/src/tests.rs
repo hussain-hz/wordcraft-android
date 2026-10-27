@@ -789,3 +789,41 @@ fn black_paper_is_display_only_and_switches_back_to_gray_and_white() {
     assert_eq!(&m.render_page(0, 1.0).unwrap().rgba[..4], &[255, 255, 255, 255]);
     assert_eq!(body_text(&m), before, "appearance never changes document text");
 }
+
+#[test]
+fn imported_arabic_alignment_buttons_and_saved_layout_agree_in_both_views() {
+    let bytes = include_bytes!("../tests/fixtures/rtl-alignment.docx");
+    let m = MobileSession::default();
+    *m.lock() = Session::new(wordcraft_engine::io::open_bytes("arabic.docx", bytes).unwrap());
+    let original = body_text(&m);
+    let expected = ["right", "left", "right", "left", "right", "right"];
+    for mode in ["print", "mobile"] {
+        m.set_view(mode.into(), 320.0).unwrap();
+        for (i, align) in expected.iter().enumerate() {
+            m.lock().sel = wordcraft_engine::Selection::caret(Pos::body(i, 0));
+            let f = m.format_state();
+            assert_eq!(f.rtl, i != 5, "{mode} paragraph {i}");
+            assert_eq!(f.align, *align, "{mode} paragraph {i}");
+            let mut s = m.lock();
+            let l = s.layout();
+            let text = s.doc.para_at(&Pos::body(i, 0)).unwrap().text.clone();
+            let a = l.caret(&Pos::body(i, 0)).unwrap().x;
+            let b = l.caret(&Pos::body(i, text.len())).unwrap().x;
+            let page_width = l.pages[0].w;
+            if *align == "right" {
+                assert!(a.max(b) > page_width * 0.7, "right edge: {mode} {i} {a} {b}");
+            } else {
+                assert!(a.min(b) < page_width * 0.3, "left edge: {mode} {i} {a} {b}");
+            }
+        }
+        m.lock().sel = wordcraft_engine::Selection::caret(Pos::body(0, 0));
+        for value in ["left", "left", "right", "right", "center", "right"] {
+            m.execute("para.align".into(), json!({"value": value}).to_string()).unwrap();
+            assert_eq!(m.format_state().align, value, "repeated explicit choice is stable");
+        }
+        let saved = m.save_bytes("again.docx".into()).unwrap();
+        *m.lock() = Session::new(wordcraft_engine::io::open_bytes("again.docx", &saved).unwrap());
+        assert_eq!(body_text(&m), original);
+        assert_eq!(m.format_state().align, "right");
+    }
+}

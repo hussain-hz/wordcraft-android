@@ -322,3 +322,32 @@ fn a_latin_link_inserted_into_reopened_hebrew_is_saved_left_to_right() {
     assert_eq!(s.typing_props().rtl, None);
     assert_eq!(s.typing_props().lang_bidi.as_deref(), Some("he-IL"), "the bidi language stays");
 }
+
+#[test]
+fn alignment_of_mixed_selection_resolves_each_paragraphs_inherited_direction() {
+    use wordcraft_doc::props::ParaProps;
+    use wordcraft_doc::styles::Style;
+    let mut s = session(
+        "العربية
+English",
+        false,
+    );
+    s.doc.styles.styles.push(Style { id: "ArabicBase".into(), para: ParaProps { bidi: Some(true), ..Default::default() }, ..Default::default() });
+    s.doc.styles.styles.push(Style { id: "ArabicChild".into(), based_on: Some("ArabicBase".into()), ..Default::default() });
+    s.doc.para_mut(StoryRef::Body, &wordcraft_doc::Path::top(0)).unwrap().props.style = Some("ArabicChild".into());
+    run(&mut s, "select.all", json!({}));
+    for id in ["para.align", "para.alignLeft", "para.alignRight"] {
+        if id == "para.align" {
+            run(&mut s, id, json!({"value": "left"}));
+        } else {
+            run(&mut s, id, json!({}));
+        }
+        let want = if id == "para.alignRight" { Align::Right } else { Align::Left };
+        for i in 0..2 {
+            let r = s.doc.styles.resolve_para(&props(&s, i));
+            assert_eq!(r.bidi, i == 0);
+            assert_eq!(r.align.visual(r.bidi), want, "{id} paragraph {i}");
+        }
+        run(&mut s, "edit.undo", json!({}));
+    }
+}

@@ -1618,9 +1618,9 @@ fn spacing_label(l: wordcraft_engine::doc::props::LineSpacing) -> String {
 fn align_name(a: wordcraft_engine::doc::props::Align) -> &'static str {
     use wordcraft_engine::doc::props::Align;
     match a {
-        Align::Left => "left",
+        Align::Left | Align::PhysicalLeft => "left",
         Align::Center => "center",
-        Align::Right => "right",
+        Align::Right | Align::PhysicalRight => "right",
         Align::Justify => "justify",
         Align::Distribute => "distribute",
     }

@@ -642,6 +642,9 @@ pub enum Align {
     Right,
     Justify,
     Distribute,
+    /// Physical page edge from OOXML `left`/`right`, independent of paragraph direction.
+    PhysicalLeft,
+    PhysicalRight,
 }
 
 impl Align {
@@ -652,6 +655,17 @@ impl Align {
         match self {
             Align::Left if rtl => Align::Right,
             Align::Right if rtl => Align::Left,
+            Align::PhysicalLeft => Align::Left,
+            Align::PhysicalRight => Align::Right,
+            a => a,
+        }
+    }
+
+    /// Normalize an absolute OOXML edge after the complete style/direction cascade is known.
+    pub fn logical(self, rtl: bool) -> Align {
+        match self {
+            Align::PhysicalLeft => Align::Left.visual(rtl),
+            Align::PhysicalRight => Align::Right.visual(rtl),
             a => a,
         }
     }

@@ -417,7 +417,13 @@ impl PropCtx {
                         _ => {}
                     }
                 }
-                "w:jc" => p.align = k.attr("w:val").map(align),
+                "w:jc" => {
+                    p.align = k.attr("w:val").map(|v| match v {
+                        "left" => Align::PhysicalLeft,
+                        "right" => Align::PhysicalRight,
+                        other => align(other),
+                    })
+                }
                 "w:outlineLvl" => p.outline_level = k.attr("w:val").and_then(u32_of).map(|v| v.min(9) as u8),
                 "w:rPr" => mark = self.rpr(k),
                 _ => {}

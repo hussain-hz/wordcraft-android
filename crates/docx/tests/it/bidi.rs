@@ -94,8 +94,8 @@ fn bidi_markup_is_written_in_schema_order() {
 
 #[test]
 fn reads_word_style_bidi_markup() {
-    // What a right-to-left paragraph looks like in a Word document: w:bidi, logical
-    // alignment and indents (left = start), runs with w:rtl and the complex-script values.
+    // Word paragraphs keep physical jc=left separate from logical start/end;
+    // bidi controls reading order, while runs carry complex-script formatting.
     let body = r#"
 <w:p>
   <w:pPr><w:bidi/><w:ind w:left="720" w:right="0"/><w:jc w:val="left"/></w:pPr>
@@ -109,7 +109,7 @@ fn reads_word_style_bidi_markup() {
     assert_eq!(ps[0].text, "سلام دنیا Word 2025");
     assert_eq!(ps[0].props.bidi, Some(true));
     assert_eq!(ps[0].props.indent_left, Some(36.0), "w:left is the start indent");
-    assert_eq!(ps[0].props.align, Some(Align::Left), "jc=left is the start edge");
+    assert_eq!(ps[0].props.align, Some(Align::PhysicalLeft), "jc=left is the physical left edge");
     let fa = &ps[0].runs[0].props;
     assert_eq!(fa.font.as_deref(), Some("Times New Roman"));
     assert_eq!(fa.font_cs.as_deref(), Some("B Lotus"));
@@ -174,4 +174,58 @@ fn rtl_tables_and_sections_round_trip() {
     let again: Vec<bool> = r.body.iter().filter_map(|b| b.as_table()).map(|t| t.props.bidi_visual).collect();
     assert_eq!(again, vec![true, false]);
     assert!(r.last_section.rtl && r.last_section.columns.count == 2);
+}
+
+#[test]
+fn physical_and_logical_alignment_survive_direction_inheritance_and_round_trip() {
+    let mut body = String::new();
+    let mut expected = Vec::new();
+    for rtl in [false, true] {
+        for (jc, ltr_edge, rtl_edge) in [
+            ("left", Align::Left, Align::Left),
+            ("right", Align::Right, Align::Right),
+            ("start", Align::Left, Align::Right),
+            ("end", Align::Right, Align::Left),
+            ("center", Align::Center, Align::Center),
+            ("both", Align::Justify, Align::Justify),
+        ] {
+            for inherited in [false, true] {
+                // Direction either appears after jc or is inherited through a based-on chain.
+                let bidi = if rtl { "1" } else { "0" };
+                let ppr = if inherited {
+                    format!(r#"<w:pStyle w:val="Child{bidi}"/><w:jc w:val="{jc}"/>"#)
+                } else {
+                    format!(r#"<w:jc w:val="{jc}"/><w:bidi w:val="{bidi}"/>"#)
+                };
+                body.push_str(&format!(r#"<w:p><w:pPr>{ppr}</w:pPr><w:r><w:t>العربية English 123</w:t></w:r></w:p>"#));
+                expected.push((rtl, if rtl { rtl_edge } else { ltr_edge }));
+            }
+        }
+    }
+    // Alignment from a style must resolve against the paragraph's own direction too.
+    body.push_str(r#"<w:p><w:pPr><w:pStyle w:val="Right"/><w:bidi/></w:pPr><w:r><w:t>موروث</w:t></w:r></w:p>"#);
+    expected.push((true, Align::Right));
+    body.push_str(r#"<w:p><w:pPr><w:pStyle w:val="Start"/><w:bidi/></w:pPr><w:r><w:t>بداية</w:t></w:r></w:p>"#);
+    expected.push((true, Align::Right));
+    let root = r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="doc" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"#;
+    let rels = r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="styles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>"#;
+    let styles = r#"<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Base1"><w:pPr><w:bidi/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Child1"><w:basedOn w:val="Base1"/></w:style><w:style w:type="paragraph" w:styleId="Base0"><w:pPr><w:bidi w:val="0"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Child0"><w:basedOn w:val="Base0"/></w:style><w:style w:type="paragraph" w:styleId="Right"><w:pPr><w:jc w:val="right"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Start"><w:pPr><w:jc w:val="start"/></w:pPr></w:style></w:styles>"#;
+    let document =
+        format!(r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{body}</w:body></w:document>"#);
+    let bytes = zip(&[
+        ("_rels/.rels", root.as_bytes()),
+        ("word/document.xml", document.as_bytes()),
+        ("word/_rels/document.xml.rels", rels.as_bytes()),
+        ("word/styles.xml", styles.as_bytes()),
+    ]);
+    let mut doc = wordcraft_docx::read(&bytes).unwrap();
+    for _ in 0..3 {
+        let ps = paras(&doc);
+        assert_eq!(ps.len(), expected.len());
+        for (i, (p, (rtl, edge))) in ps.iter().zip(&expected).enumerate() {
+            let resolved = doc.styles.resolve_para(&p.props);
+            assert_eq!((resolved.bidi, resolved.align.visual(resolved.bidi)), (*rtl, *edge), "paragraph {i}");
+        }
+        doc = wordcraft_docx::read(&wordcraft_docx::write(&doc).unwrap()).unwrap();
+    }
 }

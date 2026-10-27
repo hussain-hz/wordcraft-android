@@ -241,7 +241,7 @@ impl ResolvedPara {
         tabs.sort_by(|a, b| a.pos.total_cmp(&b.pos));
         ResolvedPara {
             style: style.to_string(),
-            align: p.align.unwrap_or_default(),
+            align: p.align.unwrap_or_default().logical(p.bidi.unwrap_or(false)),
             indent_left: clampi(p.indent_left),
             indent_right: clampi(p.indent_right),
             indent_first: clampi(p.indent_first),

@@ -2392,3 +2392,16 @@ fn paragraph_borders_read_from_both_forms() {
     assert_eq!((top.style, top.width, top.space), (wordcraft_doc::props::BorderStyle::Single, 1.0, 2.0));
     assert_eq!(top.color, Some(wordcraft_doc::Rgb(0xFF, 0, 0)));
 }
+
+#[test]
+fn old_doc_physical_alignment_and_new_doc_logical_alignment_remain_distinct() {
+    use wordcraft_doc::props::{Align, ParaProps};
+    for (opcode, physical) in [(0x2403, true), (0x2461, false)] {
+        for (byte, visual) in [(0, Align::Left), (2, Align::Right)] {
+            let mut p = ParaProps { bidi: Some(true), ..Default::default() };
+            super::fmt::apply_para(&mut p, &super::sprm::Prl { op: opcode, operand: &[byte] });
+            let rp = wordcraft_doc::Document::new().styles.resolve_para(&p);
+            assert_eq!(rp.align.visual(true), if physical { visual } else { visual.visual(true) });
+        }
+    }
+}

@@ -309,11 +309,7 @@ private fun CellAlignPanel(vm: AppViewModel) {
     val f = vm.format
     Scrolling {
         // the text's alignment, then the cells' vertical alignment (the selected cells)
-        CellRow(
-            Triple(LucideIcons.AlignLeft.glyph(), f?.align == "left") { vm.command("para.alignLeft") },
-            Triple(LucideIcons.AlignCenter.glyph(), f?.align == "center") { vm.command("para.alignCenter") },
-            Triple(LucideIcons.AlignRight.glyph(), f?.align == "right") { vm.command("para.alignRight") },
-        )
+        AlignmentRow(vm, justify = false)
         CellRow(
             *listOf("top", "middle", "bottom").map { v ->
                 Triple(Glyph.CellLines(v) as Glyph, f?.cellValign == v) { vm.command("table.cellAlign", json("value" to v)) }
@@ -592,11 +588,7 @@ private fun AltTextPanel(vm: AppViewModel) {
 @Composable
 private fun ShapeTextPanel(vm: AppViewModel) {
     Scrolling {
-        CellRow(
-            Triple(LucideIcons.AlignLeft.glyph(), false) { vm.command("para.alignLeft") },
-            Triple(LucideIcons.AlignCenter.glyph(), false) { vm.command("para.alignCenter") },
-            Triple(LucideIcons.AlignRight.glyph(), false) { vm.command("para.alignRight") },
-        )
+        AlignmentRow(vm, justify = false)
         CellRow(
             Triple(Glyph.Letters("⤒"), false) { vm.command("shape.alignText", json("anchor" to "t")) },
             Triple(Glyph.Letters("↕"), false) { vm.command("shape.alignText", json("anchor" to "ctr")) },

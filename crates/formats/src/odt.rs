@@ -201,6 +201,8 @@ impl Writer {
             Some(Align::Right) => props.push_str(" fo:text-align=\"end\""),
             Some(Align::Justify) | Some(Align::Distribute) => props.push_str(" fo:text-align=\"justify\""),
             Some(Align::Left) => props.push_str(" fo:text-align=\"start\""),
+            Some(Align::PhysicalLeft) => props.push_str(" fo:text-align=\"left\""),
+            Some(Align::PhysicalRight) => props.push_str(" fo:text-align=\"right\""),
             None => {}
         }
         // The master page starts the page itself: no page break besides.

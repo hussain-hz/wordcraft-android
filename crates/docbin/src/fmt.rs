@@ -324,10 +324,10 @@ pub(crate) fn apply_para(p: &mut ParaProps, prl: &Prl) {
         P_JC | P_JC80 => {
             p.align = match prl.operand.first().copied().unwrap_or(0) {
                 1 => Some(Align::Center),
-                2 => Some(Align::Right),
+                2 => Some(if prl.op == P_JC80 { Align::PhysicalRight } else { Align::Right }),
                 3 => Some(Align::Justify),
                 4 => Some(Align::Distribute),
-                _ => Some(Align::Left),
+                _ => Some(if prl.op == P_JC80 { Align::PhysicalLeft } else { Align::Left }),
             };
         }
         P_DXA_LEFT | P_DXA_LEFT80 => {

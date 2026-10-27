@@ -86,7 +86,8 @@ pub struct PageSize {
 pub struct DocumentInfo {
     /// Changes when another document is opened or created.
     pub document_id: u64,
-    /// Changes with every edit, undo and redo: draw the pages again when it does.
+    /// Changes with every edit, undo and redo, and with the proofing choices (they change the
+    /// marks without an edit): draw the pages again when it does.
     pub revision: u64,
     pub pages: Vec<PageSize>,
     pub dirty: bool,
@@ -125,6 +126,14 @@ pub struct PageRect {
     pub y: f32,
     pub width: f32,
     pub height: f32,
+}
+
+/// A comment thread's mark beside its line in Mobile View: the thread, and the line its
+/// anchor starts on (page, x, top, height; no width).
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct CommentMark {
+    pub id: u32,
+    pub line: PageRect,
 }
 
 /// Find's state for its bar and the pages: how many matches there are, which one is selected
@@ -213,6 +222,8 @@ pub struct Swatch {
     pub name: String,
     /// `RRGGBB`.
     pub hex: String,
+    /// What a screen reader says for it ("Accent 1, Lighter 80%", "Dark Red", "Yellow").
+    pub label: String,
 }
 
 /// The colours the colour menus offer, as the desktop's menus have them: the document theme's
@@ -420,8 +431,8 @@ pub struct StyleLook {
     pub indent: f32,
 }
 
-/// The recommended styles the Styles list ends with, in its order (the headings after the first
-/// appear one level at a time, as the one above is used).
+/// The built-in styles the Styles list offers though the document lacks them (its other
+/// built-ins are listed once the document has them), as the phone app's latent styles.
 const RECOMMENDED_STYLES: &[&str] = &[
     "No Spacing",
     "Heading 1",
@@ -444,6 +455,7 @@ const RECOMMENDED_STYLES: &[&str] = &[
     "Subtle Reference",
     "Intense Reference",
     "Book Title",
+    "List Paragraph",
 ];
 
 /// What the Styles list calls built-in style `name`: the comment styles go by their feature's
@@ -519,6 +531,7 @@ impl Default for MobileSession {
         s.read_aloud.backend = speech::Backend::Hold;
         // Arabic-Indic and Western digits may coexist in the same document.
         s.view.numeral = wordcraft_engine::layout::NumeralMode::Preserve;
+        s.prefs.mark_grammar = false;
         Self { session: Mutex::new(s), dark_paper: AtomicU8::new(DARK_PAPER), reading: Mutex::new(Vec::new()) }
     }
 }
@@ -948,6 +961,7 @@ impl MobileSession {
     /// (`mobile`, the engine's Web Layout), and return the new pages.
     pub fn set_view(&self, mode: String, width: f32) -> Result<DocumentInfo, MobileError> {
         let mut s = self.lock();
+        s.view.mobile = mode == "mobile";
         if mode == "mobile" {
             s.view.web_width = if width.is_finite() { width.clamp(72.0, 4000.0) } else { 360.0 };
             Self::run(&mut s, "view.webLayout", json!({}))?;
@@ -959,16 +973,38 @@ impl MobileSession {
         Ok(info(&mut s))
     }
 
-    /// Whether the body holds pictures, shapes, charts or groups: Mobile View then says it can't
-    /// show them as the pages do.
+    /// Whether the body holds drawings Mobile View moves from where the pages have them (ones
+    /// the text wraps round, beside or above and below) or ink: Mobile View then says it can't
+    /// show them as the pages do, as the reference says it for such documents (not for pictures
+    /// in line with the text, or in front of it or behind it).
     pub fn has_drawings(&self) -> bool {
-        use wordcraft_engine::doc::para::OBJ;
+        use wordcraft_engine::doc::para::{OBJ, Wrap};
+        let moved = |o: &wordcraft_engine::doc::InlineObject| {
+            o.ink().is_some() || o.frame().is_some_and(|(_, _, f)| matches!(f.wrap, Wrap::Square | Wrap::Tight | Wrap::Through | Wrap::TopAndBottom))
+        };
         let s = self.lock();
         s.doc.para_paths(wordcraft_engine::doc::StoryRef::Body).iter().any(|path| {
             s.doc
                 .para_at(&Pos::new(wordcraft_engine::doc::StoryRef::Body, path.clone(), 0))
-                .is_some_and(|p| p.text.char_indices().any(|(i, c)| c == OBJ && p.object_at(i).is_some_and(|o| o.is_drawing())))
+                .is_some_and(|p| p.text.char_indices().any(|(i, c)| c == OBJ && p.object_at(i).is_some_and(|o| o.is_drawing() && moved(o))))
         })
+    }
+
+    /// The zoom the document was saved at (View › Zoom), percent, which the pages first show at
+    /// (as the reference opens them); 0 when it was saved fitting the page to the window.
+    pub fn document_zoom(&self) -> u32 {
+        match self.lock().doc.settings.zoom {
+            Some(z) if z.fit.is_some() => 0,
+            Some(z) => z.percent.clamp(10, 500),
+            None => 100,
+        }
+    }
+
+    /// How far down the first page its text starts (its top margin), points: the pages open
+    /// scrolled past it, as the reference opens them.
+    pub fn first_text_top(&self) -> f32 {
+        let s = self.lock();
+        s.doc.sections().first().map_or(0.0, |(_, sp)| if sp.margin_top.is_finite() { sp.margin_top.abs() } else { 0.0 })
     }
 
     /// Draw the pages dark (lightness inverted, pictures as they are) to sit in a dark theme.
@@ -1047,21 +1083,23 @@ impl MobileSession {
         self.lock().find.results.clear();
     }
 
-    /// The Styles list: the document's own styles by name, then the recommended ones (a built-in
-    /// one the document lacks is added when applied), each with its look.
+    /// The Styles list as the phone app shows it: the document's styles that aren't hidden (or
+    /// are used), the recommended built-ins it lacks (one is added when applied), and Heading n
+    /// once Heading n-1 shows; all by priority (none counts as 0), then name, each with its look.
     pub fn style_looks(&self) -> Vec<StyleLook> {
         use wordcraft_engine::doc::props::{CharProps, ParaProps, TextColor, Underline};
-        use wordcraft_engine::doc::styles::{StyleKind, StyleSheet};
+        use wordcraft_engine::doc::styles::{Style, StyleKind, StyleSheet, heading_level};
         let s = self.lock();
         let doc = &s.doc;
         let builtin = StyleSheet::builtin();
-        // the paragraph styles the body uses, for the headings shown one level at a time
-        let used: std::collections::HashSet<String> = doc
-            .para_paths(wordcraft_engine::doc::StoryRef::Body)
-            .into_iter()
-            .take(100_000)
-            .filter_map(|path| doc.para(wordcraft_engine::doc::StoryRef::Body, &path).and_then(|p| p.props.style.clone()))
-            .collect();
+        // the paragraph and character styles the body uses: a hidden style shows once used
+        let mut used = std::collections::HashSet::new();
+        for path in doc.para_paths(wordcraft_engine::doc::StoryRef::Body).into_iter().take(100_000) {
+            if let Some(p) = doc.para(wordcraft_engine::doc::StoryRef::Body, &path) {
+                used.extend(p.props.style.clone());
+                used.extend(p.run_ranges().filter_map(|(_, c)| c.style.clone()));
+            }
+        }
         let look = |sheet: &StyleSheet, st: &wordcraft_engine::doc::styles::Style| {
             let character = st.kind == StyleKind::Character;
             let c = if character {
@@ -1088,37 +1126,35 @@ impl MobileSession {
                 indent: if indent.is_finite() { indent.clamp(0.0, 400.0) } else { 0.0 },
             }
         };
-        let recommended = |name: &str| RECOMMENDED_STYLES.iter().any(|r| r.eq_ignore_ascii_case(name));
-        let mut own: Vec<StyleLook> = doc
+        // shown by its flags (a hidden Heading n beside a shown Heading n-1 too), or used, or a
+        // heading below one that is used
+        let used_heading = |n: u32| doc.styles.find(&format!("Heading {n}")).is_some_and(|st| used.contains(&st.id));
+        let shown = |st: &Style| {
+            doc.styles.shown_in_lists(st) || used.contains(&st.id) || heading_level(&st.name).is_some_and(|n| n > 1 && used_heading(n - 1))
+        };
+        let mut list: Vec<(u32, StyleLook)> = doc
             .styles
             .styles
             .iter()
-            .filter(|st| matches!(st.kind, StyleKind::Paragraph | StyleKind::Character) && !st.hidden && !recommended(&st.name))
-            .map(|st| look(&doc.styles, st))
+            .filter(|st| matches!(st.kind, StyleKind::Paragraph | StyleKind::Character))
+            .filter(|st| shown(st))
+            .map(|st| (st.priority.unwrap_or(0), look(&doc.styles, st)))
             .collect();
-        own.sort_by_key(|l| l.name.to_lowercase());
         for name in RECOMMENDED_STYLES {
-            // Heading n shows once Heading n-1 is used
-            if let Some(level) = name.strip_prefix("Heading ").and_then(|n| n.parse::<u32>().ok())
-                && level > 1
-            {
-                let above = format!("Heading {}", level - 1);
-                let id = doc.styles.find(&above).map(|st| st.id.clone()).unwrap_or_default();
-                if !used.contains(&id) {
-                    continue;
-                }
+            if doc.styles.find(name).is_some() {
+                continue;
             }
-            match doc.styles.find(name) {
-                Some(st) if !st.hidden => own.push(look(&doc.styles, st)),
-                Some(_) => {}
-                None => {
-                    if let Some(st) = builtin.find(name) {
-                        own.push(look(&builtin, st));
-                    }
-                }
+            // a built-in the document lacks shows as in a new document, a lower heading once the
+            // one above it shows or is used
+            let revealed = heading_level(name).is_some_and(|n| {
+                n > 1 && doc.styles.find(&format!("Heading {}", n - 1)).map_or(n == 2, |above| !above.hidden || used.contains(&above.id))
+            });
+            if let Some(st) = builtin.find(name).filter(|st| revealed || builtin.shown_in_lists(st)) {
+                list.push((st.priority.unwrap_or(0), look(&builtin, st)));
             }
         }
-        own
+        list.sort_by_cached_key(|(priority, l)| (*priority, l.name.to_lowercase()));
+        list.into_iter().map(|(_, l)| l).collect()
     }
 
     /// The selected picture's or shape's alt text, for its Alt Text pane; `None` with no object
@@ -1359,25 +1395,50 @@ impl MobileSession {
     pub fn color_choices(&self) -> ColorChoices {
         use wordcraft_engine::doc::props::{Highlight, Rgb};
         let s = self.lock();
-        let swatch = |c: Rgb| Swatch { name: c.hex(), hex: c.hex() };
+        let swatch = |c: Rgb, label: String| Swatch { name: c.hex(), hex: c.hex(), label };
         // the theme's ten colours in the desktop's order, then five lighter and darker shades of
         // each: the colour's lightness moved towards white or black, its hue and saturation kept
         let base = s.doc.settings.theme_colors.iter().take(10).copied().collect::<Vec<_>>();
         let order = [1usize, 0, 3, 2, 4, 5, 6, 7, 8, 9];
         let colours: Vec<Rgb> = order.iter().filter_map(|&i| base.get(i).copied()).collect();
         let columns: Vec<[Rgb; 6]> = colours.iter().map(|&c| shades(c)).collect();
-        let theme = (0..6).map(|row| columns.iter().map(|col| swatch(col[row])).collect()).filter(|row: &Vec<Swatch>| !row.is_empty()).collect();
-        let standard = ["C00000", "FF0000", "FFC000", "FFFF00", "92D050", "00B050", "00B0F0", "0070C0", "002060", "7030A0"]
-            .iter()
-            .filter_map(|h| Rgb::parse(h))
-            .map(swatch)
+        // named by their place in the theme (bg1, tx1, bg2, tx2, accents), as the file format does
+        const SLOTS: [&str; 10] =
+            ["Background 1", "Text 1", "Background 2", "Text 2", "Accent 1", "Accent 2", "Accent 3", "Accent 4", "Accent 5", "Accent 6"];
+        let theme = (0..6)
+            .map(|row| {
+                columns
+                    .iter()
+                    .zip(colours.iter().zip(SLOTS))
+                    .map(|(col, (&base, slot))| {
+                        let shade = shade_names(base).get(row).copied().unwrap_or("");
+                        swatch(col[row], if shade.is_empty() { slot.to_string() } else { format!("{slot}, {shade}") })
+                    })
+                    .collect()
+            })
+            .filter(|row: &Vec<Swatch>| !row.is_empty())
             .collect();
+        let standard = [
+            ("C00000", "Dark Red"),
+            ("FF0000", "Red"),
+            ("FFC000", "Orange"),
+            ("FFFF00", "Yellow"),
+            ("92D050", "Light Green"),
+            ("00B050", "Green"),
+            ("00B0F0", "Light Blue"),
+            ("0070C0", "Blue"),
+            ("002060", "Dark Blue"),
+            ("7030A0", "Purple"),
+        ]
+        .iter()
+        .filter_map(|(h, label)| Some(swatch(Rgb::parse(h)?, label.to_string())))
+        .collect();
         // the highlight colours, by their OOXML names: `format.highlight` matches those first, so
         // they are unambiguous (its "green" is the bright green; the darker one is "darkGreen")
         let highlights = Highlight::ALL
             .iter()
             .filter(|h| !matches!(h, Highlight::None | Highlight::White))
-            .filter_map(|h| Some(Swatch { name: h.ooxml().to_string(), hex: h.rgb()?.hex() }))
+            .filter_map(|h| Some(Swatch { name: h.ooxml().to_string(), hex: h.rgb()?.hex(), label: highlight_label(*h).to_string() }))
             .collect();
         ColorChoices { theme, standard, highlights }
     }
@@ -1391,6 +1452,42 @@ impl MobileSession {
         let texts = found.iter().map(|u| u.text.clone()).collect();
         *self.reading.lock().unwrap_or_else(PoisonError::into_inner) = found;
         texts
+    }
+
+    /// Where each comment thread is anchored in the body: the line its anchor starts on (page,
+    /// x, top, height), for the marks Mobile View shows beside commented lines. Replies, and
+    /// comments whose anchor is gone, have none.
+    pub fn comment_marks(&self) -> Vec<CommentMark> {
+        let mut s = self.lock();
+        let anchors: Vec<(u32, Pos)> = wordcraft_engine::cmd::review::comment_list(&s)
+            .into_iter()
+            .filter(|(id, _)| s.doc.comments.get(id).is_some_and(|c| c.parent.is_none()))
+            .filter_map(|(id, pos)| Some((id, pos?)))
+            .collect();
+        if anchors.is_empty() {
+            return Vec::new();
+        }
+        let layout = s.layout();
+        anchors
+            .iter()
+            .filter_map(|(id, p)| {
+                let c = layout.caret(p)?;
+                Some(CommentMark { id: *id, line: PageRect { page: page_index(c.page), x: c.x, y: c.top, width: 0.0, height: c.height } })
+            })
+            .collect()
+    }
+
+    /// The rectangles comment `id`'s range takes on the pages, for the selected comment's mark
+    /// over its text; none when its range is gone.
+    pub fn comment_range_rects(&self, id: u32) -> Vec<PageRect> {
+        let mut s = self.lock();
+        let Some((a, b)) = wordcraft_engine::cmd::review::comment_range(&s, id) else { return Vec::new() };
+        let layout = s.layout();
+        layout
+            .selection_rects(&s.doc, &a, &b, s.page_hint)
+            .into_iter()
+            .map(|(page, r)| PageRect { page: page_index(page), x: r.x, y: r.y, width: r.w, height: r.h })
+            .collect()
     }
 
     /// The rectangles of sentence `index` of the last Read Aloud list, to highlight it while it
@@ -1454,12 +1551,21 @@ impl MobileSession {
     }
 }
 
+/// The document's revision, with the proofing choices that change what is drawn without an edit
+/// (spelling marks, grammar marks).
+fn drawn_revision(s: &Session) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    (s.rev(), s.view.proofing, s.prefs.mark_grammar).hash(&mut h);
+    h.finish()
+}
+
 /// The document's state for [`DocumentInfo`].
 fn info(s: &mut Session) -> DocumentInfo {
     let layout = s.layout();
     DocumentInfo {
         document_id: s.document_id(),
-        revision: s.rev(),
+        revision: drawn_revision(s),
         pages: layout.pages.iter().map(|p| PageSize { width: p.w, height: p.h, markup: p.markup }).collect(),
         dirty: s.dirty,
         can_undo: s.can_undo(),
@@ -1491,6 +1597,42 @@ fn link_span(s: &Session) -> Option<(String, usize, usize)> {
         last += 1;
     }
     Some((url, runs.get(first)?.0.start, runs.get(last)?.0.end))
+}
+
+/// The names of a theme colour's five shades ([`shades`]), after an empty one for the colour.
+fn shade_names(c: wordcraft_engine::doc::props::Rgb) -> [&'static str; 6] {
+    let (_, _, l) = to_hsl(c);
+    if l < 0.2 {
+        ["", "Lighter 90%", "Lighter 75%", "Lighter 50%", "Lighter 25%", "Lighter 10%"]
+    } else if l > 0.8 {
+        ["", "Darker 10%", "Darker 25%", "Darker 50%", "Darker 75%", "Darker 90%"]
+    } else {
+        ["", "Lighter 80%", "Lighter 60%", "Lighter 40%", "Darker 25%", "Darker 50%"]
+    }
+}
+
+/// A highlight colour as people call it.
+fn highlight_label(h: wordcraft_engine::doc::props::Highlight) -> &'static str {
+    use wordcraft_engine::doc::props::Highlight as H;
+    match h {
+        H::Yellow => "Yellow",
+        H::BrightGreen => "Bright Green",
+        H::Turquoise => "Turquoise",
+        H::Pink => "Pink",
+        H::Blue => "Blue",
+        H::Red => "Red",
+        H::DarkBlue => "Dark Blue",
+        H::Teal => "Teal",
+        H::Green => "Green",
+        H::Violet => "Violet",
+        H::DarkRed => "Dark Red",
+        H::DarkYellow => "Dark Yellow",
+        H::Gray50 => "Gray",
+        H::Gray25 => "Light Gray",
+        H::Black => "Black",
+        H::White => "White",
+        H::None => "No Color",
+    }
 }
 
 /// A theme colour's column in the colour menus: the colour, then five shades. How far each moves
@@ -1551,6 +1693,8 @@ fn from_hsl(h: f64, s: f64, l: f64) -> wordcraft_engine::doc::props::Rgb {
 
 /// How the editor draws pages: as the desktop does on screen (formatting marks, markup and the
 /// dark page as the view has them; headers and footers dimmed while the body is edited).
+const MOBILE_PAD_PT: f32 = 5.0;
+
 fn render_options(s: &Session, dark_paper: u8) -> RenderOptions {
     let mut opts = RenderOptions::default();
     opts.display.marks = s.view.marks;
@@ -1560,6 +1704,10 @@ fn render_options(s: &Session, dark_paper: u8) -> RenderOptions {
     opts.display.simple_markup = s.view.markup_view == wordcraft_engine::MarkupView::Simple;
     opts.display.hide_ink = s.view.hide_ink;
     opts.display.revisions = s.prefs.markup.clone();
+    // Mobile View's page sits inside a pad on the screen; its margin shows wider by that much
+    if s.view.mobile {
+        opts.display.outer_margin = MOBILE_PAD_PT;
+    }
     opts.dark = s.view.dark_mode;
     opts.dark_paper = dark_paper;
     opts

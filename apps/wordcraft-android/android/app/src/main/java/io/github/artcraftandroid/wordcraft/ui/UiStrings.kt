@@ -21,8 +21,13 @@ internal fun localizedUiText(context: Context, source: String, vararg args: Any)
 
 private fun labelResource(source: String): Int? = when (source) {
     "%1\$s can't be opened any more." -> R.string.ui_5aa22e2b218b
+    "%1\$s list item" -> R.string.ui_e32f54a22ca7
+    "%1\$s menu" -> R.string.ui_588ca289643a
     "%1\$s mm" -> R.string.ui_9667c1b7ab39
     "%1\$s of %2\$s" -> R.string.ui_8f4594535134
+    "%1\$s replies" -> R.string.ui_473720a165fe
+    "%1\$s tab" -> R.string.ui_11edc7c8d61c
+    "%1\$s, %2\$s" -> R.string.ui_75e53fce0524
     "%1\$s: %2\$s" -> R.string.ui_13326cace603
     "A WordCraft template" -> R.string.ui_1bb3583d74db
     "A WordCraft update is available" -> R.string.ui_a832a817d125
@@ -54,6 +59,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Alignment" -> R.string.ui_9d597870c4b3
     "All Fonts" -> R.string.ui_c15ea5330c20
     "All Markup" -> R.string.ui_e1efe4e8a789
+    "All issues" -> R.string.ui_b0528ab97789
     "Alt Text" -> R.string.ui_77055f48eb4c
     "An empty page" -> R.string.ui_7d238e75e701
     "An open-source word processor for Android, built on the WordCraft engine. It is not affiliated with or endorsed by Microsoft; Word is a trademark of Microsoft." -> R.string.ui_8bbaaa91a691
@@ -73,6 +79,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Automatically save files" -> R.string.ui_24c51c32778b
     "B4 (JIS)" -> R.string.ui_46825e420b59
     "B5 (JIS)" -> R.string.ui_63d31610e286
+    "Background 1" -> R.string.ui_109514accb4a
+    "Background 2" -> R.string.ui_fe560c695e1c
     "Banded Columns" -> R.string.ui_e086c8f00e9b
     "Banded Rows" -> R.string.ui_97f854ecb2d2
     "Bar" -> R.string.ui_95d64cacce0f
@@ -90,6 +98,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Bottom: %1\$s" -> R.string.ui_16b1a8553739
     "Box and Whisker" -> R.string.ui_9de7b4ffb9d1
     "Breaks" -> R.string.ui_6d027fce254d
+    "Bright Green" -> R.string.ui_baec03fb5f48
     "Bring Forward" -> R.string.ui_1816a3240fe1
     "Bring in Front of Text" -> R.string.ui_b01fa4d5591c
     "Bring to Front" -> R.string.ui_ce67c6954ace
@@ -109,6 +118,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Characters (with spaces)" -> R.string.ui_26edfe8e1326
     "Chart" -> R.string.ui_3e5b90ae053f
     "Chart Title" -> R.string.ui_0e4485a648e3
+    "Check Document" -> R.string.ui_85aa7d98a18d
     "Check for updates" -> R.string.ui_f26f3275e735
     "Checking for updates…" -> R.string.ui_497a19986d82
     "Choose an item" -> R.string.ui_11997590030a
@@ -118,8 +128,10 @@ private fun labelResource(source: String): Int? = when (source) {
     "Clear Formatting" -> R.string.ui_804cf3352c42
     "Close" -> R.string.ui_7d9eb7acb13e
     "Close Header & Footer" -> R.string.ui_f10deadb11db
+    "Close the comment pane" -> R.string.ui_14ed33dc7a0d
     "Clustered Bar" -> R.string.ui_8e0c496136d0
     "Clustered Column" -> R.string.ui_a73b320b935e
+    "Collapse more options" -> R.string.ui_413af96cc0c0
     "Color" -> R.string.ui_6b73191a0a4b
     "Colorful" -> R.string.ui_e02654696bff
     "Colors" -> R.string.ui_88c45d9e526c
@@ -129,7 +141,10 @@ private fun labelResource(source: String): Int? = when (source) {
     "Comment Reference" -> R.string.ui_6190b96e3a01
     "Comment Subject" -> R.string.ui_b6e21f4593cb
     "Comment Text" -> R.string.ui_718e35bb9fb1
+    "Comment from %1\$s: %2\$s, %3\$s, %4\$s" -> R.string.ui_46db9bfa640b
     "Comments" -> R.string.ui_355f79f29d7d
+    "Comments Pane" -> R.string.ui_7ba4bdaf9fea
+    "Comments pane" -> R.string.ui_b10b4e15f3b4
     "Continuous" -> R.string.ui_04f13cecbc50
     "Copy" -> R.string.ui_e21f935f11d7
     "Couldn't check for updates. Try again when connected." -> R.string.ui_db037a3559ae
@@ -137,12 +152,26 @@ private fun labelResource(source: String): Int? = when (source) {
     "Crop Graphic" -> R.string.ui_d235c78b73d3
     "Crop Picture" -> R.string.ui_b4db66a2b745
     "Crop Position" -> R.string.ui_19676013a0a9
+    "Curved Connector" -> R.string.ui_4baaa3d2ca9a
+    "Curved Connector Arrow" -> R.string.ui_01579399ffe0
+    "Curved Connector Double Arrow" -> R.string.ui_d10ff179e371
     "Custom Margins" -> R.string.ui_2c637f78a180
     "Custom Margins..." -> R.string.ui_7cd51359ac95
     "Cut" -> R.string.ui_1f45f02561f4
     "Cycle" -> R.string.ui_518653530449
     "Dark" -> R.string.ui_60acc53f13a5
+    "Dark Blue" -> R.string.ui_a0266c976294
     "Dark Gray" -> R.string.ui_350b555a4f4a
+    "Dark Red" -> R.string.ui_22f874f54f19
+    "Dark Yellow" -> R.string.ui_7a73b77ec4c1
+    "Darker 10%" -> R.string.ui_afe0aa214881
+    "Darker 25%" -> R.string.ui_fc9644dab855
+    "Darker 40%" -> R.string.ui_a11f1d1f5b0b
+    "Darker 50%" -> R.string.ui_c83fa6abe81e
+    "Darker 60%" -> R.string.ui_3ed9a244a61d
+    "Darker 75%" -> R.string.ui_c57a949e8a84
+    "Darker 80%" -> R.string.ui_99f750b2a0bd
+    "Darker 90%" -> R.string.ui_89745d19d093
     "Data Labels" -> R.string.ui_78023df4505c
     "Decrease Indent" -> R.string.ui_889313b9b63a
     "Default" -> R.string.ui_21b111cbfe6e
@@ -153,6 +182,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Delete Comment" -> R.string.ui_534716e70e41
     "Delete Rows" -> R.string.ui_af3d82c21398
     "Delete Table" -> R.string.ui_8e5eac659f83
+    "Delete thread" -> R.string.ui_009afc8315d1
     "Demote" -> R.string.ui_bf0692a7035a
     "Describe this object for someone who can't see it." -> R.string.ui_16072bd26a50
     "Dictation" -> R.string.ui_25ce1a09ddc1
@@ -180,6 +210,9 @@ private fun labelResource(source: String): Int? = when (source) {
     "Edit Header" -> R.string.ui_4ab2645dc4c7
     "Edit Link" -> R.string.ui_f0d155f6ac36
     "Edit Text" -> R.string.ui_eb25bd7c6059
+    "Elbow Connector" -> R.string.ui_663aa3d5ca17
+    "Elbow Connector Arrow" -> R.string.ui_cd0789bf2de9
+    "Elbow Connector Double Arrow" -> R.string.ui_e812b7b748b0
     "Elements" -> R.string.ui_e1ff7a906103
     "Emphasis" -> R.string.ui_0ab4b2c43447
     "Endnote" -> R.string.ui_150c8fdadd59
@@ -199,6 +232,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Font" -> R.string.ui_64d0b3adcd2d
     "Font Color" -> R.string.ui_b3567e7a3805
     "Font Size" -> R.string.ui_4dd6ff92e0d9
+    "Font Size combo box, %1\$s selected" -> R.string.ui_a46bfcc8c468
+    "Font combo box, %1\$s selected" -> R.string.ui_4c4c6fd2cdbd
     "Footer" -> R.string.ui_26c87bb51e69
     "Footnote" -> R.string.ui_aa8885bcba3b
     "For more details, " -> R.string.ui_6b30cb1b6d6c
@@ -208,6 +243,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Go to Footnote" -> R.string.ui_65b35fa5b8e6
     "Graphics" -> R.string.ui_a874fca87cdd
     "Graphics Effects" -> R.string.ui_8a763140d74c
+    "Gray 25%" -> R.string.ui_29827ae11e1c
+    "Gray 50%" -> R.string.ui_fe5e2109a1f8
     "Grayscale" -> R.string.ui_93638ea9e0b0
     "Hanging" -> R.string.ui_ebd52c8ba1fa
     "Header" -> R.string.ui_ba5caa4285a8
@@ -241,6 +278,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Insert" -> R.string.ui_8aa318eb7eaa
     "Insert Column Left" -> R.string.ui_ca764f106c30
     "Insert Column Right" -> R.string.ui_c56e17b4d400
+    "Insert Link..." -> R.string.ui_76087fecc85e
     "Insert Row Above" -> R.string.ui_a6c1f35ccb5a
     "Insert Row Below" -> R.string.ui_928ae5db553d
     "Insert Rows and Columns" -> R.string.ui_6c0125167d16
@@ -258,6 +296,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Keywords" -> R.string.ui_8bfdb93cafaa
     "Landscape" -> R.string.ui_e658d3ae034a
     "Language" -> R.string.ui_a4fe65264ef7
+    "Language combo box, %1\$s selected" -> R.string.ui_60dffe50dfcb
     "Last Column" -> R.string.ui_1f875464bfd5
     "Later" -> R.string.ui_73b6e48a1b55
     "Layout" -> R.string.ui_a511909161e1
@@ -269,7 +308,19 @@ private fun labelResource(source: String): Int? = when (source) {
     "Letter (paper)" -> R.string.ui_202cbd005e98
     "Liberation typefaces: SIL Open Font License 1.1" -> R.string.ui_bcd0f5fc0066
     "Light" -> R.string.ui_dbcd5e7bb7a0
+    "Light Blue" -> R.string.ui_985fe7732a3e
+    "Light Green" -> R.string.ui_657742fb1340
+    "Lighter 10%" -> R.string.ui_6cd73f84af62
+    "Lighter 25%" -> R.string.ui_c994e1b9ac30
+    "Lighter 40%" -> R.string.ui_a224a579b75b
+    "Lighter 50%" -> R.string.ui_4cea0b710222
+    "Lighter 60%" -> R.string.ui_dae34a127d57
+    "Lighter 75%" -> R.string.ui_61202976f46f
+    "Lighter 80%" -> R.string.ui_0e912e8e9a07
+    "Lighter 90%" -> R.string.ui_2e18854b7825
     "Line" -> R.string.ui_d7852cd0d245
+    "Line Arrow" -> R.string.ui_28b13fd02699
+    "Line Double Arrow" -> R.string.ui_a6c60f6e05a2
     "Line Spacing" -> R.string.ui_45e098284e7f
     "Line Spacing:" -> R.string.ui_19c810152c05
     "Linear" -> R.string.ui_e6950b45d25c
@@ -279,6 +330,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Maps" -> R.string.ui_119e66d117ae
     "Margins" -> R.string.ui_eea8d245aa44
     "Mark as decorative" -> R.string.ui_f78a301c8274
+    "Mark text as:" -> R.string.ui_981da839b97a
     "Match Case" -> R.string.ui_f3766f1ddd69
     "Match Word" -> R.string.ui_1739f7bc5665
     "Matrix" -> R.string.ui_76a2171c057b
@@ -290,8 +342,10 @@ private fun labelResource(source: String): Int? = when (source) {
     "Monochromatic" -> R.string.ui_276a54ae7bb8
     "More Colors" -> R.string.ui_42ef0e721fd2
     "More Formatting" -> R.string.ui_73ec32ba5069
+    "More Options" -> R.string.ui_6285ce5d2717
     "More languages are coming." -> R.string.ui_2e7839d9a1e9
     "More options" -> R.string.ui_bc79cdffbaa8
+    "More thread actions" -> R.string.ui_a96a172d641c
     "Narrow" -> R.string.ui_ba227109ba7e
     "New" -> R.string.ui_18fdd549b2ed
     "New Comment" -> R.string.ui_d244fabdef89
@@ -300,6 +354,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Next Change" -> R.string.ui_7888235a7abc
     "Next Comment" -> R.string.ui_9bbfde029e9d
     "Next Page" -> R.string.ui_6ead5dfdc11e
+    "Next comment" -> R.string.ui_47fd8be0f176
     "No Color" -> R.string.ui_bceab57becfa
     "No Fill" -> R.string.ui_6bc87d2a9a50
     "No Markup" -> R.string.ui_578caa2c1e99
@@ -307,8 +362,11 @@ private fun labelResource(source: String): Int? = when (source) {
     "No Shadow" -> R.string.ui_60214436e13e
     "No Spacing" -> R.string.ui_2fb30737a609
     "No app on this phone can do that." -> R.string.ui_d38d7faf0624
+    "No comments yet." -> R.string.ui_b7cba9576dc5
     "No comments yet. Select some text and add one below." -> R.string.ui_e833cba0678d
+    "No comments yet. Select some text and add one." -> R.string.ui_379d63f005dc
     "No headings yet. Use the Heading styles to add some." -> R.string.ui_05580123d88b
+    "No items available." -> R.string.ui_3ee785c1058b
     "No matching documents" -> R.string.ui_4e0ae55148f9
     "No results" -> R.string.ui_a43619f32117
     "None" -> R.string.ui_dc937b598926
@@ -352,22 +410,28 @@ private fun labelResource(source: String): Int? = when (source) {
     "Picture" -> R.string.ui_9a1c54f55e7c
     "Picture Effects" -> R.string.ui_71cd241b3535
     "Picture Position" -> R.string.ui_2f968713ffc5
+    "Picture of %1\$s" -> R.string.ui_0ad825f6ea7a
     "Pictures" -> R.string.ui_1e6245009d67
     "Pie" -> R.string.ui_5c9659bd1a6d
     "Pin" -> R.string.ui_ff1cee744146
     "Pin documents to find them here." -> R.string.ui_6bcc94085099
+    "Pink" -> R.string.ui_bd38ed773240
     "Pinned" -> R.string.ui_f20c87946555
     "Portrait" -> R.string.ui_f71094c30160
     "Post" -> R.string.ui_a5554622c655
+    "Post comment" -> R.string.ui_153dc13a3e4c
+    "Post reply" -> R.string.ui_860e36762600
     "Presets" -> R.string.ui_954f93fe1c66
     "Previous Change" -> R.string.ui_27321e67f7ea
     "Previous Comment" -> R.string.ui_b166c5cebce7
+    "Previous comment" -> R.string.ui_cd2b9ac422c5
     "Print" -> R.string.ui_df0fe79898ef
     "Print Layout" -> R.string.ui_d1293c46e11b
     "Print View" -> R.string.ui_1029a1a7a81b
     "Process" -> R.string.ui_e083bd83e9d3
     "Professional" -> R.string.ui_19c73a5cdf34
     "Promote" -> R.string.ui_5834dab08544
+    "Proofing" -> R.string.ui_756f13b97027
     "Proofing and Language" -> R.string.ui_135c22ca27eb
     "Pyramid" -> R.string.ui_b5c3abbc6906
     "Quote" -> R.string.ui_eb4cdebd82bf
@@ -394,16 +458,20 @@ private fun labelResource(source: String): Int? = when (source) {
     "Remove Space Before Paragraph" -> R.string.ui_fb127e3a415a
     "Remove from list" -> R.string.ui_82963c765306
     "Reopen" -> R.string.ui_a886d1dc4f12
+    "Reopen thread" -> R.string.ui_5c89cdaff549
     "Repeat Header Rows" -> R.string.ui_e219c08d75aa
+    "Repeated word" -> R.string.ui_41668af29f1e
     "Replace" -> R.string.ui_95e154398a4b
     "Replace All" -> R.string.ui_4bcc68df375a
     "Replace with..." -> R.string.ui_b15834545c24
     "Replaced items: %1\$s" -> R.string.ui_a113ba075366
     "Reply" -> R.string.ui_c253f451bdd5
+    "Reply from %1\$s: %2\$s, %3\$s" -> R.string.ui_e3b2bbd4fd1b
     "Report" -> R.string.ui_b6ce788d9786
     "Reset" -> R.string.ui_daee7606b339
     "Resolve" -> R.string.ui_c8f193b315c8
     "Resolve Comment" -> R.string.ui_c106b3cb97f2
+    "Resolve thread" -> R.string.ui_b544771b961c
     "Results: %1\$s" -> R.string.ui_5c1820b8cce3
     "Resume" -> R.string.ui_d640c7421da0
     "Review" -> R.string.ui_aff0766a5290
@@ -435,6 +503,8 @@ private fun labelResource(source: String): Int? = when (source) {
     "Share" -> R.string.ui_29887a5ff984
     "Share as PDF" -> R.string.ui_ee00ac0fd74a
     "Show" -> R.string.ui_0df6f1cad36c
+    "Show Commands" -> R.string.ui_91b4f0fe15d0
+    "Show Word Count" -> R.string.ui_1c41474177cb
     "Simple Frame White" -> R.string.ui_12f9d05d6de5
     "Simple Markup" -> R.string.ui_b14afc9fc328
     "Size" -> R.string.ui_1af851907331
@@ -471,10 +541,15 @@ private fun labelResource(source: String): Int? = when (source) {
     "Switch to Dark Background" -> R.string.ui_902ab2e84c38
     "Switch to Light Background" -> R.string.ui_40aa6b8c5f83
     "System Default" -> R.string.ui_d8081c667c73
+    "Tab menu, %1\$s selected" -> R.string.ui_6459b25de202
     "Table" -> R.string.ui_16d1c9050a0b
     "Table Styles" -> R.string.ui_a68a131cef41
+    "Teal" -> R.string.ui_fa15a5c1d610
+    "Tell me" -> R.string.ui_573b8c055df4
     "Tell me what you want to do" -> R.string.ui_4ed7b3c73e47
     "Text" -> R.string.ui_71988c4d8e08
+    "Text 1" -> R.string.ui_21e57b707ffe
+    "Text 2" -> R.string.ui_de6f857c42e2
     "Text Box" -> R.string.ui_dc7ec1ed1293
     "Text Encoding" -> R.string.ui_ab5ad1dc20c4
     "Text Rotation" -> R.string.ui_f554803c263b
@@ -507,6 +582,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Track Changes" -> R.string.ui_32457b2aee5c
     "Treemap" -> R.string.ui_66ba877f1741
     "Tue" -> R.string.ui_d1eb39b09bf5
+    "Turquoise" -> R.string.ui_27b0da11a987
     "Two" -> R.string.ui_94a72c074cfe
     "Type" -> R.string.ui_baaddf70fb5d
     "Underline" -> R.string.ui_02f843261112
@@ -519,6 +595,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Version %1\$s" -> R.string.ui_b65bfa7f1eb0
     "View" -> R.string.ui_dcc839a4015c
     "View release" -> R.string.ui_db51f7282b31
+    "Violet" -> R.string.ui_2a36428839a3
     "Voice" -> R.string.ui_87bf2bc08589
     "Waterfall" -> R.string.ui_6b53bc225e0a
     "Wed" -> R.string.ui_58339f45df96

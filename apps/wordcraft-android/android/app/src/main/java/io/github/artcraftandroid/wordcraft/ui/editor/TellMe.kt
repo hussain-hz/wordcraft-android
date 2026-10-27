@@ -101,7 +101,7 @@ internal val TELL_ME_ITEMS: List<TellMeItem> = listOf(
     page("Shapes", "Insert", "shapes", LucideIcons.Shapes.glyph(), "rectangle circle arrow line"),
     cmd("Text Box", "Insert", "insert.textBox", LucideIcons.TextCursorInput.glyph()),
     TellMeItem("Link", "Insert", LucideIcons.Link.glyph(), "hyperlink web address url", opens = true) { vm, _ -> vm.linkPane = true },
-    TellMeItem("Comment", "Insert", LucideIcons.MessageSquarePlus.glyph(), "note remark") { vm, _ -> vm.commentsOpen = true },
+    TellMeItem("Comment", "Insert", LucideIcons.MessageSquarePlus.glyph(), "note remark") { vm, _ -> vm.openComments(write = true) },
     away("Header & Footer", "Insert", LucideIcons.PanelTop.glyph(), "top bottom of page") { it.command("insert.editHeader") },
     page("Page Number", "Insert", "pageNumber", LucideIcons.Hash.glyph(), "numbers count"),
     cmd("Equation", "Insert", "insert.equation", LucideIcons.Sigma.glyph(), "math formula"),
@@ -119,11 +119,11 @@ internal val TELL_ME_ITEMS: List<TellMeItem> = listOf(
     page("Size", "Layout", "paperSize", LucideIcons.File.glyph(), "paper page letter a4"),
     page("Columns", "Layout", "columns", LucideIcons.Columns2.glyph(), "newspaper"),
     page("Breaks", "Layout", "breaks", LucideIcons.SeparatorHorizontal.glyph(), "page break section"),
-    cmd("Spelling", "Review", "review.spelling", LucideIcons.SpellCheck.glyph(), "spell check proofing grammar"),
+    away("Check Document", "Review", LucideIcons.SpellCheck.glyph(), "spelling spell check proofing grammar") { it.openCheck() },
     page("Proofing and Language", "Review", "proofing", null, "spelling language"),
     away("Read Aloud", "Review", LucideIcons.AudioLines.glyph(), "speak listen voice") { it.startReadAloud() },
     page("Word Count", "Review", "wordCount", LucideIcons.FileDigit.glyph(), "characters pages statistics"),
-    TellMeItem("New Comment", "Review", LucideIcons.MessageSquarePlus.glyph(), "note remark") { vm, _ -> vm.commentsOpen = true },
+    TellMeItem("New Comment", "Review", LucideIcons.MessageSquarePlus.glyph(), "note remark") { vm, _ -> vm.openComments(write = true) },
     cmd("Delete Comment", "Review", "review.deleteComment", LucideIcons.MessageSquareX.glyph(), "remove"),
     cmd("Resolve Comment", "Review", "review.resolveComment", LucideIcons.CheckCheck.glyph(), "done"),
     cmd("Next Comment", "Review", "review.nextComment", null),
@@ -182,7 +182,7 @@ internal fun TellMeHeader(vm: AppViewModel, query: String, onQuery: (String) -> 
         Modifier.fillMaxWidth().height(ROW).background(WordColors.Strip).topEdge(WordColors.StripMore).bottomEdge(WordColors.StripMore),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.Accent, { vm.tellMeOpen = false }, width = 56.dp, height = ROW)
+        BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.BackIcon, { vm.tellMeOpen = false }, width = 56.dp, height = ROW)
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
         Box(Modifier.weight(1f).padding(start = 16.dp, end = 4.dp), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) Text(uiText("Tell me what you want to do"), color = WordColors.HeaderIconDisabled, fontSize = 16.sp, maxLines = 1)
@@ -198,8 +198,7 @@ internal fun TellMeHeader(vm: AppViewModel, query: String, onQuery: (String) -> 
             )
         }
         if (query.isNotEmpty()) BarButton(LucideIcons.X.glyph(), WordColors.HeaderIcon, { onQuery("") }, width = 48.dp, height = ROW)
-        Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
-        BarButton(Glyph.Triangle(up = false), WordColors.AccentDark, vm::collapsePalette, width = 43.dp, height = ROW)
+        BarButton(Glyph.Triangle(up = false), WordColors.CollapseIcon, vm::collapsePalette, width = 43.dp, height = ROW)
     }
 }
 

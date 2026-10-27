@@ -167,6 +167,8 @@ impl MarkupView {
 pub struct ViewState {
     pub zoom: f32,
     pub mode: ViewMode,
+    /// Web Layout as the phone app's Mobile View ([`wordcraft_layout::LayoutOptions::mobile`]).
+    pub mobile: bool,
     pub read_mode: bool,
     /// View › Focus (#1678): the document alone on screen, with a slim bar to drop the ribbon down.
     pub focus_mode: bool,
@@ -294,6 +296,7 @@ impl Default for ViewState {
         ViewState {
             zoom: 1.0,
             mode: ViewMode::Print,
+            mobile: false,
             read_mode: false,
             focus_mode: false,
             full_screen_view: false,
@@ -507,6 +510,7 @@ pub struct Session {
         (bool, wordcraft_layout::HideDeleted, bool, bool),
         NumeralMode,
         Option<wordcraft_layout::TypingWord>,
+        bool,
     )>,
     /// The word being typed, left without a spelling squiggle ([`TypedWord`]).
     typing: Option<TypedWord>,
@@ -971,7 +975,7 @@ impl Session {
         let deleted =
             (hide_deleted, if original { Default::default() } else { self.prefs.markup.hidden_deletions() }, self.revisions_in_balloons(), original);
         let outline = (mode == ViewMode::Outline).then(|| self.view.outline.view());
-        if let Some((r, w, h, m, sp, l, pf, o, hd, n, t)) = &self.layout
+        if let Some((r, w, h, m, sp, l, pf, o, hd, n, t, mo)) = &self.layout
             && *r == self.rev
             && (*w == width || mode == ViewMode::Print)
             && *h == height
@@ -982,6 +986,7 @@ impl Session {
             && *hd == deleted
             && *o == outline
             && *t == typing
+            && *mo == self.view.mobile
         {
             return l.clone();
         }
@@ -990,6 +995,7 @@ impl Session {
         let opts = LayoutOptions {
             view: mode,
             web_width: width,
+            mobile: self.view.mobile,
             read_height: height,
             read_line_spacing: spacing.map(f32::from_bits),
             show_hidden: self.view.marks || self.prefs.marks.hidden,
@@ -1008,7 +1014,7 @@ impl Session {
             filepath: filepath.clone(),
         };
         let l = Arc::new(wordcraft_layout::layout(&self.doc, &mut self.cache, &opts));
-        self.layout = Some((self.rev, width, height, mode, spacing, l.clone(), self.view.proofing, outline, deleted, self.view.numeral, typing));
+        self.layout = Some((self.rev, width, height, mode, spacing, l.clone(), self.view.proofing, outline, deleted, self.view.numeral, typing, self.view.mobile));
         l
     }
 

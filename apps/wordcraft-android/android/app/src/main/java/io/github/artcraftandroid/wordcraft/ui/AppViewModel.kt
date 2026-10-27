@@ -40,12 +40,18 @@ enum class ViewMode { Print, Mobile }
 
 /**
  * Mobile View draws the reflowed text this large: dp on screen per point of the document, as the
- * reference app's reflowed view measures on the phone.
+ * reference app's reflowed view measures on the phone (36 pt of paragraph spacing over 60.1 dp).
  */
-const val MOBILE_DP_PER_PT = 1.7f
+const val MOBILE_DP_PER_PT = 1.67f
 
 /** Mobile View's white margin each side of the reflowed text (points), on top of the engine's own. */
 const val MOBILE_PAD_PT = 5f
+
+/**
+ * Mobile View's room above the text (points): the phone app starts it about 8.6 pt under the bar,
+ * so the reflowed page's 18 pt top margin is partly hidden.
+ */
+const val MOBILE_TOP_PT = -9.4f
 
 /** What separates the words Read Aloud counts. */
 private val WORD_GAP = Regex("\\s+")
@@ -655,6 +661,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (on) scheduleAutoSave()
     }
 
+    /** Word Count counts text boxes, footnotes and endnotes too. */
+    var countWithBoxes by mutableStateOf(prefs.getBoolean("countWithBoxes", true))
+        private set
+
+    /** Word Count's "Show Word Count" option, kept like the other options (the phone has no
+     *  status bar to show it in). */
+    var showWordCount by mutableStateOf(prefs.getBoolean("showWordCount", false))
+        private set
+
+    fun chooseCountWithBoxes(on: Boolean) {
+        countWithBoxes = on
+        prefs.edit().putBoolean("countWithBoxes", on).apply()
+    }
+
+    fun chooseShowWordCount(on: Boolean) {
+        showWordCount = on
+        prefs.edit().putBoolean("showWordCount", on).apply()
+    }
+
     /** Recent Shapes: the gallery entries inserted lately, newest first (see ShapeGalleryPanel). */
     var recentShapes by mutableStateOf(
         prefs.getString("recentShapes", null)?.split(',')?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
@@ -794,6 +819,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         screen = if (document != null) Screen.Editor else Screen.Start
     }
 
+    /** The zoom the document was saved at, percent (0: fitting the page), which Print View opens at. */
+    var docZoom by mutableStateOf(100)
+        private set
+
+    /** How far down the first page its text starts, points: Print View opens scrolled past it. */
+    var textTop by mutableStateOf(0f)
+        private set
+
     /** The document has drawings Mobile View can't show well (its message bar says so), unless closed. */
     var hasDrawings by mutableStateOf(false)
         private set
@@ -801,23 +834,63 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The Comments pane shows (in the palette's place). */
     var commentsOpen by mutableStateOf(false)
+        private set
+
+    /** The thread the Comments pane shows (null: the first), and whether a reply or a new comment is being written (the pane then takes the whole screen). */
+    var commentFocus by mutableStateOf<Int?>(null)
+    var commentWriting by mutableStateOf(false)
+
+    /** Open the Comments pane on thread [focus] (or the first); [write] starts a new comment on the selection. */
+    fun openComments(focus: Int? = null, write: Boolean = false) {
+        commentFocus = focus
+        commentWriting = write
+        commentsOpen = true
+        loadComments()
+    }
+
+    fun closeComments() {
+        commentsOpen = false
+        commentWriting = false
+        commentFocus = null
+        activeComment = null
+        commentRange = emptyList()
+    }
+
+    /** The thread the Comments pane shows (marked on the pages: its text and its mark), and its range's rectangles. */
+    var activeComment by mutableStateOf<Int?>(null)
+        private set
+    var commentRange by mutableStateOf<List<io.github.artcraftandroid.wordcraft.core.PageRect>>(emptyList())
+        private set
+
+    /** Mark the thread the Comments pane shows, after it moves to another or the pages change. */
+    fun markActiveComment() = withEngine { e -> readActiveComment(e) }
+
+    private suspend fun readActiveComment(e: Engine) {
+        val id = if (commentsOpen) commentFocus ?: comments.firstOrNull { it.parent == null }?.id else null
+        activeComment = id
+        commentRange = if (id == null || id < 0) emptyList() else e.command { commentRangeRects(id.toUInt()) }
+    }
 
     /** A comment as the pane lists it. */
-    data class CommentItem(val id: Int, val author: String, val date: String, val text: String, val resolved: Boolean, val parent: Int?, val anchor: JSONObject?)
+    data class CommentItem(val id: Int, val author: String, val initials: String, val date: String, val dateUtc: String, val text: String, val resolved: Boolean, val parent: Int?, val anchor: JSONObject?)
 
     var comments by mutableStateOf<List<CommentItem>>(emptyList())
         private set
 
-    fun loadComments() = withEngine { e ->
+    fun loadComments() = withEngine { e -> comments = readComments(e) }
+
+    private suspend fun readComments(e: Engine): List<CommentItem> {
         val out = e.command { runCatching { execute("review.comments", "") }.getOrNull() }
-        comments = runCatching {
+        return runCatching {
             val arr = JSONArray(out ?: "[]")
             (0 until arr.length()).map { i ->
                 val o = arr.getJSONObject(i)
                 CommentItem(
                     id = o.optInt("id"),
                     author = o.optString("author"),
+                    initials = o.optString("initials"),
                     date = o.optString("date"),
+                    dateUtc = if (o.isNull("dateUtc")) "" else o.optString("dateUtc"),
                     text = o.optString("text"),
                     resolved = o.optBoolean("resolved"),
                     parent = if (o.isNull("parent")) null else o.optInt("parent"),
@@ -825,6 +898,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }.getOrDefault(emptyList())
+    }
+
+    /** Post a new comment on the selection, and show its thread. */
+    fun postComment(text: String) = withEngine { e ->
+        val id = e.command { runCatching { JSONObject(execute("review.newComment", JSONObject().put("text", text).toString())).optInt("id", -1) }.getOrDefault(-1) }
+        refresh(e)
+        comments = readComments(e)
+        commentFocus = id.takeIf { it >= 0 && comments.any { c -> c.id == it } }
+        commentWriting = false
+        if (commentFocus == null) closeComments()
+    }
+
+    /** Post a reply to thread [id], and show the thread again. */
+    fun postReply(id: Int, text: String) = withEngine { e ->
+        e.command { runCatching { execute("review.reply", JSONObject().put("id", id).put("text", text).toString()) } }
+        refresh(e)
+        comments = readComments(e)
+        commentFocus = id
+        commentWriting = false
+    }
+
+    /** Delete thread [id] with its replies; the pane goes on to the next thread, or closes after the last. */
+    fun deleteThread(id: Int) = withEngine { e ->
+        val threads = comments.filter { it.parent == null }
+        val at = threads.indexOfFirst { it.id == id }
+        e.command { runCatching { execute("review.deleteComment", JSONObject().put("id", id).toString()) } }
+        refresh(e)
+        comments = readComments(e)
+        val left = comments.filter { it.parent == null }
+        if (left.isEmpty()) closeComments() else commentFocus = left.getOrNull(at.coerceIn(0, left.size - 1))?.id
     }
 
     /** Run a comment command and list the comments again. */
@@ -838,6 +941,76 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun goToComment(c: CommentItem) {
         val anchor = c.anchor ?: return
         command("caret.set", JSONObject().put("pos", anchor).toString())
+    }
+
+    /** Check Document: the proofing issues in the palette's place, and its Settings page. */
+    var checkOpen by mutableStateOf(false)
+    var checkSettings by mutableStateOf(false)
+
+    /** An issue as the pane lists it: where it is, its text, and what it could change to. */
+    data class ProofIssue(val start: JSONObject?, val end: JSONObject?, val text: String, val spelling: Boolean, val message: String, val suggestions: List<String>)
+
+    var issues by mutableStateOf<List<ProofIssue>>(emptyList())
+        private set
+
+    /** Spelling and grammar marks, as the pane's switches set them (the reference marks no grammar). */
+    var checkSpelling by mutableStateOf(true)
+        private set
+    var markGrammar by mutableStateOf(false)
+        private set
+
+    fun openCheck() {
+        closePalette()
+        checkSettings = false
+        checkOpen = true
+    }
+
+    /** The document's issues, those the marks show. */
+    fun loadIssues() = withEngine { e ->
+        val out = e.command { runCatching { execute("review.issues", JSONObject().put("grammar", markGrammar).toString()) }.getOrNull() }
+        issues = runCatching {
+            val arr = JSONArray(out ?: "[]")
+            (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                val s = o.optJSONArray("suggestions")
+                ProofIssue(
+                    start = o.optJSONObject("start"),
+                    end = o.optJSONObject("end"),
+                    text = o.optString("text"),
+                    spelling = o.optString("kind") == "spelling",
+                    message = o.optString("message"),
+                    suggestions = if (s == null) emptyList() else (0 until s.length()).map { s.optString(it) },
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    /** Turn spelling or grammar marks on or off. */
+    fun setProofing(spelling: Boolean = checkSpelling, grammar: Boolean = markGrammar) {
+        checkSpelling = spelling
+        markGrammar = grammar
+        command("file.options", JSONObject().put("checkSpelling", spelling).put("markGrammar", grammar).toString())
+    }
+
+    private fun selectIssue(i: ProofIssue) = "select.range" to JSONObject().put("anchor", i.start).put("focus", i.end).toString()
+
+    /** Go to the issue, its text selected. */
+    fun goToIssue(i: ProofIssue) {
+        val (id, params) = selectIssue(i)
+        command(id, params)
+    }
+
+    /** Change the issue's text to [text] (or ignore the word everywhere: null), then list the issues again. */
+    fun fixIssue(i: ProofIssue, text: String?) = withEngine { e ->
+        val (id, params) = selectIssue(i)
+        e.command {
+            runCatching {
+                execute(id, params)
+                if (text != null) execute("review.applySuggestion", JSONObject().put("text", text).toString()) else execute("review.ignoreAll", "")
+            }
+        }
+        refresh(e)
+        loadIssues()
     }
 
     /** The spelling or grammar suggestions for the word at the caret, offered in the context bar. */
@@ -983,6 +1156,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refresh(e)
     }
 
+    /** The thread whose mark a tap at (`x`, `y`) on `page` is on (its middle 5.2 pt in from the page's right edge, 12 pt across), if any. */
+    private fun commentMarkAt(page: Int, x: Float, y: Float): Int? {
+        val w = info?.pages?.getOrNull(page)?.width ?: return null
+        return commentMarks.firstOrNull { m ->
+            val l = m.line
+            l.page.toInt() == page && kotlin.math.abs(x - (w - 5.2f)) <= 10f && kotlin.math.abs(y - (l.y + l.height * 0.32f)) <= 10f
+        }?.id?.toInt()
+    }
+
+    /** Where each comment thread is anchored (its first line), for the marks beside the text. */
+    var commentMarks by mutableStateOf<List<io.github.artcraftandroid.wordcraft.core.CommentMark>>(emptyList())
+        private set
+
     /** Re-read the pages, the selection, the formatting and the engine's requests after a change. */
     private suspend fun refresh(e: Engine) {
         val r = e.command { Triple(documentInfo(), selectionView(), formatState()) }
@@ -993,6 +1179,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val extra = e.command { pageSetup() to reviewState() }
         pageSetup = extra.first
         review = extra.second
+        commentMarks = e.command { commentMarks() }
+        if (commentsOpen) readActiveComment(e)
         val events = e.command { takeEvents() }
         events.status?.let { if (it.isNotBlank()) message = it }
         scheduleAutoSave()
@@ -1052,12 +1240,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (viewMode == ViewMode.Mobile && mobileWidth > 0f) e.command { setView("mobile", mobileWidth) } else e.command { setView("print", 0f) }
         colors = e.command { colorChoices() }
         themeFonts = e.command { themeFonts() }
+        // the drawings message shows for each document with drawings Mobile View moves, until
+        // closed, as the reference app's does
         hasDrawings = e.command { hasDrawings() }
-        // the drawings message shows once, on the first document with drawings, and not again
-        // for any document, as the reference app does
-        val shown = prefs.getBoolean("drawingsMessageShown", false)
-        messageBarClosed = shown
-        if (!shown && hasDrawings) prefs.edit().putBoolean("drawingsMessageShown", true).remove("messageShown").apply()
+        messageBarClosed = false
+        docZoom = e.command { documentZoom() }.toInt()
+        textTop = e.command { firstTextTop() }
         val key = doc.uri?.toString()
         // reopened where it was left past its first page: offered to go back there
         resumeOffer = key?.let { readingPlaces().optJSONObject(it) }?.takeIf { it.optInt("p") >= 1 }?.let { it.optDouble("f").toFloat() to it.optInt("p") }
@@ -1335,7 +1523,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (text.isNotBlank()) p.put("text", text)
         command("insert.link", p.toString())
         linkPane = false
+        if (address.isNotBlank()) {
+            recentLinks = (listOf(address) + recentLinks.filter { it != address }).take(5)
+            prefs.edit().putString("recentLinks", recentLinks.joinToString(" ")).apply()
+        }
     }
+
+    /** The addresses linked lately, newest first (the Link page's list), kept space-separated. */
+    var recentLinks by mutableStateOf(prefs.getString("recentLinks", null)?.split(' ')?.filter { it.isNotBlank() }.orEmpty())
+        private set
 
     fun addComment(text: String) {
         if (text.isNotBlank()) command("review.newComment", JSONObject().put("text", text).toString())
@@ -1474,6 +1670,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A tap on the page: the caret goes there; while editing, the keyboard comes up. */
     fun tap(page: Int, x: Float, y: Float) = withEngine { e ->
+        // a comment's mark beside its line opens that comment, as the reference's does
+        val mark = if (viewMode == ViewMode.Mobile) commentMarkAt(page, x, y) else null
+        if (mark != null) {
+            openComments(mark)
+            return@withEngine
+        }
         contextBar = false
         e.command { tap(page.toUInt(), x, y, false) }
         refresh(e)

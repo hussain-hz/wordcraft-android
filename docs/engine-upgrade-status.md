@@ -1,7 +1,8 @@
 # Engine 0.11 Android integration
 
 Latest stable app: 0.0.7, version code 7990. Engine: 0.11.0.
-Approved test build: 0.0.7-beta.2, version code 7020.
+Current test build: 0.0.8-beta.1, version code 8010; awaiting user approval.
+Android upstream merged through 9beb31563db9901507abf96f7bca9a8572734474, retaining engine 0.11.0 and our Arabic/theme fixes.
 Upstream: https://github.com/storytold/wordcraft/releases/tag/v0.11.0
 Commit: `e31f2f06a5f8004ceaa88f68c00b47908e321aa4`.
 

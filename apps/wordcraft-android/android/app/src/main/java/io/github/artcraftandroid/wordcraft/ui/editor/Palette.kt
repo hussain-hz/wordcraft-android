@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -171,8 +172,10 @@ fun TabSwitcher(vm: AppViewModel, modifier: Modifier = Modifier) {
     Column(modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max).widthIn(min = 112.dp).shadow(6.dp)) {
         for (tab in tabs) {
             val current = tab == vm.paletteTab
+            val tabDescription = uiText("%1\$s tab", uiText(tab))
             Box(
-                Modifier.fillMaxWidth().height(ROW).background(if (current) WordColors.PopupCurrent else WordColors.PopupFill).clickable { vm.showTab(tab) },
+                Modifier.fillMaxWidth().height(ROW).background(if (current) WordColors.PopupCurrent else WordColors.PopupFill).clickable { vm.showTab(tab) }
+                    .semantics { contentDescription = tabDescription },
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(uiText(tab), color = if (current) WordColors.OnPopupCurrent else WordColors.OnPopup, fontSize = 18.sp, modifier = Modifier.padding(start = 16.dp))
@@ -183,24 +186,27 @@ fun TabSwitcher(vm: AppViewModel, modifier: Modifier = Modifier) {
 
 @Composable
 private fun TabHeader(vm: AppViewModel, tab: String) {
+    val tabDescription = uiText("Tab menu, %1\$s selected", uiText(tab))
     val info = vm.info
     Row(
         Modifier.fillMaxWidth().height(ROW).background(WordColors.Strip).topEdge(WordColors.StripMore).bottomEdge(WordColors.StripMore),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.widthIn(min = 112.dp).fillMaxHeight().clickable { vm.toggleTabs() }.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.widthIn(min = 112.dp).fillMaxHeight().clickable { vm.toggleTabs() }.semantics { contentDescription = tabDescription }.padding(start = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(uiText(tab), color = WordColors.Accent, fontSize = 18.sp, maxLines = 1)
             Spacer(Modifier.width(12.dp).weight(1f, fill = false))
-            GlyphIcon(LucideIcons.ChevronsUpDown.glyph(), WordColors.Accent, size = 20.dp)
+            GlyphIcon(LucideIcons.ChevronsUpDown.glyph(), WordColors.SwitchIcon, size = 20.dp)
             Spacer(Modifier.width(10.dp))
         }
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
         Spacer(Modifier.weight(1f))
-        BarButton(LucideIcons.Lightbulb.glyph(), WordColors.HeaderIcon, { vm.tellMeOpen = true }, width = 48.dp, height = ROW)
-        BarButton(LucideIcons.Undo2.glyph(), WordColors.HeaderIcon, vm::undo, enabled = info?.canUndo == true, width = 48.dp, height = ROW, disabledTint = WordColors.HeaderIconDisabled)
-        BarButton(LucideIcons.Redo2.glyph(), WordColors.HeaderIcon, vm::redo, enabled = info?.canRedo == true, width = 48.dp, height = ROW, disabledTint = WordColors.HeaderIconDisabled)
-        Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
-        BarButton(Glyph.Triangle(up = false), WordColors.AccentDark, vm::collapsePalette, width = 43.dp, height = ROW)
+        BarButton(LucideIcons.Lightbulb.glyph(), WordColors.HeaderIcon, { vm.tellMeOpen = true }, width = 48.dp, height = ROW, label = "Tell me")
+        BarButton(LucideIcons.Undo2.glyph(), WordColors.HeaderIcon, vm::undo, enabled = info?.canUndo == true, width = 48.dp, height = ROW, disabledTint = WordColors.HeaderIconDisabled, label = "Undo")
+        BarButton(LucideIcons.Redo2.glyph(), WordColors.HeaderIcon, vm::redo, enabled = info?.canRedo == true, width = 48.dp, height = ROW, disabledTint = WordColors.HeaderIconDisabled, label = "Redo")
+        BarButton(Glyph.Triangle(up = false), WordColors.CollapseIcon, vm::collapsePalette, width = 43.dp, height = ROW, label = "Collapse more options")
     }
 }
 
@@ -210,7 +216,7 @@ private fun PanelHeader(title: String, onBack: () -> Unit, onClose: () -> Unit) 
         Modifier.fillMaxWidth().height(ROW).background(WordColors.Strip).topEdge(WordColors.StripMore).bottomEdge(WordColors.StripMore),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.Accent, onBack, width = 56.dp, height = ROW)
+        BarButton(LucideIcons.ChevronLeft.glyph(), WordColors.BackIcon, onBack, width = 56.dp, height = ROW)
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
         Text(uiText(title), color = WordColors.Accent, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp))
         Box(Modifier.width(1.dp).height(32.dp).background(WordColors.SwitcherDivider))
@@ -223,7 +229,11 @@ internal fun Band() {
     Spacer(Modifier.fillMaxWidth().height(BAND).background(WordColors.Divider))
 }
 
-/** A row of the palette: an icon at 16 dp, a label at 50 dp, a chevron when it drills in. */
+/**
+ * A row of the palette: an icon at 16 dp, a label at 50 dp (at 16 dp when [bare]), a chevron when
+ * it drills in. Screen readers hear "label menu" (or [description]) for the part that opens a
+ * page, as in the reference app, and [name] (when given) for the main part of a split row.
+ */
 @Composable
 internal fun PaletteRow(
     label: String,
@@ -235,21 +245,38 @@ internal fun PaletteRow(
     iconTint: Color = WordColors.OnStrip,
     height: Dp = ROW,
     enabled: Boolean = true,
+    bare: Boolean = false,
+    description: String? = null,
+    name: String? = null,
 ) {
+    val menuDescription = description?.let { uiText(it) } ?: uiText("%1\$s menu", uiText(label))
+    val actionDescription = name?.let { uiText(it) }
     Row(Modifier.fillMaxWidth().height(height + 1.dp).background(if (pressed) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f).fillMaxHeight().clickable(enabled = enabled, onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
+        val opens = chevron && onOpen == null
+        Row(
+            Modifier.weight(1f).fillMaxHeight().clickable(enabled = enabled, onClick = onClick).then(
+                when {
+                    opens -> Modifier.semantics { contentDescription = menuDescription }
+                    name != null -> Modifier.semantics { contentDescription = actionDescription.orEmpty() }
+                    else -> Modifier
+                },
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Spacer(Modifier.width(16.dp))
-            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { if (glyph != null) GlyphIcon(glyph, if (enabled) iconTint else WordColors.Disabled) }
-            Spacer(Modifier.width(10.dp))
+            if (!bare) {
+                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { if (glyph != null) GlyphIcon(glyph, if (enabled) iconTint else WordColors.Disabled) }
+                Spacer(Modifier.width(10.dp))
+            }
             Text(uiText(label), color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (chevron && onOpen == null) {
+            if (opens) {
                 GlyphIcon(LucideIcons.ChevronRight.glyph(), WordColors.OnStrip, size = 20.dp)
                 Spacer(Modifier.width(15.dp))
             }
         }
         if (onOpen != null) {
             Box(Modifier.width(1.dp).height(25.dp).background(WordColors.Divider))
-            Box(Modifier.width(50.dp).fillMaxHeight().clickable(enabled = enabled, onClick = onOpen), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(50.dp).fillMaxHeight().clickable(enabled = enabled, onClick = onOpen).semantics { contentDescription = menuDescription }, contentAlignment = Alignment.Center) {
                 GlyphIcon(LucideIcons.ChevronRight.glyph(), if (enabled) WordColors.OnStrip else WordColors.Disabled, size = 20.dp)
             }
         }
@@ -284,10 +311,18 @@ internal fun AlignmentRow(vm: AppViewModel, justify: Boolean = true) {
 
 /** A row of equal cells (the toggles, the indents, the alignments). */
 @Composable
-internal fun CellRow(vararg cells: Triple<Glyph, Boolean, () -> Unit>) {
+internal fun CellRow(vararg cells: Triple<Glyph, Boolean, () -> Unit>, labels: List<String> = emptyList()) {
     Row(Modifier.fillMaxWidth().height(ROW + 1.dp).bottomEdge(WordColors.Divider)) {
-        for ((glyph, on, click) in cells) {
-            Box(Modifier.weight(1f).height(ROW).background(if (on) WordColors.Pressed else WordColors.Surface).clickable(onClick = click), contentAlignment = Alignment.Center) {
+        for ((i, cell) in cells.withIndex()) {
+            val (glyph, on, click) = cell
+            val label = labels.getOrNull(i)?.let { uiText(it) }
+            Box(
+                Modifier.weight(1f).height(ROW).background(if (on) WordColors.Pressed else WordColors.Surface).clickable(onClick = click).semantics {
+                    if (label != null) contentDescription = label
+                    selected = on
+                },
+                contentAlignment = Alignment.Center,
+            ) {
                 GlyphIcon(glyph, WordColors.OnStrip, size = 26.dp)
             }
         }
@@ -304,12 +339,21 @@ internal fun json(vararg pairs: Pair<String, Any>): String = JSONObject().apply 
 @Composable
 private fun HomeTab(vm: AppViewModel, onFind: () -> Unit) {
     val f = vm.format
+    val fontDescription = uiText("Font combo box, %1\$s selected", f?.font.orEmpty())
+    val sizeDescription = uiText("Font Size combo box, %1\$s selected", f?.size?.let(::sizeLabel).orEmpty())
     Scrolling {
         Row(Modifier.fillMaxWidth().height(ROW + 1.dp).bottomEdge(WordColors.Divider), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).fillMaxHeight().clickable { vm.pushPanel("font") }, contentAlignment = Alignment.CenterStart) {
+            Box(
+                Modifier.weight(1f).fillMaxHeight().clickable { vm.pushPanel("font") }.semantics { contentDescription = fontDescription },
+                contentAlignment = Alignment.CenterStart,
+            ) {
                 Text(f?.font.orEmpty(), color = WordColors.OnSurface, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
             }
-            Box(Modifier.width(95.dp).fillMaxHeight().clickable { vm.pushPanel("size") }, contentAlignment = Alignment.CenterStart) {
+            Box(
+                Modifier.width(95.dp).fillMaxHeight().clickable { vm.pushPanel("size") }
+                    .semantics { contentDescription = sizeDescription },
+                contentAlignment = Alignment.CenterStart,
+            ) {
                 Text(f?.size?.let(::sizeLabel).orEmpty(), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
@@ -318,18 +362,21 @@ private fun HomeTab(vm: AppViewModel, onFind: () -> Unit) {
             Triple(Letters.Italic, f?.italic == true) { vm.command("format.italic") },
             Triple(Letters.Underline, f?.underline == true) { vm.command("format.underline") },
             Triple(Letters.Strike, f?.strikethrough == true) { vm.command("format.strikethrough") },
+            labels = listOf("Bold", "Italic", "Underline", "Strikethrough"),
         )
         PaletteRow(
             "Highlight",
             Glyph.WithBar(LucideIcons.Highlighter.glyph(), hexColor(vm.lastHighlight.second)),
             onClick = { vm.applyHighlight(vm.lastHighlight.first, vm.lastHighlight.second) },
             onOpen = { vm.pushPanel("highlight") },
+            name = vm.colors?.highlights?.firstOrNull { it.name == vm.lastHighlight.first }?.let { "Highlight ${it.label}" },
         )
         PaletteRow(
             "Font Color",
             Glyph.WithBar(Letters.FontColor, hexColor(vm.lastFontColor)),
             onClick = { vm.applyFontColor(vm.lastFontColor) },
             onOpen = { vm.pushPanel("fontColor") },
+            name = vm.colors?.let { c -> (c.theme.flatten() + c.standard).firstOrNull { it.hex.equals(vm.lastFontColor, ignoreCase = true) } }?.let { "Font Color ${it.label}" },
         )
         PaletteRow("Clear Formatting", LucideIcons.RemoveFormatting.glyph(), onClick = { vm.command("format.clear") })
         PaletteRow("More Formatting", LucideIcons.Subscript.glyph(), onClick = { vm.pushPanel("moreFormatting") }, chevron = true)
@@ -341,6 +388,7 @@ private fun HomeTab(vm: AppViewModel, onFind: () -> Unit) {
             Triple(LucideIcons.ListIndentIncrease.glyph(), false) { vm.command("para.indent") },
             Triple(Glyph.Letters("›¶"), f?.rtl == false) { vm.command("para.ltr") },
             Triple(Glyph.Letters("¶‹"), f?.rtl == true) { vm.command("para.rtl") },
+            labels = listOf("Decrease Indent", "Increase Indent", "Left-to-Right", "Right-to-Left"),
         )
         AlignmentRow(vm)
         PaletteRow("Paragraph Formatting", null, onClick = { vm.pushPanel("paragraph") }, chevron = true)
@@ -369,8 +417,10 @@ internal fun SectionBand(title: String) {
 /** A drill-in page's 40 dp list row; the current choice is filled. */
 @Composable
 internal fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit, trailing: String? = null, indent: Dp = 43.dp, size: Int = 18, enabled: Boolean = true) {
+    val description = uiText("%1\$s list item", uiText(label))
     Row(
-        Modifier.fillMaxWidth().height(LIST_ROW).background(if (selected) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider).clickable(enabled = enabled, onClick = onClick),
+        Modifier.fillMaxWidth().height(LIST_ROW).background(if (selected) WordColors.Pressed else WordColors.Surface).bottomEdge(WordColors.Divider).clickable(enabled = enabled, onClick = onClick)
+            .semantics { contentDescription = description; this.selected = selected },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(uiText(label), color = if (enabled) WordColors.OnSurface else WordColors.Disabled, fontSize = size.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = indent))
@@ -425,8 +475,11 @@ private fun SizePanel(vm: AppViewModel) {
 internal fun SwatchGrid(swatches: List<Swatch>, perRow: Int, cellW: Dp, selected: String?, verticalPadding: Dp = 10.dp, onPick: (Swatch) -> Unit) {
     AdaptiveGallery(swatches, perRow, cellW, 48.dp, Modifier.padding(horizontal = 16.dp, vertical = verticalPadding)) { swatch ->
         val on = swatch.hex.equals(selected, ignoreCase = true)
+        val colorName = uiText(swatch.label.substringBefore(", "))
+        val shade = swatch.label.substringAfter(", ", "")
+        val description = if (shade.isEmpty()) colorName else uiText("%1\$s, %2\$s", colorName, uiText(shade))
         Box(Modifier.fillMaxSize().selectable(selected = on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { onPick(swatch) }).semantics {
-            contentDescription = "${swatch.name} #${swatch.hex}"
+            contentDescription = description
         }.padding(3.dp)) {
             Box(Modifier.fillMaxSize().background(hexColor(swatch.hex))
                 .border(if (on) 2.dp else 1.dp, if (on) WordColors.OnStrip else WordColors.Pressed))
@@ -491,11 +544,11 @@ private fun MoreColorsPanel(vm: AppViewModel) {
         listOf(0.85f, 0.7f, 0.5f, 0.35f, 0.2f).map { light ->
             val color = android.graphics.Color.HSVToColor(floatArrayOf(hue * 36f, if (light > 0.5f) 1.6f - light * 1.2f else 1f, if (light > 0.5f) 1f else light * 2f))
             val hex = "%06X".format(color and 0xFFFFFF)
-            Swatch(hex, hex)
+            Swatch(hex, hex, hex)
         }
     } + listOf((0 until 10).map { grey ->
         val hex = "%02X%02X%02X".format(255 - grey * 28, 255 - grey * 28, 255 - grey * 28)
-        Swatch(hex, hex)
+        Swatch(hex, hex, hex)
     })
     Scrolling {
         Spacer(Modifier.height(6.dp))
@@ -534,6 +587,9 @@ internal fun Tile(preview: String, selected: Boolean, w: Dp, h: Dp, onClick: () 
         Text(preview, color = WordColors.OnStrip, fontSize = 18.sp, textAlign = align, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp))
     }
 }
+
+/** What a screen reader says for each bullet of the gallery. */
+private val BULLET_NAMES = listOf("Solid Circle", "Hollow Circle", "Solid Square", "Four Diamonds", "Arrow", "Check Mark")
 
 @Composable
 private fun BulletsPanel(vm: AppViewModel) {
@@ -588,7 +644,8 @@ private fun ParagraphPanel(vm: AppViewModel) {
         Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.BottomStart) {
             Text(uiText("Line Spacing:"), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
         }
-        PaletteRow(f?.lineSpacing ?: "1.0", null, onClick = { vm.pushPanel("lineSpacing") }, chevron = true)
+        val spacing = f?.lineSpacing ?: "1.0"
+        PaletteRow(spacing, null, onClick = { vm.pushPanel("lineSpacing") }, chevron = true, description = "Line Spacing: combo box, $spacing selected")
         val before = (f?.spaceBefore ?: 0f) > 0f
         val after = (f?.spaceAfter ?: 0f) > 0f
         PaletteRow(if (before) "Remove Space Before Paragraph" else "Add Space Before Paragraph", null, onClick = { vm.command("para.addSpaceBefore") })
@@ -622,7 +679,7 @@ private fun LineSpacingPanel(vm: AppViewModel) {
 @Composable
 private fun StylesPanel(vm: AppViewModel) {
     val current = vm.format?.styleName
-    // the document's own styles, then the recommended ones, each drawn in its style
+    // the styles the document offers, by priority as the phone app lists them, each drawn in its style
     LaunchedEffect(vm.info?.documentId, vm.info?.revision) { vm.loadStyleLooks() }
     LazyColumn(Modifier.fillMaxSize()) {
         items(vm.styleLooks) { look ->

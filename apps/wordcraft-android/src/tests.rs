@@ -353,6 +353,10 @@ fn drawings_are_found_and_footnotes_are_not_drawings() {
     assert!(!m.has_drawings());
     m.execute("caret.set".into(), r#"{"pos":{"block":0,"off":0}}"#.into()).unwrap();
     m.execute("insert.shape".into(), r#"{"kind":"ellipse"}"#.into()).unwrap();
+    // in front of the text it stays where it is in Mobile View; wrapped, it moves
+    m.execute("arrange.wrap".into(), r#"{"wrap":"inFrontOfText"}"#.into()).unwrap();
+    assert!(!m.has_drawings());
+    m.execute("arrange.wrap".into(), r#"{"wrap":"square"}"#.into()).unwrap();
     assert!(m.has_drawings());
 }
 
@@ -513,24 +517,7 @@ fn the_session_can_move_between_threads() {
     assert_eq!(body_text(&m), "From another thread");
 }
 
-#[test]
-fn the_styles_list_has_the_documents_styles_then_the_recommended_ones() {
-    let m = MobileSession::new();
-    let looks = m.style_looks();
-    let names: Vec<&str> = looks.iter().map(|l| l.name.as_str()).collect();
-    let at = |n: &str| names.iter().position(|x| *x == n).unwrap_or_else(|| panic!("{n} in {names:?}"));
-    assert!(at("Normal") < at("No Spacing"), "the document's own first: {names:?}");
-    assert!(at("No Spacing") < at("Heading 1") && at("Heading 1") < at("Title"));
-    assert!(!names.contains(&"Heading 2"), "Heading 2 waits for Heading 1 to be used");
-    let h1 = &looks[at("Heading 1")];
-    assert!(h1.size > looks[at("Normal")].size && !h1.character);
-    assert!(looks.iter().any(|l| l.character), "character styles too");
-    // a heading used brings the next level
-    m.execute("para.style".into(), r#"{"style": "Heading 1"}"#.into()).unwrap();
-    assert!(m.style_looks().iter().any(|l| l.name == "Heading 2"));
-    assert_eq!(style_display_name("annotation text"), "Comment Text");
-    assert_eq!(style_display_name("Footer"), "Footer");
-}
+
 
 #[test]
 fn read_aloud_finds_each_word_said() {
@@ -850,4 +837,124 @@ fn arabic_and_western_digits_render_as_written_on_android_and_in_export_options(
         assert_eq!(body_text(&m), text, "display settings never rewrite the digits");
         assert!(m.export_bytes("digits.pdf".into()).unwrap().starts_with(b"%PDF"));
     }
+}
+
+
+#[test]
+fn a_picture_s_shadow_stays_dark_on_a_dark_page() {
+    let m = MobileSession::default();
+    let png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+    m.execute("insert.picture".into(), json!({ "data": png, "width": 100 }).to_string()).unwrap();
+    m.set_dark(true);
+    let plain = m.render_page(0, 1.0).unwrap();
+    m.execute("shape.effects".into(), json!({ "shadow": "offsetBottomRight" }).to_string()).unwrap();
+    let shadowed = m.render_page(0, 1.0).unwrap();
+    let (a, _) = plain.rgba.as_chunks::<4>();
+    let (b, _) = shadowed.rgba.as_chunks::<4>();
+    let sum = |p: &[u8; 4]| p[0] as i32 + p[1] as i32 + p[2] as i32;
+    // as the reference keeps a picture's shadow black on its dark page: it only darkens (and
+    // little, the page being near black already)
+    assert!(a.iter().zip(b).all(|(x, y)| sum(y) <= sum(x) + 6), "a shadow lightened the page");
+    assert!(a.iter().zip(b).any(|(x, y)| sum(y) + 9 < sum(x)), "no shadow drawn");
+}
+
+#[test]
+fn the_styles_list_shows_what_the_phone_app_shows_by_priority() {
+    let m = MobileSession::new();
+    let looks = m.style_looks();
+    let names: Vec<&str> = looks.iter().map(|l| l.name.as_str()).collect();
+    let at = |n: &str| names.iter().position(|x| *x == n).unwrap_or_else(|| panic!("{n} in {names:?}"));
+    // by priority, then name: Normal 0, No Spacing 1, the headings 9, Title 10…
+    assert!(at("Normal") < at("No Spacing") && at("No Spacing") < at("Heading 1"), "{names:?}");
+    assert!(at("Heading 1") < at("Heading 2") && at("Heading 2") < at("Title") && at("Title") < at("Subtitle"));
+    assert!(at("Book Title") < at("List Paragraph"));
+    // hidden until used: Heading 3 on, captions, headers, contents entries
+    for hidden in ["Heading 3", "Caption", "Header", "TOC 1", "Hyperlink"] {
+        assert!(!names.contains(&hidden), "{hidden} waits to be used: {names:?}");
+    }
+    let h1 = &looks[at("Heading 1")];
+    assert!(h1.size > looks[at("Normal")].size && !h1.character);
+    assert!(looks.iter().any(|l| l.character), "character styles too");
+    // a heading used brings the next level
+    m.execute("para.style".into(), r#"{"style": "Heading 2"}"#.into()).unwrap();
+    let names: Vec<String> = m.style_looks().into_iter().map(|l| l.name).collect();
+    assert!(names.iter().any(|n| n == "Heading 3") && !names.iter().any(|n| n == "Heading 4"), "{names:?}");
+    assert_eq!(style_display_name("annotation text"), "Comment Text");
+    assert_eq!(style_display_name("Footer"), "Footer");
+}
+
+/// As the reference marks text: misspellings and a repeated word (under the second), no grammar.
+#[test]
+fn proofing_marks_spelling_and_repeated_words_but_no_grammar() {
+    let m = MobileSession::default();
+    let text = "this one has has  two spaces and a mispeled word.";
+    m.execute("text.insert".into(), json!({ "text": text }).to_string()).unwrap();
+    let marks: Vec<(String, bool)> = {
+        let mut s = m.lock();
+        let l = s.layout();
+        l.pages
+            .iter()
+            .flat_map(|p| &p.items)
+            .filter_map(|it| if let wordcraft_engine::layout::Placed::Lines { para, .. } = it { Some(para.issues.clone()) } else { None })
+            .flatten()
+            .map(|(a, b, grammar)| (text[a..b].to_string(), grammar))
+            .collect()
+    };
+    assert_eq!(marks, [("has".to_string(), false), ("mispeled".to_string(), false)]);
+    // the pane lists the same, and grammar comes back with its switch
+    let listed = |grammar: bool| -> usize {
+        let out = m.execute("review.issues".into(), json!({ "grammar": grammar }).to_string()).unwrap();
+        serde_json::from_str::<Value>(&out).unwrap().as_array().map_or(0, Vec::len)
+    };
+    assert_eq!(listed(false), 2);
+    assert!(listed(true) > 2);
+    // turning grammar marks on draws the pages again
+    let before = m.document_info().revision;
+    m.execute("file.options".into(), json!({ "markGrammar": true }).to_string()).unwrap();
+    assert_ne!(m.document_info().revision, before);
+}
+
+/// A comment's anchor line is reported for the mark beside it; a reply adds none.
+#[test]
+fn comment_marks_point_at_each_threads_line() {
+    let m = MobileSession::default();
+    m.execute("text.insert".into(), json!({ "text": "First line\nSecond line with a note" }).to_string()).unwrap();
+    assert!(m.comment_marks().is_empty());
+    m.execute("select.text".into(), json!({ "text": "a note" }).to_string()).unwrap();
+    m.execute("review.newComment".into(), json!({ "text": "Check this." }).to_string()).unwrap();
+    let marks = m.comment_marks();
+    assert_eq!(marks.len(), 1, "{marks:?}");
+    let first = &marks[0].line;
+    assert!(first.height > 0.0 && first.y > 0.0, "{first:?}");
+    // the mark names its thread, and the list gives the thread's initials
+    let list: serde_json::Value = serde_json::from_str(&m.execute("review.comments".into(), "{}".into()).unwrap()).unwrap();
+    assert_eq!(list[0]["id"], marks[0].id);
+    assert!(list[0]["initials"].is_string(), "{list}");
+    // its range on the page: the words it is on, on the anchor's line
+    let range = m.comment_range_rects(marks[0].id);
+    assert_eq!(range.len(), 1, "{range:?}");
+    assert!(range[0].width > 10.0 && (range[0].y - first.y).abs() < 1.0, "{range:?} {first:?}");
+    assert!(m.comment_range_rects(999).is_empty());
+}
+
+/// A new document opens at 100%, the zoom it is saved at.
+#[test]
+fn a_document_opens_at_its_saved_zoom() {
+    let m = MobileSession::default();
+    assert_eq!(m.document_zoom(), 100);
+    // and scrolled past the first page's top margin
+    assert!((m.first_text_top() - 72.0).abs() < 0.5, "{}", m.first_text_top());
+}
+
+/// Each colour in the colour menus has a name a screen reader says: the theme's by their place
+/// and shade, the standard ones and the highlights by their colour.
+#[test]
+fn colour_swatches_have_names() {
+    let c = MobileSession::default().color_choices();
+    assert_eq!(c.theme[0][0].label, "Background 1");
+    assert_eq!(c.theme[0][4].label, "Accent 1");
+    assert!(c.theme[1][4].label.starts_with("Accent 1, "), "{}", c.theme[1][4].label);
+    assert_eq!(c.standard[0].label, "Dark Red");
+    assert_eq!(c.highlights[0].label, "Yellow");
+    assert!(c.theme.iter().flatten().chain(&c.standard).chain(&c.highlights).all(|s| !s.label.is_empty()));
 }

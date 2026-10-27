@@ -24,10 +24,8 @@ object WordColors {
     /** Tab and panel titles, their icons, the selection. */
     val Accent get() = pick(0xFF3B5BDB, 0xFF7C93F0)
 
-    /** The darker accent (lighter in dark): the palette's open/close handle, the current tab's label. */
-    val AccentDark get() = pick(0xFF2B44A8, 0xFFA5B4F5)
-
     /** Small coloured parts of icons (list bullets, the strip's more arrow). */
+    val AccentDark get() = pick(0xFF2B44A8, 0xFF7C93F0)
     val AccentLight get() = pick(0xFF4C6EF5, 0xFF7C93F0)
     val AccentDisabled get() = pick(0xFF99A7E1, 0xFF4A5583)
 
@@ -40,6 +38,14 @@ object WordColors {
     /** The palette header's Tell Me, Undo and Redo. */
     val HeaderIcon get() = pick(0xFF3B5BDB, 0xFFCACACA)
     val HeaderIconDisabled get() = pick(0xFF99A7E1, 0xFF575757, 0xFF666666)
+
+    /**
+     * The palette header's tab-switch arrows, collapse arrow and Back: the accent in light; in
+     * dark white, light grey and grey, as the phone app draws them.
+     */
+    val SwitchIcon get() = pick(0xFF3B5BDB, 0xFFFFFFFF)
+    val CollapseIcon get() = pick(0xFF2B44A8, 0xFFE8E8E8)
+    val BackIcon get() = pick(0xFF3B5BDB, 0xFF6E6E6E)
 
     /** Bottom sheets (the header's overflow). */
     val Sheet get() = pick(0xFFFFFFFF, 0xFF000000, 0xFF3A3A3A)
@@ -96,12 +102,24 @@ object WordColors {
     val FindField get() = pick(0xFFFFFFFF, 0xFF000000, 0xFF3C3C3C)
     val FindHint get() = pick(0xFF8A8A8A, 0xFFACACAC, 0xFFC7C7C7)
     val MatchCurrent get() = pick(0xFFC7BA64, 0xFF867836)
+
+    /** Mobile View's message card over the pages, and its text (the dark one measured on the reference). */
+    val MessageCard get() = pick(0xFFDCE5F7, 0xFF244185)
+    val OnMessageCard get() = pick(0xFF1F3B78, 0xFF8AAAEB)
     val MatchOther get() = pick(0xFFFFEE80, 0xFF4D4A2A)
 
     /** Find settings: an unticked box, its edge, and the line under Replace. */
     val CheckOff get() = pick(0xFFFFFFFF, 0xFF6E6E6E)
     val CheckEdge get() = pick(0xFF8A8A8A, 0xFF666666, 0xFF777777)
     val SettingsLine get() = pick(0xFFC6C6C6, 0xFF969696)
+
+    /** Word Count's and Language's text (and Word Count's ticks), its boxes' edges, the rule under the counts. */
+    val OnLists get() = pick(0xFF505050, 0xFFD2D2D2)
+    val CountsBoxEdge get() = pick(0xFFD2D2D2, 0xFF666666)
+    val CountsRule get() = pick(0xFFBDBDBD, 0xFF303030, 0xFF565656)
+
+    /** Language's chosen language: grey in light, the reference's blue in dark. */
+    val ListChosen get() = pick(0xFFE9EDFF, 0xFF263052, 0xFF454B60)
 
     /** Over the pages behind a bottom sheet. */
     val Scrim = Color(0x52000000)

@@ -417,6 +417,10 @@ pub struct CellText {
     pub chr: CharProps,
 }
 
+/// Mobile View's gap between a list label and its text, ems of the label's size (measured against
+/// the reference on five lists of bullets and numbers).
+const MOBILE_LABEL_GAP: f32 = 0.28;
+
 /// Inputs that change a paragraph's layout beyond its own content.
 pub struct ParaEnv<'a> {
     pub doc: &'a Document,
@@ -455,6 +459,10 @@ pub struct ParaEnv<'a> {
     /// Heights of the paragraph's inline text boxes that resize to fit their text, by object
     /// index: they take these instead of their saved heights.
     pub fitted: &'a [(usize, f32)],
+    /// The phone app's Mobile View, with the share of their size its indents and default tab
+    /// stops take (the screen's text width over the page's): a list's text just after its label,
+    /// and tab stops past the line's end left for the default ones.
+    pub mobile: Option<f32>,
 }
 
 /// The section's document grid as layout applies it (`w:docGrid`, ECMA-376 §17.6.5).
@@ -862,7 +870,8 @@ impl<'a> Builder<'a> {
 
     /// Style index for a resolved char in `face` (caps-scaled `size` override for small caps).
     fn style(&mut self, rc: &Arc<ResolvedChar>, face_override: Option<FaceRef>, small: bool) -> u32 {
-        let r = wordcraft_fonts::word::resolve(lookup_family(self.env.doc, &rc.font), rc.bold, rc.italic);
+        let family = lookup_family(self.env.doc, &rc.font);
+        let r = wordcraft_fonts::word::resolve(family, rc.bold, rc.italic);
         let face = face_override.unwrap_or(r.face);
         // The display list reads every run's format (link target, strike kind, underline colour,
         // baseline shift…) from its StyleRun, so runs share one only when their formats are equal.
@@ -888,11 +897,14 @@ impl<'a> Builder<'a> {
             }
         }
         let size = rc.draw_size() * if small { 0.8 } else { 1.0 };
-        // A symbol font that isn't installed, or is installed one em tall (Apple's Symbol), takes
-        // the height Word gives it.
-        let (a, d) = match wordcraft_fonts::word::symbol_line(&rc.font, &r) {
-            Some((a, d)) => (a * face.upem, d * face.upem),
-            None => wordcraft_fonts::word::line_metrics(&face),
+        // a face standing in for the requested font keeps that font's line spacing
+        let (a, d) = if let Some((a, d)) = wordcraft_fonts::word::symbol_line(&rc.font, &r) {
+            (a * face.upem, d * face.upem)
+        } else {
+            match face_override {
+                None => wordcraft_fonts::word::line_metrics_for(family, r.substituted, &face, self.env.mobile.is_some()),
+                Some(_) => wordcraft_fonts::word::line_metrics(&face),
+            }
         };
         let k = size as f64 / face.upem.max(1.0);
         // A fallback face (letters the requested font lacks) is emboldened or slanted when it has
@@ -1493,6 +1505,12 @@ pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
             rp.indent_first = 0.0;
         }
     }
+    // Mobile View keeps indents in proportion to the screen
+    if let Some(k) = env.mobile {
+        rp.indent_left *= k;
+        rp.indent_first *= k;
+        rp.indent_right *= k;
+    }
     let resolve = |c: &CharProps| -> Arc<ResolvedChar> { Arc::new(doc.styles.resolve_char_in(para_style, table_chr, c)) };
     let levels = bidi_levels(&p.text, rp.bidi);
     let mut b =
@@ -2046,7 +2064,18 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
     let rp = pl.rp.clone();
     let width = env.width.max(MIN_LINE_WIDTH);
     let base_right = (width - rp.indent_right).max(1.0);
-    let default_tab = env.doc.settings.default_tab;
+    let mut default_tab = env.doc.settings.default_tab;
+    // Mobile View's default stops are in proportion to the screen, as its indents are; a set stop
+    // stays where it is, but one past the line's end is left for the default ones
+    let mobile_tabs: Vec<TabStop>;
+    let tabs: &[TabStop] = match env.mobile {
+        Some(k) => {
+            default_tab = if default_tab > 1.0 { default_tab } else { 36.0 } * k;
+            mobile_tabs = rp.tabs.iter().copied().filter(|t| t.pos <= base_right + 0.01).collect();
+            &mobile_tabs
+        }
+        None => &rp.tabs,
+    };
     let first_left = rp.indent_left + rp.indent_first;
     // Word 2013+ (compatibility mode 15) fits more text on a justified line by shrinking its
     // spaces (`space_room`); never on lines with tabs.
@@ -2163,8 +2192,10 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
             };
             let end = lab.x + lab.width;
             x = match suffix.unwrap_or(LevelSuffix::Tab) {
+                // Mobile View sets the text just after the label, not at the tab stop
+                LevelSuffix::Tab if env.mobile.is_some() => end + pl.styles.get(lab.style as usize).map(|s| s.size * MOBILE_LABEL_GAP).unwrap_or(3.4),
                 LevelSuffix::Tab => {
-                    let t = next_tab(end, &rp.tabs, default_tab, hanging_at).pos;
+                    let t = next_tab(end, tabs, default_tab, hanging_at).pos;
                     // The level's own tab stop after the number, when it comes first.
                     match level.and_then(|l| l.tab).filter(|p| p.is_finite() && *p > end + 0.01) {
                         Some(p) if p < t => p,
@@ -2209,7 +2240,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
                     has_tab = true;
                     resolve_tab(pl, &mut pending_tab, &mut xs, c0, x, &mut x);
                     let ptab = pl.ptabs.iter().find(|t| t.0 == j).map(|&(_, a, b, l)| ptab_stop(a, b, l, width, (rp.indent_left, rp.indent_right)));
-                    let stop = ptab.unwrap_or_else(|| next_tab(x, &rp.tabs, default_tab, hanging_at));
+                    let stop = ptab.unwrap_or_else(|| next_tab(x, tabs, default_tab, hanging_at));
                     // A positional tab whose place the text has passed goes there on the next line
                     // (ECMA-376 §17.3.3.23); a line with nothing but markers on it is empty.
                     if ptab.is_some() && stop.pos < x - 0.01 && (c0..j).any(|k| pl.clusters.get(k).is_some_and(|c| c.kind != ClKind::Marker)) {
@@ -2459,6 +2490,8 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
         // The tallest picture on the line (it sits on the baseline).
         let mut obj_asc = 0.0f32;
         let mut any = false;
+        // Anything but pictures on the line (text, an equation).
+        let mut has_text = false;
         let dropped = pl.drop_cap.map_or(0, |d| d.0);
         for (k, c) in pl.clusters.get(c0..c1).into_iter().flatten().enumerate() {
             // Spaces and tabs never make a line taller, whatever their size: Word sizes a line by
@@ -2474,6 +2507,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
                 // and descent, and grows above the baseline to fit a taller picture.
                 let (a, d) = if matches!(c.kind, ClKind::Object(_)) && c.obj_h > 0.0 {
                     if pl.maths.iter().any(|(k, _)| c.kind == ClKind::Object(*k)) {
+                        has_text = true;
                         // Exact spacing keeps the run's baseline; tall math may overflow the
                         // fixed line box without moving adjacent text up by its denominator.
                         if matches!(rp.line_spacing, LineSpacing::Exactly(_)) { (st.ascent, st.descent) } else { (c.obj_h, c.obj_d) }
@@ -2482,6 +2516,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
                         (st.ascent, st.descent)
                     }
                 } else {
+                    has_text = true;
                     // `obj_h` is set on text clusters only under ruby text, which the line grows to fit.
                     let (a, d) = st.line_extent();
                     (a.max(c.obj_h + st.shift), d)
@@ -2533,6 +2568,22 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u32, level: Optio
             top + ((height - up - desc) / 2.0).max(0.0) + up
         } else {
             top + baseline_offset(rp.line_spacing, asc, height, desc).max(obj_asc.min(height - desc))
+        };
+        // Mobile View sizes a line of only pictures by them, with no text's ascent or descent
+        // around them, and a picture taller than the text beside it with the text's descent
+        // under it; either way the spacing's extra goes below (measured against the reference
+        // at single and 1.15 spacing, with a box, a picture and a line)
+        let tall = !has_text || obj_asc > asc;
+        let (height, baseline) = if env.mobile.is_some() && tall && obj_asc > 0.0 && grid.is_none() && !(first && pl.label.is_some()) {
+            let content = if has_text { obj_asc + desc } else { obj_asc };
+            let h = match rp.line_spacing {
+                LineSpacing::Multiple(m) => content + (m - 1.0).max(0.0) * text_natural,
+                LineSpacing::AtLeast(v) => content.max(v),
+                LineSpacing::Exactly(v) => v,
+            };
+            (h, top + obj_asc.min(h))
+        } else {
+            (height, baseline)
         };
 
         // Alignment / justification (trailing spaces hang).
@@ -3234,7 +3285,10 @@ fn proof_issues(
 ) -> Vec<(usize, usize, bool)> {
     paragraph_issues(p, runs, &opts.spelling, opts.grammar, list_item)
         .into_iter()
-        .map(|i| (i.start, i.end, i.kind == wordcraft_proof::IssueKind::Grammar))
+        .map(|i| {
+            let (a, b) = i.marked(&p.text);
+            (a, b, i.kind == wordcraft_proof::IssueKind::Grammar)
+        })
         .filter(|&(a, b, grammar)| grammar || !typing.is_some_and(|(s, e)| a < e && s < b))
         .collect()
 }
@@ -3287,6 +3341,7 @@ mod label_spacing_tests {
             read_line_spacing: None,
             fit_objects: false,
             fitted: &[],
+            mobile: None,
         };
         let mut p = Paragraph::with_text(if wrap { "Alpha probe synthetic business text repeated" } else { "Alpha probe" }, Default::default());
         p.props.line_spacing = Some(spacing);

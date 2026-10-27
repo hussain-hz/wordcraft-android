@@ -93,11 +93,17 @@ fun EditorScreen(vm: AppViewModel) {
     val engine = vm.engine ?: return
     val info = vm.info ?: return
     val mobile = vm.viewMode == ViewMode.Mobile
+    val density = LocalDensity.current.density
     val viewport = remember(info.documentId, mobile) {
-        if (mobile) DocumentViewport(pad = io.github.artcraftandroid.wordcraft.ui.MOBILE_PAD_PT, gap = 0f) else DocumentViewport(pad = 5f, gap = 12f)
+        if (mobile) {
+            DocumentViewport(pad = io.github.artcraftandroid.wordcraft.ui.MOBILE_PAD_PT, gap = 0f, padTop = io.github.artcraftandroid.wordcraft.ui.MOBILE_TOP_PT)
+        } else {
+            // the pages open at the zoom the document was saved at, as the reference opens them
+            // (100% is 160/72 dp a point, the scale of View › 100%)
+            DocumentViewport(pad = 5f, gap = 12f, startScale = vm.docZoom / 100f * density * 160f / 72f, startTop = vm.textTop, hundred = density * 160f / 72f)
+        }
     }
     var input by remember { mutableStateOf<EditorInputView?>(null) }
-    val density = LocalDensity.current.density
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -119,7 +125,11 @@ fun EditorScreen(vm: AppViewModel) {
             vm.linkPane -> vm.linkPane = false
             vm.linkEdit != null -> vm.linkEdit = null
             vm.commentPane -> vm.commentPane = false
+            vm.commentsOpen && vm.commentWriting && vm.commentFocus != null -> vm.commentWriting = false
+            vm.commentsOpen -> vm.closeComments()
             vm.headingsOpen -> vm.headingsOpen = false
+            vm.checkSettings -> vm.checkSettings = false
+            vm.checkOpen -> vm.checkOpen = false
             vm.findSettingsOpen -> vm.findSettingsOpen = false
             vm.findOpen -> vm.closeFind()
             vm.tabsOpen -> vm.toggleTabs()
@@ -131,6 +141,9 @@ fun EditorScreen(vm: AppViewModel) {
             else -> vm.close()
         }
     }
+
+    // the thread the Comments pane shows is marked on the pages
+    LaunchedEffect(vm.commentsOpen, vm.commentFocus, vm.comments) { if (vm.commentsOpen) vm.markActiveComment() }
 
     // where the reader is, kept for the next time the document opens (once the view rests)
     LaunchedEffect(viewport) {
@@ -189,8 +202,8 @@ fun EditorScreen(vm: AppViewModel) {
         for (z in vm.zoomRequests) {
             when (z) {
                 "100" -> viewport.zoomTo(density * 160f / 72f)
-                "in" -> viewport.zoomBy(1.25f, androidx.compose.ui.geometry.Offset(viewport.viewW / 2f, viewport.viewH / 2f))
-                "out" -> viewport.zoomBy(0.8f, androidx.compose.ui.geometry.Offset(viewport.viewW / 2f, viewport.viewH / 2f))
+                "in" -> viewport.zoomStep(true)
+                "out" -> viewport.zoomStep(false)
                 "onePage" -> viewport.fitPage(vm.selection?.focus?.page?.toInt() ?: 0)
                 "pageWidth" -> viewport.fitWidth()
                 // Zoom In on a chart or diagram: it fills the view
@@ -207,7 +220,7 @@ fun EditorScreen(vm: AppViewModel) {
         val r = vm.readingRects.firstOrNull() ?: return@LaunchedEffect
         if (!viewport.gesturing) viewport.reveal(r.page.toInt(), r.x, r.y, r.height, 48f * density)
     }
-    val toolbarOn = vm.editing && !vm.paletteOpen && !vm.findSettingsOpen && !vm.reading && !vm.commentsOpen && !vm.headingsOpen
+    val toolbarOn = vm.editing && !vm.paletteOpen && !vm.findSettingsOpen && !vm.reading && !vm.commentsOpen && !vm.headingsOpen && !vm.checkOpen
     // a finger scrolling towards the end hides the floating toolbar; scrolling back, a double tap,
     // a long press, a tap that brings the keyboard up or another view brings it back
     var toolbarAway by remember { mutableStateOf(false) }
@@ -253,17 +266,20 @@ fun EditorScreen(vm: AppViewModel) {
 
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     val title = titleOf(vm.document?.name.orEmpty())
-    Box(Modifier.fillMaxSize().background(WordColors.StatusBand)) {
+    // writing a comment, the light Comments pane takes the whole screen, the bars round it too
+    val commentScreen = vm.commentsOpen && vm.commentWriting
+    Box(Modifier.fillMaxSize().background(if (commentScreen) COMMENTS_GROUND else WordColors.StatusBand)) {
         BoxWithConstraints(
             Modifier.fillMaxSize().statusBarsPadding()
                 .windowInsetsPadding(WindowInsets.displayCutout.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal))
-                .background(WordColors.Surface).navigationBarsPadding().imePadding(),
+                .background(if (commentScreen) COMMENTS_GROUND else WordColors.Surface).navigationBarsPadding().imePadding(),
         ) {
             // the palette takes up to two fifths of the height (all of its 419 dp in portrait)
             val paletteHeight = min(PALETTE_HEIGHT, maxHeight * 0.4f)
             val landscape = maxWidth > maxHeight
             Column(Modifier.fillMaxSize()) {
-                if (!vm.editing && !vm.findSettingsOpen) {
+                // the Comments pane hides the bar, as the reference's does
+                if (!vm.editing && !vm.findSettingsOpen && !vm.commentsOpen) {
                     ViewTopBar(
                         title = title,
                         onClose = vm::close,
@@ -292,17 +308,6 @@ fun EditorScreen(vm: AppViewModel) {
                         onMore = { vm.overflowOpen = true },
                     )
                 }
-                AnimatedVisibility(
-                    visible = !vm.editing && !vm.findOpen && mobile && vm.hasDrawings && !vm.messageBarClosed,
-                    enter = expandVertically(tween(io.github.artcraftandroid.wordcraft.ui.Motion.BASIC, delayMillis = io.github.artcraftandroid.wordcraft.ui.Motion.QUICKEST, easing = io.github.artcraftandroid.wordcraft.ui.Motion.EaseOutSharp), expandFrom = Alignment.Top) + fadeIn(tween(io.github.artcraftandroid.wordcraft.ui.Motion.QUICKEST, delayMillis = io.github.artcraftandroid.wordcraft.ui.Motion.QUICKEST)),
-                    exit = shrinkVertically(tween(io.github.artcraftandroid.wordcraft.ui.Motion.SHORT, easing = io.github.artcraftandroid.wordcraft.ui.Motion.EaseInSharp), shrinkTowards = Alignment.Top) + fadeOut(tween(io.github.artcraftandroid.wordcraft.ui.Motion.SHORT)),
-                ) {
-                    MessageBar(
-                        text = "This document has pictures, shapes or drawings that Mobile View can't show the way the pages do.",
-                        onPrintLayout = vm::toggleMobileView,
-                        onClose = { vm.messageBarClosed = true },
-                    )
-                }
                 Box(
                     Modifier.weight(1f).fillMaxWidth().onSizeChanged {
                         vm.setViewWidth(it.width, density)
@@ -325,6 +330,9 @@ fun EditorScreen(vm: AppViewModel) {
                         },
                         highlights = vm.readingRects,
                         wordHighlights = vm.readingWord,
+                        commentMarks = if (vm.review?.showMarkup != false) vm.commentMarks.map { it.line } else emptyList(),
+                        activeMark = vm.commentMarks.firstOrNull { it.id.toInt() == vm.activeComment }?.line,
+                        activeRange = vm.commentRange,
                         modifier = Modifier.fillMaxSize(),
                         ink = if (vm.editing && vm.inkOn) {
                             val hl = vm.inkTool == "highlighter"
@@ -381,7 +389,7 @@ fun EditorScreen(vm: AppViewModel) {
                             onPaste = vm::paste,
                             onComment = {
                                 vm.contextBar = false
-                                vm.commentsOpen = true
+                                vm.openComments(write = true)
                             },
                             // centred over the selection, kept inside the view; under it when there's no room above
                             modifier = Modifier.layout { measurable, constraints ->
@@ -422,12 +430,25 @@ fun EditorScreen(vm: AppViewModel) {
                             vm.dismissResume()
                         }
                     }
-                    if (!vm.editing && !vm.findOpen && !vm.reading && !vm.commentsOpen && !vm.headingsOpen) {
+                    // the drawings message, a card over the pages above the pill, as the reference's
+                    Shown(
+                        visible = !vm.editing && !vm.findOpen && !vm.reading && !vm.commentsOpen && !vm.headingsOpen && !vm.checkOpen && mobile && vm.hasDrawings && !vm.messageBarClosed,
+                        enter = fadeIn(tween(io.github.artcraftandroid.wordcraft.ui.Motion.BASIC, delayMillis = io.github.artcraftandroid.wordcraft.ui.Motion.QUICKEST)),
+                        exit = fadeOut(tween(io.github.artcraftandroid.wordcraft.ui.Motion.SHORT)),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (16 + 56 + 26).dp),
+                    ) {
+                        MessageCard(
+                            text = "This document has pictures, shapes or drawings that Mobile View can't show the way the pages do.",
+                            onPrintLayout = vm::toggleMobileView,
+                            onClose = { vm.messageBarClosed = true },
+                        )
+                    }
+                    if (!vm.editing && !vm.findOpen && !vm.reading && !vm.commentsOpen && !vm.headingsOpen && !vm.checkOpen) {
                         ViewPill(
                             mobileView = mobile,
                             onToggleView = vm::toggleMobileView,
                             onReadAloud = vm::startReadAloud,
-                            onComments = { vm.commentsOpen = true },
+                            onComments = { vm.openComments() },
                             onShare = { vm.share(asPdf = false) },
                             modifier = if (landscape) Modifier.align(Alignment.BottomStart).padding(start = 30.dp, bottom = 12.dp) else Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
                         )
@@ -452,7 +473,7 @@ fun EditorScreen(vm: AppViewModel) {
                                 onTable = { vm.openInsert("table") },
                                 onLink = { vm.linkPane = true },
                                 onShapes = { vm.openInsert("shapes") },
-                                onComment = { vm.commentsOpen = true },
+                                onComment = { vm.openComments(write = true) },
                                 onMore = { vm.openInsert() },
                             )
                         } else {
@@ -465,7 +486,7 @@ fun EditorScreen(vm: AppViewModel) {
                                 onCommand = { vm.command(it) },
                                 onHighlight = { vm.openPalette("highlight") },
                                 onFontColor = { vm.openPalette("fontColor") },
-                                onComment = { vm.commentsOpen = true },
+                                onComment = { vm.openComments(write = true) },
                                 onLink = { vm.linkPane = true },
                                 onPicture = { vm.pictureRequests.trySend("pick") },
                                 onTable = { vm.openInsert("table") },
@@ -481,16 +502,20 @@ fun EditorScreen(vm: AppViewModel) {
                 if (vm.reading) {
                     if (vm.audioSettingsOpen) AudioSettingsSheet(vm)
                     ReadAloudBar(vm)
-                } else if (vm.commentsOpen) {
+                } else if (vm.commentsOpen && !vm.commentWriting) {
                     CommentsSheet(vm, Modifier.fillMaxWidth().height(paletteHeight))
                 } else if (vm.headingsOpen) {
                     HeadingsSheet(vm, Modifier.fillMaxWidth().height(paletteHeight))
+                } else if (vm.checkOpen) {
+                    CheckSheet(vm, Modifier.fillMaxWidth().height(paletteHeight))
                 } else if (vm.findSettingsOpen) {
                     FindSettingsSheet(vm, Modifier.fillMaxWidth().height(paletteHeight))
                 } else if (vm.editing && vm.paletteOpen && (imeBottom == 0 || vm.paletteTyping)) {
                     PaletteSheet(vm, onFind = vm::openFind, modifier = Modifier.fillMaxWidth().height(paletteHeight))
                 }
             }
+            // writing a reply or a new comment: the Comments pane over everything, above the keyboard
+            if (commentScreen) CommentsSheet(vm, Modifier.fillMaxSize())
             // the palette's tab list, over the pages and the palette, centred on the palette's
             // header; it grows out of its middle as it fades in
             val tabCount = PALETTE_TABS.size + (if (contextTab(vm.format) != null) 1 else 0)
@@ -590,20 +615,33 @@ private fun Scrubber(viewport: DocumentViewport, modifier: Modifier = Modifier) 
 }
 
 /** A grey bar under the title: one line and a chevron, or opened, the whole text and two buttons. */
+/**
+ * Mobile View's message for a document with drawings it moves, as a card over the pages above the
+ * pill (as the reference's): two lines of it, Print Layout, and a chevron that opens it to the
+ * whole message and Close.
+ */
 @Composable
-private fun MessageBar(text: String, onPrintLayout: () -> Unit, onClose: () -> Unit) {
+private fun MessageCard(text: String, onPrintLayout: () -> Unit, onClose: () -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().background(WordColors.Strip).topEdge(WordColors.BarEdge)) {
-        Row(Modifier.fillMaxWidth().height(if (open) 60.dp else 42.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().background(WordColors.MessageCard, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 61.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 uiText(text),
-                color = WordColors.OnBar,
-                fontSize = 16.sp,
-                maxLines = if (open) 2 else 1,
+                color = WordColors.OnMessageCard,
+                fontSize = 14.sp,
+                lineHeight = 19.sp,
+                maxLines = if (open) 6 else 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(start = 16.dp),
+                modifier = Modifier.weight(1f).padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
             )
-            BarButton((if (open) LucideIcons.ChevronUp else LucideIcons.ChevronDown).glyph(), WordColors.OnBar, { open = !open }, width = 54.dp, height = 42.dp)
+            Text(
+                uiText("Print Layout"),
+                color = WordColors.OnMessageCard,
+                fontSize = 15.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                modifier = Modifier.clickable(onClick = onPrintLayout).padding(horizontal = 14.dp, vertical = 12.dp),
+            )
+            BarButton((if (open) LucideIcons.ChevronDown else LucideIcons.ChevronUp).glyph(), WordColors.OnMessageCard, { open = !open }, width = 44.dp, height = 48.dp)
         }
         if (open) {
             Row(Modifier.fillMaxWidth().padding(end = 8.dp, bottom = 4.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {

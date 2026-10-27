@@ -158,7 +158,7 @@ pub fn check_with(text: &str, capital_first: bool) -> Vec<Issue> {
             v.push(Issue {
                 start: pair[1].0,
                 end: pair[1].1,
-                kind: IssueKind::Grammar,
+                kind: IssueKind::Repeated,
                 message: "Yinelenen sözcük".into(),
                 suggestions: Vec::new(),
                 lang: ProofLang::Tr,

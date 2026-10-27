@@ -25,12 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,7 +39,7 @@ import io.github.artcraftandroid.wordcraft.core.FormatState
 import io.github.artcraftandroid.wordcraft.ui.LucideIcons
 import io.github.artcraftandroid.wordcraft.ui.WordColors
 
-/** A tappable icon of the bars. */
+/** A tappable icon of the bars, named `label` for screen readers. */
 @Composable
 fun BarButton(
     glyph: Glyph,
@@ -54,9 +54,10 @@ fun BarButton(
     disabledTint: Color = WordColors.Disabled,
     label: String? = null,
 ) {
+    val localizedLabel = label?.let { uiText(it) }
     Box(
         modifier
-            .semantics { label?.let { contentDescription = it } }
+            .semantics { localizedLabel?.let { contentDescription = it } }
             .size(width, height)
             .background(if (pressed) WordColors.Pressed else Color.Transparent)
             .clickable(enabled = enabled, onClick = onClick),
@@ -77,12 +78,12 @@ private val BAR_BUTTON = 48.dp
 @Composable
 fun ViewTopBar(title: String, onClose: () -> Unit, onEdit: () -> Unit, onShare: () -> Unit, onFind: () -> Unit, onMore: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(BAR_HEIGHT).background(WordColors.TitleBar).padding(end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarButton(LucideIcons.X.glyph(), WordColors.OnTitleBar, onClose, width = BAR_HEIGHT, height = BAR_HEIGHT)
+        BarButton(LucideIcons.X.glyph(), WordColors.OnTitleBar, onClose, width = BAR_HEIGHT, height = BAR_HEIGHT, label = "Close")
         Text(title, color = WordColors.OnTitleBar, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        BarButton(LucideIcons.PenLine.glyph(), WordColors.OnTitleBar, onEdit, width = BAR_BUTTON, height = BAR_HEIGHT)
+        BarButton(LucideIcons.PenLine.glyph(), WordColors.OnTitleBar, onEdit, width = BAR_BUTTON, height = BAR_HEIGHT, label = "Edit")
         BarButton(LucideIcons.Share2.glyph(), WordColors.OnTitleBar, onShare, width = BAR_BUTTON, height = BAR_HEIGHT, label = uiText("Share"))
-        BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT)
-        BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT)
+        BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = BAR_BUTTON, height = BAR_HEIGHT, label = "Find")
+        BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = BAR_BUTTON, height = BAR_HEIGHT, label = "More Options")
     }
 }
 
@@ -104,15 +105,15 @@ fun EditTopBar(
     BoxWithConstraints(Modifier.fillMaxWidth().shadow(2.dp).background(WordColors.TitleBar)) {
         val buttonWidth = minOf(BAR_BUTTON, maxWidth / 8)
         Row(Modifier.fillMaxWidth().height(BAR_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(LucideIcons.Check.glyph(), WordColors.OnTitleBar, onDone, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Check.glyph(), WordColors.OnTitleBar, onDone, width = buttonWidth, height = BAR_HEIGHT, label = "Done")
             Spacer(Modifier.weight(1f))
-            BarButton(LucideIcons.PenTool.glyph(), WordColors.OnTitleBar, onShowCommands, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.PenTool.glyph(), WordColors.OnTitleBar, onShowCommands, width = buttonWidth, height = BAR_HEIGHT, label = "Show Commands")
             BarButton(LucideIcons.Share2.glyph(), WordColors.OnTitleBar, onShare, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Share"))
-            BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = buttonWidth, height = BAR_HEIGHT)
-            BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnTitleBar, onMobileView, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Search.glyph(), WordColors.OnTitleBar, onFind, width = buttonWidth, height = BAR_HEIGHT, label = "Find")
+            BarButton((if (mobileView) LucideIcons.FileText else LucideIcons.Smartphone).glyph(), WordColors.OnTitleBar, onMobileView, width = buttonWidth, height = BAR_HEIGHT, label = if (mobileView) "Print View" else "Mobile View")
             BarButton(LucideIcons.Undo2.glyph(), WordColors.OnTitleBar, onUndo, enabled = canUndo, disabledTint = WordColors.TitleDisabled, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Undo"))
             BarButton(LucideIcons.Redo2.glyph(), WordColors.OnTitleBar, onRedo, enabled = canRedo, disabledTint = WordColors.TitleDisabled, width = buttonWidth, height = BAR_HEIGHT, label = uiText("Redo"))
-            BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = buttonWidth, height = BAR_HEIGHT)
+            BarButton(LucideIcons.Ellipsis.glyph(), WordColors.OnTitleBar, onMore, width = buttonWidth, height = BAR_HEIGHT, label = "More Options")
         }
     }
 }

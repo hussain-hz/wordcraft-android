@@ -31,6 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -67,7 +70,8 @@ import java.util.Locale
 @Composable
 internal fun StyleRow(l: StyleLook, selected: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(40.dp).background(if (selected) WordColors.Pressed else WordColors.Surface).clickable(onClick = onClick),
+        Modifier.fillMaxWidth().height(40.dp).background(if (selected) WordColors.Pressed else WordColors.Surface).clickable(onClick = onClick)
+            .semantics { contentDescription = "${l.name} list item"; this.selected = selected },
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
@@ -106,10 +110,13 @@ private fun styleColor(hex: String): Color {
 
 /** A list gallery's tile: a preview, framed when it is the current choice. */
 @Composable
-internal fun ListTile(w: Dp, h: Dp, selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+internal fun ListTile(w: Dp, h: Dp, selected: Boolean, onClick: () -> Unit, label: String? = null, content: @Composable () -> Unit) {
     Box(
         Modifier.size(w, h).border(if (selected) 4.dp else 1.dp, if (selected) WordColors.OnStrip.copy(alpha = 0.45f) else WordColors.Pressed)
-            .background(WordColors.Surface).clickable(onClick = onClick),
+            .background(WordColors.Surface).clickable(onClick = onClick).semantics(mergeDescendants = label == null) {
+                if (label != null) contentDescription = label
+                this.selected = selected
+            },
         contentAlignment = Alignment.Center,
     ) { content() }
 }

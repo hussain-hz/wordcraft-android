@@ -1,9 +1,11 @@
 package io.github.artcraftandroid.wordcraft.ui.editor
 
 import io.github.artcraftandroid.wordcraft.ui.uiText
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +13,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -31,6 +37,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +70,8 @@ val TAB_PANEL_TITLES = mapOf(
     "columns" to "Columns",
     "breaks" to "Breaks",
     "proofing" to "Proofing and Language",
+    "language" to "Language",
+    "link" to "Link",
     "wordCount" to "Word Count",
     "deleteComment" to "Delete",
     "displayForReview" to "Display for Review",
@@ -81,6 +97,8 @@ fun TabPanel(vm: AppViewModel, panel: String): Boolean {
         "columns" -> ColumnsPanel(vm)
         "breaks" -> BreaksPanel(vm)
         "proofing" -> ProofingPanel(vm)
+        "language" -> LanguagePanel(vm)
+        "link" -> LinkPanel(vm)
         "wordCount" -> WordCountPanel(vm)
         "deleteComment" -> SimpleChoices(listOf("Delete" to { vm.command("review.deleteComment") }, "Delete All Comments in Document" to { vm.command("review.deleteComment", json("all" to true)) }))
         "displayForReview" -> DisplayForReviewPanel(vm)
@@ -141,8 +159,8 @@ private fun InsertTab(vm: AppViewModel) {
         PaletteRow("Pictures", LucideIcons.Image.glyph(), onClick = { vm.pushPanel("pictures") }, chevron = true)
         PaletteRow("Shapes", LucideIcons.Shapes.glyph(), onClick = { vm.pushPanel("shapes") }, chevron = true)
         PaletteRow("Text Box", LucideIcons.TextCursorInput.glyph(), onClick = { vm.command("insert.textBox") })
-        PaletteRow("Link", LucideIcons.Link.glyph(), onClick = { vm.linkPane = true }, chevron = true)
-        PaletteRow("Comment", LucideIcons.MessageSquarePlus.glyph(), onClick = { vm.commentsOpen = true })
+        PaletteRow("Link", LucideIcons.Link.glyph(), onClick = { vm.pushPanel("link") }, chevron = true)
+        PaletteRow("Comment", LucideIcons.MessageSquarePlus.glyph(), onClick = { vm.openComments(write = true) })
         PaletteRow("Header & Footer", LucideIcons.PanelTop.glyph(), onClick = {
             vm.command("insert.editHeader")
             vm.closePalette()
@@ -164,7 +182,7 @@ private fun StepperRow(label: String, glyph: Glyph, value: Int, range: IntRange,
         Text(uiText(label), color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.weight(1f))
         BarButton(Glyph.Letters("−"), WordColors.AccentLight, { onChange((value - 1).coerceIn(range)) }, enabled = value > range.first, width = 48.dp, height = ROW, iconSize = 30.dp)
         Text("$value", color = WordColors.OnSurface, fontSize = 16.sp, modifier = Modifier.width(40.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        BarButton(Glyph.Letters("+"), WordColors.AccentLight, { onChange((value + 1).coerceIn(range)) }, enabled = value < range.last, width = 48.dp, height = ROW, iconSize = 30.dp)
+        BarButton(Glyph.Letters("+"), WordColors.AccentLight, { onChange((value + 1).coerceIn(range)) }, enabled = value < range.last, width = 48.dp, height = ROW, iconSize = 30.dp, label = "Increase $label")
         Spacer(Modifier.width(8.dp))
     }
 }
@@ -177,6 +195,20 @@ private fun WideButton(label: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(uiText(label), color = Color.White, fontSize = 16.sp)
+    }
+}
+
+/** Link: Insert Link… (its pane), then the addresses linked lately, each a tap from linking again. */
+@Composable
+private fun LinkPanel(vm: AppViewModel) {
+    Scrolling {
+        PaletteRow("Insert Link...", LucideIcons.Link.glyph(), onClick = { vm.linkPane = true })
+        if (vm.recentLinks.isEmpty()) {
+            Text(uiText("No items available."), color = WordColors.Disabled, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
+        }
+        for (address in vm.recentLinks) {
+            PaletteRow(address, LucideIcons.Link.glyph(), onClick = { vm.insertLink("", address) })
+        }
     }
 }
 
@@ -272,6 +304,7 @@ private fun NumberFormatPanel(vm: AppViewModel) {
 
 /** The four pens in a row: WordCraft's own black, red, blue and green. */
 private val PEN_PRESETS = listOf("000000", "E03131", "1C7ED6", "37B24D")
+private val PEN_NAMES = listOf("Black", "Red", "Blue", "Green")
 
 @Composable
 private fun DrawTab(vm: AppViewModel) {
@@ -285,7 +318,7 @@ private fun DrawTab(vm: AppViewModel) {
         PaletteRow("Highlighter", LucideIcons.Highlighter.glyph(), onClick = { vm.pickTool("highlighter") }, pressed = vm.inkOn && vm.inkTool == "highlighter", enabled = on)
         if (!on) {
             Band()
-            CellRow(*PEN_PRESETS.map { Triple(Glyph.Dot(WordColors.Disabled) as Glyph, false) {} }.toTypedArray())
+            CellRow(*PEN_PRESETS.map { Triple(Glyph.Dot(WordColors.Disabled) as Glyph, false) {} }.toTypedArray(), labels = PEN_NAMES)
             PaletteRow("Color", LucideIcons.Palette.glyph(), onClick = {}, chevron = true, enabled = false)
             Band()
             PaletteRow("Thickness", LucideIcons.Minus.glyph(), onClick = {}, chevron = true, enabled = false)
@@ -301,6 +334,7 @@ private fun DrawTab(vm: AppViewModel) {
                     vm.setInkColor(hex)
                 }
             }.toTypedArray(),
+            labels = PEN_NAMES,
         )
         PaletteRow("Color", LucideIcons.Palette.glyph(), onClick = { vm.pushPanel("inkColor") }, chevron = true)
         Band()
@@ -321,7 +355,7 @@ private val INK_COLORS = listOf(
 private fun InkColorPanel(vm: AppViewModel) {
     val current = if (vm.inkTool == "highlighter") vm.highlighterColor else vm.penColor
     Scrolling {
-        SwatchGrid(INK_COLORS.map { io.github.artcraftandroid.wordcraft.core.Swatch(it, it) }, perRow = 8, cellW = 61.dp, selected = current) { vm.setInkColor(it.hex) }
+        SwatchGrid(INK_COLORS.map { io.github.artcraftandroid.wordcraft.core.Swatch(it, it, "#$it") }, perRow = 8, cellW = 61.dp, selected = current) { vm.setInkColor(it.hex) }
     }
 }
 
@@ -487,7 +521,7 @@ private fun BreaksPanel(vm: AppViewModel) {
 private fun ReviewTab(vm: AppViewModel) {
     val r = vm.review
     Scrolling {
-        PaletteRow("Spelling", LucideIcons.SpellCheck.glyph(), onClick = { vm.command("review.spelling") })
+        PaletteRow("Check Document", LucideIcons.SpellCheck.glyph(), onClick = { vm.openCheck() })
         PaletteRow("Proofing and Language", null, onClick = { vm.pushPanel("proofing") }, chevron = true)
         Band()
         PaletteRow("Read Aloud", LucideIcons.AudioLines.glyph(), onClick = {
@@ -497,7 +531,7 @@ private fun ReviewTab(vm: AppViewModel) {
         Band()
         PaletteRow("Word Count", LucideIcons.FileDigit.glyph(), onClick = { vm.pushPanel("wordCount") }, chevron = true)
         Band()
-        PaletteRow("New Comment", LucideIcons.MessageSquarePlus.glyph(), onClick = { vm.commentsOpen = true })
+        PaletteRow("New Comment", LucideIcons.MessageSquarePlus.glyph(), onClick = { vm.openComments(write = true) })
         // Delete and Resolve act on the comment at the caret
         val here = r?.commentHere == true
         PaletteRow("Delete", LucideIcons.MessageSquareX.glyph(), onClick = { vm.command("review.deleteComment") }, onOpen = { vm.pushPanel("deleteComment") }, enabled = here)
@@ -505,16 +539,19 @@ private fun ReviewTab(vm: AppViewModel) {
         CellRow(
             Triple(Glyph.Letters("‹"), false) { vm.command("review.previousComment") },
             Triple(Glyph.Letters("›"), false) { vm.command("review.nextComment") },
+            labels = listOf("Previous Comment", "Next Comment"),
         )
         Band()
         PaletteRow("Track Changes", LucideIcons.FilePenLine.glyph(), onClick = { vm.command("review.trackChanges") }, pressed = r?.trackChanges == true)
         Caption("Display for Review")
-        PaletteRow(MARKUP_VIEWS.firstOrNull { it.first == r?.markup }?.second ?: "All Markup", null, onClick = { vm.pushPanel("displayForReview") }, chevron = true)
+        val markup = MARKUP_VIEWS.firstOrNull { it.first == r?.markup }?.second ?: "All Markup"
+        PaletteRow(markup, null, onClick = { vm.pushPanel("displayForReview") }, chevron = true, description = "Display for Review combo box, $markup selected")
         PaletteRow("Accept", LucideIcons.Check.glyph(), onClick = { vm.command("review.accept") }, onOpen = { vm.pushPanel("accept") })
         PaletteRow("Reject", LucideIcons.X.glyph(), onClick = { vm.command("review.reject") }, onOpen = { vm.pushPanel("reject") })
         CellRow(
             Triple(Glyph.Letters("‹"), false) { vm.command("review.previousChange") },
             Triple(Glyph.Letters("›"), false) { vm.command("review.nextChange") },
+            labels = listOf("Previous Change", "Next Change"),
         )
     }
 }
@@ -522,9 +559,10 @@ private fun ReviewTab(vm: AppViewModel) {
 @Composable
 private fun ProofingPanel(vm: AppViewModel) {
     var hideAll by remember { mutableStateOf(false) }
+    val language = caretLanguage(vm)
     Scrolling {
         Caption("Language")
-        PaletteRow(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].displayName, null, onClick = { vm.tell("More languages are coming.") }, chevron = true)
+        PaletteRow(language, null, onClick = { vm.pushPanel("language") }, chevron = true, bare = true, description = uiText("Language combo box, %1\$s selected", language))
         CheckboxRow("Hide All Proofing Marks", hideAll) {
             hideAll = it
             vm.command("review.proofing", json("value" to !it))
@@ -533,20 +571,134 @@ private fun ProofingPanel(vm: AppViewModel) {
     }
 }
 
+/** The name of the language the selection is marked as (its BCP 47 tag from the engine). */
+@Composable
+private fun caretLanguage(vm: AppViewModel): String {
+    var tag by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { vm.query("format.state") { tag = it?.optString("lang")?.ifEmpty { null } } }
+    return if (tag != null) languageName(tag!!) else ""
+}
+
+/**
+ * The languages text can be marked as: the phone's own locales that name a region, called what
+ * the phone calls them (a language spoken in only one of them by its name alone), alphabetically.
+ */
+private val MARK_LANGUAGES: List<Pair<String, String>> by lazy {
+    val shown = Locale.getDefault()
+    // two-letter languages only: the phone also knows many minority languages by three-letter codes
+    val regional = Locale.getAvailableLocales().filter { it.language.length == 2 && it.country.length == 2 && it.variant.isEmpty() && it.script.isEmpty() }
+    val regions = regional.groupingBy { it.language }.eachCount()
+    regional
+        .map { it.toLanguageTag() to if (regions[it.language] == 1) it.getDisplayLanguage(shown) else it.getDisplayName(shown) }
+        .distinctBy { it.first }
+        .sortedBy { it.second.lowercase(shown) }
+}
+
+@Composable
+private fun languageName(tag: String): String {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    return Locale.forLanguageTag(tag).getDisplayName(locale).ifEmpty { tag }
+}
+
+/**
+ * Language: "Mark text as:" on a section band over the selection's language (chosen), a band
+ * between gaps, then every language; a tap marks the selection and goes back.
+ */
+@Composable
+private fun LanguagePanel(vm: AppViewModel) {
+    val current = caretLanguage(vm)
+    val shown = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val languages = remember(shown) {
+        MARK_LANGUAGES.map { (tag, _) -> tag to Locale.forLanguageTag(tag).getDisplayName(shown) }
+            .sortedBy { it.second.lowercase(shown) }
+    }
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(Modifier.fillMaxWidth().height(26.dp).background(WordColors.Section), contentAlignment = Alignment.CenterStart) {
+                Text(uiText("Mark text as:"), color = WordColors.OnSurface, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp))
+            }
+        }
+        item { LanguageRow(current, chosen = true) {} }
+        item {
+            Column {
+                Spacer(Modifier.height(13.dp))
+                Spacer(Modifier.fillMaxWidth().height(BAND).background(WordColors.Section))
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+        items(languages, key = { it.first }) { (tag, name) ->
+            LanguageRow(name, chosen = false) {
+                vm.command("review.language", json("lang" to tag))
+                vm.popPanel()
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageRow(name: String, chosen: Boolean, onClick: () -> Unit) {
+    val description = uiText("%1\$s list item", name)
+    Row(
+        Modifier.fillMaxWidth().height(40.dp).background(if (chosen) WordColors.ListChosen else WordColors.Surface).bottomEdge(WordColors.Divider)
+            .clickable(onClick = onClick).semantics { contentDescription = description; selected = chosen },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, color = WordColors.OnLists, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 24.dp, end = 16.dp))
+    }
+}
+
+/** Where Word Count's four rows sit below the header: the first lower than the pitch, as the reference has it. */
+private val COUNT_ROW_TOPS = listOf(11.dp, 38.dp, 70.dp, 102.dp)
+
 @Composable
 private fun WordCountPanel(vm: AppViewModel) {
     var counts by remember { mutableStateOf<JSONObject?>(null) }
-    var withBoxes by remember { mutableStateOf(true) }
+    val withBoxes = vm.countWithBoxes
     LaunchedEffect(withBoxes) { vm.query("review.wordCount", json("includeTextBoxes" to withBoxes)) { counts = it } }
     Scrolling {
         val c = counts
-        for ((label, key) in listOf("Pages" to "pages", "Words" to "words", "Characters (no spaces)" to "characters", "Characters (with spaces)" to "charactersWithSpaces")) {
-            Row(Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(uiText(label), color = WordColors.OnSurface, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Text(c?.optLong(key)?.let { "%,d".format(it) } ?: "", color = WordColors.OnSurface, fontSize = 15.sp)
+        val rows = listOf("Pages" to "pages", "Words" to "words", "Characters (no spaces)" to "characters", "Characters (with spaces)" to "charactersWithSpaces")
+        Box(Modifier.fillMaxWidth().height(141.dp)) {
+            for ((i, row) in rows.withIndex()) {
+                Row(Modifier.offset(y = COUNT_ROW_TOPS[i]).fillMaxWidth().height(32.dp).padding(start = 20.dp, end = 22.5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(uiText(row.first), color = WordColors.OnLists, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    Text(c?.optLong(row.second)?.let { "%,d".format(it) } ?: "", color = WordColors.OnLists, fontSize = 15.sp)
+                }
             }
         }
-        CheckboxRow("Include textboxes, footnotes and endnotes", withBoxes) { withBoxes = it }
+        Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(WordColors.CountsRule))
+        Spacer(Modifier.height(13.dp))
+        CountsCheck("Include textboxes, footnotes and endnotes", withBoxes) { vm.chooseCountWithBoxes(it) }
+        Spacer(Modifier.height(31.dp))
+        CountsCheck("Show Word Count", vm.showWordCount) { vm.chooseShowWordCount(it) }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+/** Word Count's check boxes: a plain square (filled grey in dark) with a heavy tick in the text colour, no row lines. */
+@Composable
+private fun CountsCheck(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val shape = RoundedCornerShape(1.5.dp)
+    Row(
+        Modifier.padding(start = 16.dp, end = 16.dp).heightIn(min = 27.dp).toggleable(checked, role = Role.Checkbox, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(3.dp))
+        val tick = WordColors.OnLists
+        Box(Modifier.offset(y = 1.5.dp).size(21.dp).background(WordColors.CheckOff, shape).border(1.dp, WordColors.CountsBoxEdge, shape)) {
+            if (checked) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val path = Path().apply {
+                        moveTo(size.width * 0.19f, size.height * 0.51f)
+                        lineTo(size.width * 0.41f, size.height * 0.76f)
+                        lineTo(size.width * 0.80f, size.height * 0.25f)
+                    }
+                    drawPath(path, tick, style = Stroke(width = 2.4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(uiText(label), color = WordColors.OnLists, fontSize = 15.sp, modifier = Modifier.weight(1f))
     }
 }
 

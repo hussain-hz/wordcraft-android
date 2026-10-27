@@ -144,7 +144,7 @@ pub fn run_effects(rc: &ResolvedChar, color: Rgb) -> Option<TextEffects> {
     if rc.shadow || rc.emboss || rc.engrave {
         let distance = (rc.size / 20.0).clamp(0.5, 6.0);
         let angle = if rc.engrave { 225.0 } else { 45.0 };
-        fx.shadow = Some(Shadow { color: Rgb(128, 128, 128), transparency: 0.0, blur: 0.0, distance, angle, rot_with_shape: false, scale_y: 100.0, skew_x: 0.0 });
+        fx.shadow = Some(Shadow { color: Rgb(128, 128, 128), transparency: 0.0, blur: 0.0, distance, angle, rot_with_shape: false, scale_x: 100.0, scale_y: 100.0, skew_x: 0.0 });
     }
     if let Some(w) = &rc.text_effects {
         fx.overlay(w);

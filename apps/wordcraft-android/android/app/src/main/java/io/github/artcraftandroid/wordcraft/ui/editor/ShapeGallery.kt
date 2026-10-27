@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -26,6 +28,7 @@ import io.github.artcraftandroid.wordcraft.core.shapeAspect
 import io.github.artcraftandroid.wordcraft.core.shapeGallery
 import io.github.artcraftandroid.wordcraft.core.shapeOutline
 import io.github.artcraftandroid.wordcraft.ui.AppViewModel
+import io.github.artcraftandroid.wordcraft.ui.uiText
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -49,6 +52,38 @@ internal fun ShapeGalleryPanel(vm: AppViewModel) {
     }
 }
 
+/**
+ * What a screen reader says for a gallery entry: the text box, a line by its kind and arrows, or a
+ * preset's name spelt out ("rightArrow" → "Right Arrow", "rect" → "Rectangle").
+ */
+internal fun shapeName(key: String): String {
+    if (key == TEXT_BOX) return "Text Box"
+    if (key.contains(':')) {
+        val kind = when (key.substringBefore(':')) {
+            "straightConnector" -> "Line"
+            "elbowConnector" -> "Elbow Connector"
+            else -> "Curved Connector"
+        }
+        return when (key.substringAfter(':')) {
+            "end" -> "$kind Arrow"
+            "both" -> "$kind Double Arrow"
+            else -> kind
+        }
+    }
+    val words = key.replace(Regex("([a-z])([A-Z0-9])"), "$1 $2").replace(Regex("([0-9])([A-Za-z])"), "$1 $2").split(' ')
+    return words.joinToString(" ") { w ->
+        when (w.lowercase()) {
+            "rect" -> "Rectangle"
+            "rt" -> "Right"
+            "ellipse" -> "Oval"
+            "round" -> "Rounded"
+            "snip" -> "Snipped"
+            "flow" -> "Flow"
+            else -> w.replaceFirstChar { it.uppercase() }
+        }
+    }
+}
+
 /** The text box entry. */
 internal const val TEXT_BOX = "textBox"
 
@@ -64,7 +99,8 @@ private fun GalleryGroup(name: String, items: List<String>, vm: AppViewModel) {
     SectionBand(name)
     AdaptiveGallery(items, maxColumns = 8, preferredWidth = 61.3.dp, rowHeight = 60.dp,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) { key ->
-        Box(Modifier.fillMaxSize().clickable { vm.insertShape(key) }, contentAlignment = Alignment.Center) {
+        val description = uiText(shapeName(key))
+        Box(Modifier.fillMaxSize().semantics { contentDescription = description }.clickable { vm.insertShape(key) }, contentAlignment = Alignment.Center) {
             ShapeIcon(key)
         }
     }

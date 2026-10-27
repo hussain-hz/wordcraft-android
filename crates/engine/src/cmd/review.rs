@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Value, json};
 use wordcraft_doc::para::InlineObject;
-use wordcraft_doc::{Comment, Paragraph, PartKind, Pos, StoryRef, para_block};
+use wordcraft_doc::{Comment, Paragraph, PartKind, Pos, StoryRef, TextCounts, para_block};
 
 use super::{fmt_revisions, now_iso, pos_json, sel_result};
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
@@ -75,7 +75,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("review.spelling", "Spelling & Grammar", "Review › Proofing", next_issue)
             .key(super::mac_or("F7 / Alt+F7 / Mod+Alt+L", "F7 / Alt+F7"))
             .pure(),
-        CommandSpec::new("review.issues", "Proofing Issues", "Review › Proofing", all_issues).pure(),
+        CommandSpec::new("review.issues", "Proofing Issues", "Review › Proofing", all_issues).params(r#"{"grammar"?: bool (default true; false: spelling and repeated words only)}"#).pure(),
         CommandSpec::new("review.suggestions", "Spelling Suggestions", "Review › Proofing", suggestions).params(r#"{"pos"?: Pos}"#).pure(),
         CommandSpec::new("review.addToDictionary", "Add to Dictionary", "Review › Proofing", |s, v| {
             let w = match p::str(v, "word") {
@@ -362,6 +362,24 @@ pub fn comment_list(s: &Session) -> Vec<(u32, Option<Pos>)> {
     found
 }
 
+/// Where comment `id`'s range in the body starts and ends (its start and end markers), if both are there.
+pub fn comment_range(s: &Session, id: u32) -> Option<(Pos, Pos)> {
+    let (mut start, mut end) = (None, None);
+    for path in s.doc.para_paths(StoryRef::Body) {
+        let Some(p) = s.doc.para(StoryRef::Body, &path) else { continue };
+        for o in p.object_offsets() {
+            match p.object_at(o) {
+                Some(InlineObject::CommentStart { id: x }) if *x == id && start.is_none() => {
+                    start = Some(Pos { story: StoryRef::Body, path: path.clone(), off: o })
+                }
+                Some(InlineObject::CommentEnd { id: x }) if *x == id => end = Some(Pos { story: StoryRef::Body, path: path.clone(), off: o }),
+                _ => {}
+            }
+        }
+    }
+    Some((start?, end?))
+}
+
 fn list_comments(s: &mut Session, _: &Value) -> CmdResult {
     let list = comment_list(s);
     Ok(Value::Array(
@@ -369,7 +387,7 @@ fn list_comments(s: &mut Session, _: &Value) -> CmdResult {
             .filter_map(|(id, pos)| {
                 let c = s.doc.comments.get(id)?;
                 Some(json!({
-                    "id": id, "author": c.author, "date": c.date, "resolved": c.resolved, "parent": c.parent,
+                    "id": id, "author": c.author, "initials": c.initials, "date": c.date, "dateUtc": c.date_utc, "resolved": c.resolved, "parent": c.parent,
                     "text": s.doc.plain_text(StoryRef::Part(c.part)),
                     "anchor": pos.as_ref().map(pos_json),
                 }))
@@ -934,18 +952,18 @@ fn word_count(s: &mut Session, v: &Value) -> CmdResult {
     }
     let stories = if s.prefs.count_notes { s.doc.counted_stories() } else { vec![StoryRef::Body] };
     // A selected picture, shape or text box isn't a text selection: count the document.
-    let text = if s.sel.is_collapsed() || super::objects::object_selection(s).is_some() {
-        stories.iter().map(|st| s.doc.plain_text(*st)).collect::<Vec<_>>().join("\n")
+    let whole = s.sel.is_collapsed() || super::objects::object_selection(s).is_some();
+    let text = if whole { stories.iter().map(|st| s.doc.plain_text(*st)).collect::<Vec<_>>().join("\n") } else { s.selected_text() };
+    let counts = if whole {
+        stories.iter().map(|st| s.doc.story_counts(*st)).fold(TextCounts::default(), |a, b| a + b)
     } else {
-        s.selected_text()
+        TextCounts {
+            words: wordcraft_doc::count_words(&text),
+            chars: text.chars().filter(|c| !c.is_whitespace()).count(),
+            chars_with_spaces: text.chars().filter(|c| *c != '\n').count(),
+        }
     };
-    let words = if s.sel.is_collapsed() || super::objects::object_selection(s).is_some() {
-        stories.iter().map(|st| s.doc.story_word_count(*st)).sum()
-    } else {
-        wordcraft_doc::count_words(&text)
-    };
-    let chars = text.chars().filter(|c| *c != '\n' && *c != '\r').count();
-    let chars_no_spaces = text.chars().filter(|c| !c.is_whitespace()).count();
+    let (words, chars, chars_no_spaces) = (counts.words, counts.chars_with_spaces, counts.chars);
     let paragraphs = text.split('\n').filter(|l| !l.trim().is_empty()).count();
     let lines: usize = {
         let l = s.layout();
@@ -1017,10 +1035,14 @@ fn next_issue(s: &mut Session, _: &Value) -> CmdResult {
     Ok(json!({"done": true}))
 }
 
-fn all_issues(s: &mut Session, _: &Value) -> CmdResult {
+fn all_issues(s: &mut Session, v: &Value) -> CmdResult {
+    let grammar = p::bool(v, "grammar").unwrap_or(true);
     let mut out = Vec::new();
     for path in s.doc.para_paths(StoryRef::Body) {
         for (a, b, i) in para_issues(s, StoryRef::Body, &path) {
+            if !grammar && i.kind == wordcraft_proof::IssueKind::Grammar {
+                continue;
+            }
             out.push(issue_json(s, &a, &b, &i));
             if out.len() >= 500 {
                 return Ok(Value::Array(out));
@@ -1198,7 +1220,11 @@ mod tests {
         let l = s.layout();
         let page = &l.pages[0];
         let opts = DisplayOptions { revisions: s.prefs.markup.clone(), ..Default::default() };
-        (page_display(&s.doc, page, &opts), page.body.x)
+        // with the groups a dark page leaves alone (shapes, filled text boxes) opened up
+        fn opened(d: Vec<Draw>) -> Vec<Draw> {
+            d.into_iter().flat_map(|x| if let Draw::Kept { items } = x { opened(items) } else { vec![x] }).collect()
+        }
+        (opened(page_display(&s.doc, page, &opts)), page.body.x)
     }
 
     fn glyph_colors(d: &[Draw]) -> Vec<(wordcraft_doc::Rgb, bool)> {
@@ -1207,6 +1233,85 @@ mod tests {
 
     fn lines(d: &[Draw]) -> Vec<(f32, f32, f32, f32)> {
         d.iter().filter_map(|x| if let Draw::Line { x0, y0, x1, y1, .. } = x { Some((*x0, *y0, *x1, *y1)) } else { None }).collect()
+    }
+
+    /// A comment and its reply share a range: the shade covers the commented words only, not
+    /// the paragraph before them.
+    #[test]
+    fn a_threads_shade_covers_only_its_words() {
+        let mut s = Session::new(Document::new());
+        s.view.proofing = false;
+        s.run("document.setText", &json!({"text": "The garden grows"})).unwrap();
+        s.run("select.text", &json!({"text": "garden"})).unwrap();
+        let id = s.run("review.newComment", &json!({"text": "Which?"})).unwrap()["id"].as_u64().unwrap() as u32;
+        // a reply anchored as the reference's files anchor them: its own markers round the same words
+        let reply = s.run("review.reply", &json!({"id": id, "text": "North."})).unwrap()["id"].as_u64().unwrap() as u32;
+        let (a, b) = super::comment_range(&s, id).unwrap();
+        s.doc.insert_object(&b, wordcraft_doc::InlineObject::CommentEnd { id: reply }, &Default::default()).unwrap();
+        s.doc.insert_object(&a, wordcraft_doc::InlineObject::CommentStart { id: reply }, &Default::default()).unwrap();
+        s.relayout();
+        let (d, body_x) = draws(&mut s);
+        let shades: Vec<f32> = d
+            .iter()
+            .filter_map(|x| {
+                if let Draw::Fill { rect, color, .. } = x { (*color == wordcraft_doc::Rgb(0xE8, 0xE8, 0xE8)).then_some(rect.x) } else { None }
+            })
+            .collect();
+        assert!(!shades.is_empty() && shades.iter().all(|x| *x > body_x + 10.0), "{shades:?} from {body_x}");
+    }
+
+    /// A comment made here carries its time as UTC, said so (`dateUtc`), for the phone app's
+    /// rule: a UTC time is shown in the reader's zone, a file's own `w:date` as written.
+    #[test]
+    fn comments_made_here_say_their_time_is_utc() {
+        let mut s = Session::new(Document::new());
+        s.run("document.setText", &json!({"text": "one two"})).unwrap();
+        s.run("select.text", &json!({"text": "two"})).unwrap();
+        let id = s.run("review.newComment", &json!({"text": "note"})).unwrap()["id"].as_u64().unwrap();
+        s.run("review.reply", &json!({"id": id, "text": "answer"})).unwrap();
+        let list = s.run("review.comments", &json!({})).unwrap();
+        let all = list.as_array().unwrap();
+        assert_eq!(all.len(), 2);
+        for c in all {
+            assert!(c["date"].as_str().unwrap().ends_with('Z'), "{c}");
+            assert_eq!(c["dateUtc"], c["date"], "{c}");
+        }
+    }
+
+    /// Changed lines one after another make one bar beside them, over the spacing between their
+    /// paragraphs, as the phone app draws it; an unchanged line between breaks it.
+    #[test]
+    fn change_bars_join_over_consecutive_changed_lines() {
+        let mut s = Session::new(Document::new());
+        s.view.proofing = false;
+        s.run(
+            "document.setText",
+            &json!({"text": "one
+two
+three
+four"}),
+        )
+        .unwrap();
+        s.run("review.trackChanges", &json!({"value": true})).unwrap();
+        for word in ["one", "two", "four"] {
+            s.run("select.text", &json!({"text": word})).unwrap();
+            s.run("text.insert", &json!({"text": "new"})).unwrap();
+        }
+        let (d, body_x) = draws(&mut s);
+        let bars: Vec<_> = lines(&d).into_iter().filter(|(x0, _, x1, _)| x0 == x1 && *x0 < body_x).collect();
+        assert_eq!(bars.len(), 2, "one bar beside one and two, one beside four: {bars:?}");
+        assert!((bars[0].0 - body_x / 2.0).abs() < 0.01, "in the middle of the margin: {bars:?}");
+        let widths: Vec<f32> = d
+            .iter()
+            .filter_map(|x| if let Draw::Line { x0, x1, width, .. } = x { (x0 == x1 && *x0 < body_x).then_some(*width) } else { None })
+            .collect();
+        assert_eq!(widths, [1.25, 1.25], "as wide as the phone app's");
+        // with margin shown beyond the page (Mobile View's pad), in the middle of all of it
+        let l = s.layout();
+        let opts = DisplayOptions { revisions: s.prefs.markup.clone(), outer_margin: 5.0, ..Default::default() };
+        let padded = page_display(&s.doc, &l.pages[0], &opts);
+        let x = lines(&padded).into_iter().find(|(x0, _, x1, _)| x0 == x1 && *x0 < body_x).map(|l| l.0);
+        assert_eq!(x, Some((body_x + 5.0) / 2.0 - 5.0));
     }
 
     /// #328: Track Changes Options change how an insertion and a deletion are drawn, the bar

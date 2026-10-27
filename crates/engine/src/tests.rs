@@ -4321,24 +4321,7 @@ fn word_count_includes_text_boxes_by_default() {
     assert_eq!(s.word_count(), 2);
 }
 
-#[test]
-fn word_count_includes_numbered_list_labels_in_words_but_not_characters() {
-    let mut d = wordcraft_doc::Document::new();
-    let num_id = d.numbering.add_list(wordcraft_doc::ListKind::Numbered);
-    let mut p = wordcraft_doc::Paragraph::with_text("Apple", wordcraft_doc::CharProps::default());
-    p.props.numbering = Some(wordcraft_doc::props::NumRef { num: num_id, level: 0 });
-    d.body = vec![std::sync::Arc::new(wordcraft_doc::Block::Para(p))];
-    let mut s = Session::new(d);
 
-    let v = run(&mut s, "review.wordCount", json!({}));
-    // Generated label "1." + "Apple" = 2 words.
-    assert_eq!(v["words"].as_u64(), Some(2));
-    assert_eq!(s.word_count(), 2);
-    // Generated list label "1." is formatting metadata and not run characters,
-    // so Word excludes it from character counts: "Apple" has 5 characters.
-    assert_eq!(v["characters"].as_u64(), Some(5));
-    assert_eq!(v["charactersWithSpaces"].as_u64(), Some(5));
-}
 
 #[test]
 fn word_count_excludes_carriage_returns_from_character_counts() {
@@ -10878,4 +10861,672 @@ fn numeral_preserve_keeps_mixed_digits_distinct_in_pdf_and_png_exports() {
     assert_eq!(copy(&s, "digits.pdf"), pdf);
     assert_eq!(copy(&s, "digits.png"), png);
     assert_eq!(text(&s), "١٢٣ 123 ۱۲۳");
+}
+
+
+#[test]
+fn word_count_includes_numbered_list_labels_in_words_and_characters() {
+    let mut d = wordcraft_doc::Document::new();
+    let num_id = d.numbering.add_list(wordcraft_doc::ListKind::Numbered);
+    let mut p = wordcraft_doc::Paragraph::with_text("Apple", wordcraft_doc::CharProps::default());
+    p.props.numbering = Some(wordcraft_doc::props::NumRef { num: num_id, level: 0 });
+    d.body = vec![std::sync::Arc::new(wordcraft_doc::Block::Para(p))];
+    let mut s = Session::new(d);
+
+    let v = run(&mut s, "review.wordCount", json!({}));
+    // Generated label "1." + "Apple" = 2 words.
+    assert_eq!(v["words"].as_u64(), Some(2));
+    assert_eq!(s.word_count(), 2);
+    // The phone app counts the label's characters too, and the tab after it as a space:
+    // "1." and "Apple" make 7 characters, 8 with the tab.
+    assert_eq!(v["characters"].as_u64(), Some(7));
+    assert_eq!(v["charactersWithSpaces"].as_u64(), Some(8));
+}
+
+#[test]
+fn exported_page_images_draw_headers_at_full_strength() {
+    // file.exportPng (and `wordcraft-cli render`) drew headers and footers dimmed, as the screen
+    // does while the body is edited; Word's exported pages and WordCraft's PDF don't.
+    let mut s = s();
+    run(&mut s, "text.insert", json!({"text": "Body"}));
+    let mut hp = wordcraft_doc::Paragraph::with_text("HEADER", wordcraft_doc::props::CharProps { size: Some(28.0), ..Default::default() });
+    hp.props.align = Some(wordcraft_doc::props::Align::Left);
+    let id = s.doc.add_part(wordcraft_doc::PartKind::Header, vec![wordcraft_doc::para_block(hp)]);
+    s.doc.last_section.headers.default = Some(id);
+    let dir = std::env::temp_dir().join(format!("wordcraft-png-header-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("p.png");
+    s.run("file.exportPng", &json!({"path": path.to_string_lossy(), "scale": 1.0})).unwrap();
+    let img = image::open(&path).unwrap().to_luma8();
+    // The darkest pixel in the top tenth of the page (the header) is black, not grey.
+    let top = img.height() / 10;
+    let darkest = (0..top).flat_map(|y| (0..img.width()).map(move |x| (x, y))).map(|(x, y)| img.get_pixel(x, y)[0]).min().unwrap();
+    assert!(darkest < 60, "header drawn dimmed: darkest pixel {darkest}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn add_text_gives_a_shape_text_of_its_own() {
+    use wordcraft_doc::para::InlineObject;
+    use wordcraft_doc::{Align, StoryRef};
+    let mut s = s();
+    run(&mut s, "insert.shape", json!({"preset": "wedgeRectCallout"}));
+    let story = run(&mut s, "shape.addText", json!({}))["story"].as_u64().unwrap() as u32;
+    assert_eq!(s.sel.focus.story, StoryRef::Part(story), "the caret is in the shape's text");
+    run(&mut s, "text.insert", json!({"text": "Hello"}));
+    let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+    let Some(InlineObject::Shape { story: Some(id), extra, .. }) = p.object_at(p.object_offsets()[0]) else { panic!("no story") };
+    assert_eq!((*id, extra.preset.as_deref()), (story, Some("wedgeRectCallout")), "it keeps its shape");
+    let text = s.doc.para(StoryRef::Part(story), &wordcraft_doc::Path(vec![0])).unwrap();
+    assert_eq!(text.text, "Hello");
+    assert_eq!(text.props.align, Some(Align::Center));
+    assert_eq!(s.doc.parts[&story].body.anchor, wordcraft_doc::props::VAlign::Center);
+    // again: into the same text
+    run(&mut s, "select.range", json!({"anchor": Pos::body(0, 0), "focus": Pos::body(0, wordcraft_doc::para::OBJ.len_utf8())}));
+    assert_eq!(run(&mut s, "shape.addText", json!({}))["story"].as_u64().unwrap() as u32, story);
+    // saved and read back with it
+    let bytes = crate::io::save_bytes("t.docx", &s.doc).unwrap();
+    let back = crate::io::open_bytes("t.docx", &bytes).unwrap();
+    let p = back.para_at(&Pos::body(0, 0)).unwrap();
+    assert!(matches!(p.object_at(p.object_offsets()[0]), Some(InlineObject::Shape { story: Some(_), .. })));
+    // a line can't
+    run(&mut s, "document.setText", json!({"text": ""}));
+    run(&mut s, "insert.shape", json!({"kind": "line"}));
+    assert!(s.run("shape.addText", &json!({})).is_err());
+}
+
+#[test]
+fn shape_styles_paint_a_shape_in_the_theme_colours() {
+    use wordcraft_doc::para::InlineObject;
+    let mut s = s();
+    run(&mut s, "insert.shape", json!({"preset": "hexagon"}));
+    let accent2 = s.doc.settings.theme_colors[5];
+    let paint = |s: &Session| {
+        let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Shape { fill, stroke, stroke_width, .. }) => (fill.as_ref().map(|f| f.main_color()), *stroke, *stroke_width),
+            o => panic!("{o:?}"),
+        }
+    };
+    run(&mut s, "shape.effects", json!({"glow": 6}));
+    run(&mut s, "shape.style", json!({"style": "coloredOutline", "color": "accent2"}));
+    assert_eq!(paint(&s), (Some(s.doc.settings.theme_colors[1]), Some(accent2), 1.0));
+    run(&mut s, "shape.style", json!({"style": "coloredFill", "color": "accent2"}));
+    let (fill, stroke, _) = paint(&s);
+    assert_eq!(fill, Some(accent2));
+    assert!(stroke.is_some_and(|c| c.0 <= accent2.0 && c.1 <= accent2.1 && c.2 <= accent2.2 && c != accent2), "a darker outline");
+    run(&mut s, "shape.style", json!({"style": "lightOutline", "color": "dark1"}));
+    assert_eq!(paint(&s).0, Some(s.doc.settings.theme_colors[0]));
+    let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+    assert!(matches!(p.object_at(p.object_offsets()[0]), Some(InlineObject::Shape { effects, .. }) if effects.glow.is_none()), "effects cleared");
+    assert!(s.run("shape.style", &json!({"style": "coloredFill", "color": "accent9"})).is_err());
+    // the presets: no fill, an outline alone, a gradient (kept through a save, drawn as one),
+    // and the effect rows' shadow
+    run(&mut s, "shape.style", json!({"style": "transparent", "color": "accent2"}));
+    assert_eq!(paint(&s), (None, None, 1.0));
+    run(&mut s, "shape.style", json!({"style": "transparentOutline", "color": "accent2"}));
+    assert_eq!(paint(&s), (None, Some(accent2), 1.5));
+    run(&mut s, "shape.style", json!({"style": "intenseEffect", "color": "accent2"}));
+    let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+    assert!(matches!(p.object_at(p.object_offsets()[0]), Some(InlineObject::Shape { effects, stroke: None, .. }) if effects.shadow.is_some()));
+    run(&mut s, "shape.style", json!({"style": "gradient", "color": "accent2"}));
+    let gradient = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Shape { fill, extra, .. }) => match extra.effective_fill(fill.as_ref()) {
+                Some(wordcraft_doc::fill::Fill::Gradient(g)) => Some(g),
+                _ => None,
+            },
+            _ => None,
+        }
+    };
+    let g = gradient(&s.doc).expect("a gradient");
+    assert_eq!(g.stops.len(), 3);
+    assert_eq!(g.stops[1].color, accent2);
+    let bytes = crate::io::save_bytes("g.docx", &s.doc).unwrap();
+    assert_eq!(gradient(&crate::io::open_bytes("g.docx", &bytes).unwrap()), Some(g));
+    let l = s.layout();
+    let draws = opened(wordcraft_layout::display::page_display(&s.doc, &l.pages[0], &Default::default()));
+    assert!(draws.iter().any(|d| matches!(d, wordcraft_layout::display::Draw::Shape { fill: Some(wordcraft_layout::display::Paint::Linear { .. }), .. } | wordcraft_layout::display::Draw::Path { fill: Some(wordcraft_layout::display::Paint::Linear { .. }), .. })), "the shape is painted with its gradient");
+    run(&mut s, "shape.fill", json!({"color": "FF0000"}));
+    assert_eq!(gradient(&s.doc), None, "a plain colour replaces it");
+    assert!(s.run("shape.style", &json!({"style": "sparkly"})).is_err());
+    // a half see-through fill, kept through a save
+    run(&mut s, "shape.style", json!({"style": "semitransparent", "color": "accent1"}));
+    let t = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Shape { fill, extra, .. }) => match extra.effective_fill(fill.as_ref()) {
+                Some(wordcraft_doc::fill::Fill::Solid { transparency, .. }) if transparency > 0.0 => Some(transparency),
+                _ => None,
+            },
+            _ => None,
+        }
+    };
+    assert_eq!(t(&s.doc), Some(50.0));
+    let bytes = crate::io::save_bytes("t.docx", &s.doc).unwrap();
+    assert_eq!(t(&crate::io::open_bytes("t.docx", &bytes).unwrap()), Some(50.0));
+    let fill_color = paint(&s).0.unwrap().hex();
+    run(&mut s, "shape.fill", json!({"color": &fill_color, "transparency": 0}));
+    assert_eq!(t(&s.doc), None);
+    run(&mut s, "shape.fill", json!({"color": &fill_color, "transparency": 30}));
+    let l = s.layout();
+    let draws = opened(wordcraft_layout::display::page_display(&s.doc, &l.pages[0], &Default::default()));
+    assert!(draws.iter().any(|d| matches!(d, wordcraft_layout::display::Draw::Shape { fill: Some(wordcraft_layout::display::Paint::Solid(_, alpha)), .. } | wordcraft_layout::display::Draw::Path { fill: Some(wordcraft_layout::display::Paint::Solid(_, alpha)), .. } if (*alpha - 0.7).abs() < 0.01)));
+    assert!(s.run("shape.style", &json!({"style": "sparkly", "color": "accent1"})).is_err());
+}
+
+#[test]
+fn preset_shapes_are_drawn_saved_and_changed_as_themselves() {
+    use wordcraft_doc::para::{InlineObject, ShapeKind};
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    // the gallery lists the groups and presets
+    let list = run(&mut s, "insert.shape", json!({"list": true}));
+    let groups = list["groups"].as_array().unwrap();
+    assert!(groups.iter().any(|g| g["group"] == "Block Arrows" && g["shapes"].as_array().unwrap().iter().any(|p| p["preset"] == "uturnArrow")));
+    assert!(s.run("insert.shape", &json!({"preset": "noSuchShape"})).is_err());
+
+    run(&mut s, "insert.shape", json!({"preset": "hexagon"}));
+    let shape = |s: &Session| -> (ShapeKind, f32, f32, wordcraft_doc::connector::ShapeExtra) {
+        let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+        let off = p.object_offsets()[0];
+        match p.object_at(off).unwrap() {
+            InlineObject::Shape { kind, w, h, extra, .. } => (*kind, *w, *h, extra.clone()),
+            o => panic!("{o:?}"),
+        }
+    };
+    let (kind, w, h, extra) = shape(&s);
+    assert_eq!((kind, extra.preset.as_deref()), (ShapeKind::Rectangle, Some("hexagon")), "the nearest kind, drawn as its preset");
+    assert!((w / h - wordcraft_doc::preset::aspect("hexagon")).abs() < 0.01, "first at its usual shape: {w} × {h}");
+    // drawn as its outline: a path, not a box
+    let l = s.layout();
+    let draws = opened(page_display(&s.doc, &l.pages[0], &DisplayOptions::default()));
+    assert!(draws.iter().any(|d| matches!(d, Draw::Path { fill: Some(_), .. })), "{draws:?}");
+    assert!(!draws.iter().any(|d| matches!(d, Draw::Shape { .. })));
+
+    // saved as itself with its adjust values, and read back
+    let path = Pos::body(0, 0).path;
+    let para = s.doc.para_mut(wordcraft_doc::StoryRef::Body, &path).unwrap();
+    let off = para.object_offsets()[0];
+    if let Some(InlineObject::Shape { extra, .. }) = para.object_at_mut(off) {
+        extra.adj = vec![("adj".into(), 30_000), ("vf".into(), 115_470)];
+    }
+    let bytes = crate::io::save_bytes("shapes.docx", &s.doc).unwrap();
+    let back = Session::new(crate::io::open_bytes("shapes.docx", &bytes).unwrap());
+    let (_, _, _, e) = shape(&back);
+    assert_eq!(e.preset.as_deref(), Some("hexagon"));
+    assert_eq!(e.adj, vec![("adj".to_string(), 30_000), ("vf".to_string(), 115_470)]);
+
+    // Change Shape: to another preset, and back to a plain kind
+    run(&mut s, "select.range", json!({"anchor": Pos::body(0, 0), "focus": Pos::body(0, wordcraft_doc::para::OBJ.len_utf8())}));
+    run(&mut s, "shape.change", json!({"preset": "rightArrow"}));
+    let (kind, _, _, extra) = shape(&s);
+    assert_eq!((kind, extra.preset.as_deref()), (ShapeKind::Arrow, None), "a preset its kind draws needs no name");
+    assert!(extra.adj.is_empty());
+    run(&mut s, "shape.change", json!({"preset": "flowChartDecision"}));
+    assert_eq!(shape(&s).3.preset.as_deref(), Some("flowChartDecision"));
+    run(&mut s, "shape.change", json!({"kind": "ellipse"}));
+    let (kind, _, _, extra) = shape(&s);
+    assert_eq!((kind, extra.preset), (ShapeKind::Ellipse, None));
+    assert!(s.run("shape.change", &json!({"preset": "line"})).is_err(), "a shape doesn't become a line");
+
+    // brackets and braces go in as lines, without a fill
+    run(&mut s, "document.setText", json!({"text": ""}));
+    run(&mut s, "insert.shape", json!({"preset": "bracePair"}));
+    let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+    let off = p.object_offsets()[0];
+    assert!(matches!(p.object_at(off), Some(InlineObject::Shape { fill: None, stroke: Some(_), .. })));
+}
+
+/// Picture Effects: a picture takes a shadow and a glow like a shape, drawn behind it and saved.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn pictures_take_shadows_and_glows() {
+    use wordcraft_doc::para::InlineObject;
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    let png = crate::cmd::insert::base64_encode(&tiny_png());
+    run(&mut s, "insert.picture", json!({"data": png, "width": 100}));
+    run(&mut s, "shape.effects", json!({"shadow": "offsetBottomRight", "glow": 6, "softEdge": 4}));
+    let fx = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Image { effects, .. }) => *effects,
+            o => panic!("{o:?}"),
+        }
+    };
+    let e = fx(&s.doc);
+    assert!(e.shadow.is_some() && e.glow.is_some());
+    assert_eq!(e.soft_edge, Some(4.0), "soft edges on pictures too");
+    let l = s.layout();
+    let draws = page_display(&s.doc, &l.pages[0], &DisplayOptions::default());
+    let at = |f: &dyn Fn(&Draw) -> bool| draws.iter().position(f).unwrap();
+    // the picture fading at its soft edge: in steps inside one clip; its shadow and glow behind
+    // it, in their own colours on a dark page
+    let shadows = |d: &Draw| matches!(d, Draw::Kept { items } if items.iter().all(|i| matches!(i, Draw::Effects { .. })));
+    assert!(at(&shadows) < at(&|d| matches!(d, Draw::ClipPath { .. })), "behind the picture");
+    let bytes = crate::io::save_bytes("p.docx", &s.doc).unwrap();
+    let back = crate::io::open_bytes("p.docx", &bytes).unwrap();
+    let b = fx(&back);
+    assert!(b.shadow.is_some() && b.glow.is_some() && b.soft_edge == Some(4.0), "{b:?}");
+    run(&mut s, "shape.effects", json!({"shadow": null, "glow": null, "softEdge": null}));
+    assert!(fx(&s.doc).is_empty());
+}
+
+/// Picture Effects › Reflection: the picture mirrored below it in fading strips, room kept for it
+/// under the line, and saved.
+#[cfg(not(target_arch = "wasm32"))]
+/// The navigation pane's headings: the document's own; or, in a document without heading styles,
+/// paragraphs that look like headings (larger, or bold short lines with text after them), the
+/// largest at level 1.
+#[test]
+fn headings_are_found_by_their_look_when_there_are_none() {
+    let mut s = s();
+    run(
+        &mut s,
+        "document.setText",
+        json!({"text": "Annual Report\nThe year in short.\nSales\nSales rose by a third over the year, as they did before.\nA plain line, then\nThe end of it all."}),
+    );
+    let fmt = |s: &mut Session, text: &str, cmd: &str, v: serde_json::Value| {
+        run(s, "select.text", json!({"text": text}));
+        run(s, cmd, v);
+    };
+    fmt(&mut s, "Annual Report", "format.size", json!({"size": 20}));
+    fmt(&mut s, "Sales", "format.bold", json!({"value": true}));
+    let r = run(&mut s, "navigation.headings", json!({}));
+    assert_eq!(r["detected"], true);
+    let got: Vec<(u64, String)> =
+        r["headings"].as_array().unwrap().iter().map(|h| (h["level"].as_u64().unwrap(), h["text"].as_str().unwrap().to_string())).collect();
+    assert_eq!(got, [(1, "Annual Report".to_string()), (2, "Sales".to_string())], "{r}");
+    assert_eq!(run(&mut s, "navigation.headings", json!({"detect": false}))["headings"], json!([]));
+    // a real heading wins
+    run(&mut s, "caret.docStart", json!({}));
+    run(&mut s, "styles.apply", json!({"style": "Heading 1"}));
+    let r = run(&mut s, "navigation.headings", json!({}));
+    assert_eq!(r["detected"], false);
+    assert_eq!(r["headings"].as_array().unwrap().len(), 1);
+}
+
+/// Display for Review: All Markup marks both changes; No Markup and Simple Markup show the final
+/// text, Simple Markup with a red bar beside the changed line; Original shows the text before
+/// the changes (the insertion left out, the deletion back as ordinary text).
+#[test]
+fn display_for_review_shows_four_views() {
+    use wordcraft_layout::display::{DisplayOptions, Draw, SIMPLE_MARKUP_BAR, page_display};
+    let mut s = s();
+    run(&mut s, "document.setText", json!({"text": "keep gone"}));
+    run(&mut s, "review.trackChanges", json!({"value": true}));
+    run(&mut s, "caret.docEnd", json!({}));
+    run(&mut s, "text.insert", json!({"text": " new"}));
+    run(&mut s, "select.text", json!({"text": "gone"}));
+    run(&mut s, "text.delete", json!({}));
+    let shown = |s: &mut Session| {
+        let l = s.layout();
+        let page = &l.pages[0];
+        let mut out = String::new();
+        // the text of the clusters that take room
+        for it in &page.items {
+            if let wordcraft_layout::Placed::Lines { story, path, para: pl, .. } = it {
+                let text = s.doc.para(*story, path).map(|p| p.text.clone()).unwrap_or_default();
+                for c in pl.clusters.iter().filter(|c| c.adv > 0.0) {
+                    out.push_str(text.get(c.start..c.end).unwrap_or(""));
+                }
+            }
+        }
+        out
+    };
+    let view = |s: &mut Session, v: &str| {
+        let r = run(s, "review.markup", json!({"value": v}));
+        assert_eq!(r["markup"], v);
+    };
+    view(&mut s, "allMarkup");
+    let all = shown(&mut s);
+    assert!(all.contains("gone") && all.contains("new"), "{all}");
+    view(&mut s, "noMarkup");
+    let fin = shown(&mut s);
+    assert!(!fin.contains("gone") && fin.contains("new"), "{fin}");
+    view(&mut s, "original");
+    let orig = shown(&mut s);
+    assert!(orig.contains("gone") && !orig.contains("new"), "{orig}");
+    view(&mut s, "simpleMarkup");
+    assert_eq!(shown(&mut s), fin);
+    let l = s.layout();
+    let opts = DisplayOptions { markup: false, simple_markup: true, ..Default::default() };
+    let draws = page_display(&s.doc, &l.pages[0], &opts);
+    assert!(draws.iter().any(|d| matches!(d, Draw::Line { color, .. } if *color == SIMPLE_MARKUP_BAR)), "a red bar");
+    assert!(s.run("review.markup", &json!({"value": "sideways"})).is_err());
+    // no value: markup on and off
+    run(&mut s, "review.markup", json!({}));
+    assert_eq!(s.view.markup_view, crate::session::MarkupView::All);
+}
+
+/// A text file that isn't Unicode: its encoding is a guess, Text Encoding lists the others and
+/// previews it in any, and File › Open opens it in the one chosen.
+#[test]
+fn text_files_open_in_a_chosen_encoding() {
+    let mut s = s();
+    let data = crate::cmd::insert::base64_encode(b"Caf\xe9 cr\xe8me br\xfbl\xe9e\r\nNa\xefve");
+    let r = s.run("file.textEncoding", &json!({"path": "menu.txt", "data": data})).unwrap();
+    assert_eq!((r["guessed"].as_bool(), r["detected"].as_str()), (Some(true), Some("windows-1252")));
+    assert!(r["preview"].as_str().unwrap().starts_with("Caf\u{e9} cr\u{e8}me"));
+    assert!(r["encodings"].as_array().unwrap().len() >= 30);
+    let r = s.run("file.textEncoding", &json!({"path": "menu.txt", "data": data, "encoding": "windows-1251"})).unwrap();
+    assert!(r["preview"].as_str().unwrap().starts_with("Caf\u{439}"), "{r}");
+    s.run("file.open", &json!({"path": "menu.txt", "data": data, "encoding": "windows-1251"})).unwrap();
+    assert!(s.doc.plain_text(StoryRef::Body).starts_with("Caf\u{439}"));
+    assert_eq!(s.doc.body.len(), 2, "a paragraph per line");
+    assert!(s.run("file.open", &json!({"path": "menu.txt", "data": data, "encoding": "klingon"})).is_err());
+    // UTF-8 is no guess
+    let utf8 = crate::cmd::insert::base64_encode("Caf\u{e9}".as_bytes());
+    let r = s.run("file.textEncoding", &json!({"path": "u.txt", "data": utf8})).unwrap();
+    assert_eq!((r["guessed"].as_bool(), r["detected"].as_str()), (Some(false), Some("utf-8")));
+}
+
+/// An icon's SVG original stays with its picture through styles and moves, but new pixels (Change
+/// Picture, a colour edit) drop it, so a save doesn't bring back a drawing the picture no longer is.
+/// Graphics Fill and Graphics Outline repaint an icon's SVG and the picture beside it follows;
+/// Reset Picture brings back the first colours, and a picture without an SVG can't take them.
+#[test]
+fn icon_fill_and_outline_repaint_its_svg() {
+    use wordcraft_doc::para::InlineObject;
+    let mut s = s();
+    run(&mut s, "insert.icon", json!({"id": "heart", "size": 48}));
+    let icon = |s: &Session| match crate::cmd::objects::selected(s) {
+        Some((_, InlineObject::Image { media, svg: Some(svg), .. })) => (media, svg),
+        o => panic!("not an icon: {o:?}"),
+    };
+    let text = |s: &Session, k: &str| String::from_utf8(s.doc.media[k].to_vec()).unwrap();
+    let first = icon(&s);
+    assert!(text(&s, &first.1).starts_with("<svg"));
+
+    run(&mut s, "graphic.fill", json!({"color": "00B050"}));
+    let (png, svg) = icon(&s);
+    assert!(png != first.0 && text(&s, &svg).contains("fill:#00B050"));
+    let px = image::load_from_memory(&s.doc.media[&png]).unwrap().to_rgba8();
+    assert_eq!(px.dimensions(), (200, 200), "the picture keeps its pixel size");
+    let inked: Vec<_> = px.pixels().filter(|p| p.0[3] == 255).collect();
+    assert!(!inked.is_empty() && inked.iter().all(|p| p.0[..3] == [0, 0xB0, 0x50]));
+
+    // 3 pt round a 48 pt icon drawn on a 24-unit grid is 1.5 units; a first outline is ¾ pt
+    run(&mut s, "graphic.outline", json!({"color": "C00000", "width": 3}));
+    assert!(text(&s, &icon(&s).1).contains("stroke:#C00000;stroke-width:1.5"), "{}", text(&s, &icon(&s).1));
+    run(&mut s, "graphic.outline", json!({"color": null}));
+    assert!(text(&s, &icon(&s).1).contains("stroke:none"));
+    run(&mut s, "graphic.outline", json!({"color": "000000"}));
+    assert!(text(&s, &icon(&s).1).contains("stroke:#000000;stroke-width:0.375"), "{}", text(&s, &icon(&s).1));
+    run(&mut s, "graphic.fill", json!({"color": null}));
+    assert!(text(&s, &icon(&s).1).contains("fill:none"));
+    // saved and read back, it keeps its new SVG
+    let back = wordcraft_docx::read(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
+    let kept = back.media.values().any(|b| std::str::from_utf8(b).is_ok_and(|t| t.contains("fill:none")));
+    assert!(kept);
+
+    run(&mut s, "picture.reset", json!({}));
+    assert_eq!(icon(&s), first, "Reset Picture: the first picture and SVG");
+    for bad in [json!({}), json!({"color": "green"}), json!({"color": 5})] {
+        assert!(s.run("graphic.fill", &bad).is_err(), "{bad}");
+    }
+    assert!(s.run("graphic.outline", &json!({})).is_err());
+    // a picture without an SVG
+    run(&mut s, "insert.picture", json!({"data": crate::cmd::insert::base64_encode(&tiny_png())}));
+    assert!(s.run("graphic.fill", &json!({"color": "00B050"})).is_err());
+}
+
+/// An SVG file inserted as a picture is kept as its SVG, beside a picture drawn from it, at its
+/// view box's size; one that draws nothing is refused.
+#[test]
+fn insert_picture_takes_an_svg_file() {
+    use wordcraft_doc::para::InlineObject;
+    let mut s = s();
+    let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 48"><rect width="96" height="48" fill="#4472C4"/></svg>"##;
+    let r = run(&mut s, "insert.picture", json!({"data": crate::cmd::insert::base64_encode(svg)}));
+    assert_eq!((r["width"].as_f64(), r["height"].as_f64()), (Some(72.0), Some(36.0)));
+    let Some((_, InlineObject::Image { media, svg: Some(k), .. })) = crate::cmd::objects::selected(&s) else { panic!("no SVG picture") };
+    assert_eq!(&s.doc.media[&k][..], &svg[..]);
+    let png = image::load_from_memory(&s.doc.media[&media]).unwrap().to_rgba8();
+    assert_eq!(png.dimensions(), (300, 150), "about 300 ppi");
+    assert_eq!(png.get_pixel(150, 75).0, [0x44, 0x72, 0xC4, 255]);
+    run(&mut s, "graphic.fill", json!({"color": "C00000"}));
+    let empty = crate::cmd::insert::base64_encode(b"<svg viewBox='0 0 10 10'></svg>");
+    assert!(s.run("insert.picture", &json!({"data": empty})).is_err());
+}
+
+#[test]
+fn new_pixels_drop_an_icons_svg_original() {
+    use wordcraft_doc::para::InlineObject;
+    let mut s = s();
+    let png = crate::cmd::insert::base64_encode(&tiny_png());
+    run(&mut s, "insert.picture", json!({"data": png, "width": 100}));
+    let svg_key = s.doc.add_media(br#"<svg xmlns="http://www.w3.org/2000/svg"/>"#.to_vec(), "svg");
+    let set_svg = |s: &mut Session| {
+        let p = s.doc.para_mut(wordcraft_doc::StoryRef::Body, &Pos::body(0, 0).path).unwrap();
+        for o in &mut p.objects {
+            if let InlineObject::Image { svg, .. } = o {
+                *svg = Some(svg_key.clone());
+            }
+        }
+    };
+    let svg_of = |s: &Session| {
+        let p = s.doc.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Image { svg, .. }) => svg.clone(),
+            other => panic!("{other:?}"),
+        }
+    };
+    set_svg(&mut s);
+    run(&mut s, "select.all", json!({}));
+    run(&mut s, "picture.style", json!({"style": "metalOval"}));
+    assert_eq!(svg_of(&s), Some(svg_key.clone()), "a style leaves the pixels, and the SVG");
+    run(&mut s, "picture.color", json!({"mode": "grayscale"}));
+    assert_eq!(svg_of(&s), None);
+    set_svg(&mut s);
+    run(&mut s, "picture.change", json!({"data": crate::cmd::insert::base64_encode(&tiny_png())}));
+    assert_eq!(svg_of(&s), None);
+}
+
+/// Picture Styles frame a picture, cut it to a shape and give it effects without touching its
+/// pixels; the frame is kept through a save and drawn (cut, outlined, its soft edge in steps);
+/// Picture Border changes the outline alone; Reset Picture takes it all off.
+#[test]
+fn picture_styles_frame_pictures() {
+    use wordcraft_doc::para::InlineObject;
+    use wordcraft_doc::picture::{Compound, FrameLine};
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    let png = crate::cmd::insert::base64_encode(&tiny_png());
+    run(&mut s, "insert.picture", json!({"data": png, "width": 100}));
+    let obj = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        p.object_at(p.object_offsets()[0]).cloned().unwrap()
+    };
+    let InlineObject::Image { media: before, .. } = obj(&s.doc) else { panic!() };
+    for id in crate::cmd::objects::PICTURE_STYLES {
+        assert!(crate::cmd::objects::picture_style(id).is_some(), "{id}");
+    }
+    run(&mut s, "picture.style", json!({"style": "metalOval"}));
+    let InlineObject::Image { media, framing, effects, float, .. } = obj(&s.doc) else { panic!() };
+    assert_eq!(media, before, "the pixels are the picture's own");
+    assert_eq!(framing.shape.as_deref(), Some("ellipse"));
+    let line = framing.line.expect("an outline");
+    assert_eq!((line.width, line.compound), (9.0, Compound::ThinThick));
+    assert!(effects.shadow.is_some());
+    assert!(float.effect.iter().all(|e| *e >= 4.5), "room for the outline: {:?}", float.effect);
+    let draws = |s: &mut Session| {
+        let l = s.layout();
+        page_display(&s.doc, &l.pages[0], &DisplayOptions::default())
+    };
+    let d = draws(&mut s);
+    assert!(
+        d.iter().any(|d| matches!(d, Draw::ClipPath { items, .. } if matches!(items.first(), Some(Draw::Image { .. })))),
+        "cut to the oval: {d:?}"
+    );
+    let rings = d.iter().filter(|d| matches!(d, Draw::Path { fill: Some(c), .. } if *c == wordcraft_layout::display::Paint::solid(line.color))).count();
+    assert_eq!(rings, 2, "two lines");
+    // kept through a save
+    let bytes = crate::io::save_bytes("p.docx", &s.doc).unwrap();
+    let InlineObject::Image { framing: back, effects: fx_back, .. } = obj(&crate::io::open_bytes("p.docx", &bytes).unwrap()) else { panic!() };
+    assert_eq!(back, framing);
+    assert_eq!(fx_back.shadow.is_some(), effects.shadow.is_some());
+    // a soft edge fades in steps, inside one cut
+    run(&mut s, "picture.style", json!({"style": "softEdgeRectangle"}));
+    let d = draws(&mut s);
+    let steps = d.iter().find_map(|d| if let Draw::ClipPath { items, .. } = d { Some(items.len()) } else { None });
+    assert_eq!(steps, Some(10), "{d:?}");
+    // Picture Border: the outline alone
+    run(&mut s, "picture.style", json!({"style": "simpleFrameWhite"}));
+    run(&mut s, "picture.border", json!({"color": "FF0000", "compound": "dbl"}));
+    let InlineObject::Image { framing, effects, .. } = obj(&s.doc) else { panic!() };
+    assert_eq!(framing.line, Some(FrameLine { color: wordcraft_doc::props::Rgb(0xFF, 0, 0), width: 7.0, compound: Compound::Double }));
+    assert!(effects.shadow.is_some(), "the style's shadow stays");
+    run(&mut s, "picture.border", json!({"color": "none"}));
+    let InlineObject::Image { framing, .. } = obj(&s.doc) else { panic!() };
+    assert_eq!(framing.line, None);
+    assert!(s.run("picture.border", &json!({"compound": "quadruple"})).is_err());
+    assert!(s.run("picture.style", &json!({"style": "sparkly"})).is_err());
+    // the old names still work; Reset Picture takes the style off
+    run(&mut s, "picture.style", json!({"style": "rounded"}));
+    run(&mut s, "picture.reset", json!({}));
+    let InlineObject::Image { framing, effects, float, .. } = obj(&s.doc) else { panic!() };
+    assert!(framing.is_none() && effects.is_empty() && float.effect == [0.0; 4]);
+}
+
+#[test]
+fn pictures_take_reflections() {
+    use wordcraft_doc::para::InlineObject;
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    let png = crate::cmd::insert::base64_encode(&tiny_png());
+    run(&mut s, "insert.picture", json!({"data": png, "width": 100}));
+    run(&mut s, "shape.effects", json!({"reflection": "full8pt"}));
+    let obj = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        p.object_at(p.object_offsets()[0]).cloned().unwrap()
+    };
+    let InlineObject::Image { effects, float, h, .. } = obj(&s.doc) else { panic!() };
+    let r = effects.reflection.expect("a reflection");
+    assert_eq!((r.size, r.distance), (92.0, 8.0));
+    assert!((float.effect[3] - (8.0 + 0.92 * h)).abs() < 0.01, "room below for it: {:?}", float.effect);
+    let l = s.layout();
+    let draws = page_display(&s.doc, &l.pages[0], &DisplayOptions::default());
+    let picture = draws.iter().find_map(|d| if let Draw::Image { rect, .. } = d { Some(*rect) } else { None }).unwrap();
+    let strips: Vec<_> = draws.iter().filter_map(|d| if let Draw::Clip { rect, items } = d { Some((rect, items)) } else { None }).collect();
+    assert!(strips.len() >= 8, "{draws:?}");
+    assert!(strips.iter().all(|(rect, _)| rect.y >= picture.bottom() + 8.0 - 0.01), "below the picture and its gap");
+    let alpha = |items: &Vec<Draw>| if let Some(Draw::Faded { alpha, .. }) = items.first() { *alpha } else { -1.0 };
+    assert!(alpha(strips[0].1) > alpha(strips[strips.len() - 1].1), "fading out");
+    let bytes = crate::io::save_bytes("p.docx", &s.doc).unwrap();
+    let back = crate::io::open_bytes("p.docx", &bytes).unwrap();
+    let InlineObject::Image { effects: b, .. } = obj(&back) else { panic!() };
+    assert_eq!(b.reflection, Some(r));
+    run(&mut s, "shape.effects", json!({"reflection": null}));
+    assert!(s.run("shape.effects", &json!({"reflection": "sideways"})).is_err());
+}
+
+/// Picture Effects › Shadow's inner and perspective shadows: drawn (inside the picture, and
+/// flattened behind it) and saved.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn pictures_take_inner_and_perspective_shadows() {
+    use wordcraft_doc::para::InlineObject;
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    let png = crate::cmd::insert::base64_encode(&tiny_png());
+    run(&mut s, "insert.picture", json!({"data": png, "width": 100}));
+    run(&mut s, "shape.effects", json!({"innerShadow": "insideTopLeft", "shadow": "perspectiveUpperRight"}));
+    let fx = |d: &wordcraft_doc::Document| {
+        let p = d.para_at(&Pos::body(0, 0)).unwrap();
+        match p.object_at(p.object_offsets()[0]) {
+            Some(InlineObject::Image { effects, .. }) => *effects,
+            o => panic!("{o:?}"),
+        }
+    };
+    let e = fx(&s.doc);
+    assert!(e.inner_shadow.is_some() && e.shadow.is_some_and(|sh| sh.is_perspective()));
+    let l = s.layout();
+    let draws = page_display(&s.doc, &l.pages[0], &DisplayOptions::default());
+    let image = draws.iter().position(|d| matches!(d, Draw::Image { .. })).unwrap();
+    let rect = match &draws[image] {
+        Draw::Image { rect, .. } => *rect,
+        o => panic!("{o:?}"),
+    };
+    // the inner shadow over the picture, inside its frame (in the picture's own colours on a
+    // dark page)
+    let kept = |d: &Draw| match d {
+        Draw::Kept { items } => items.clone(),
+        other => vec![other.clone()],
+    };
+    assert!(draws[image..].iter().flat_map(kept).any(|d| matches!(d, Draw::Clip { rect: r, .. } if r == rect)), "{draws:?}");
+    // the perspective shadow behind it, flattened: no higher than a quarter of the picture
+    let shadow_top = draws[..image]
+        .iter()
+        .flat_map(kept)
+        .find_map(|d| match d {
+            Draw::Effects { segs, .. } => segs
+                .iter()
+                .filter_map(|p| match p {
+                    wordcraft_doc::graphic::PathSeg::Move(_, y) | wordcraft_doc::graphic::PathSeg::Line(_, y) => Some(*y),
+                    _ => None,
+                })
+                .reduce(f32::min),
+            _ => None,
+        })
+        .expect("a shadow");
+    assert!(shadow_top > rect.bottom() - rect.h * 0.3, "{shadow_top} vs {rect:?}");
+    let bytes = crate::io::save_bytes("p.docx", &s.doc).unwrap();
+    let back = fx(&crate::io::open_bytes("p.docx", &bytes).unwrap());
+    assert_eq!(back.inner_shadow, e.inner_shadow);
+    assert_eq!(back.shadow.map(|sh| (sh.scale_y, sh.skew_x)), e.shadow.map(|sh| (sh.scale_y, sh.skew_x)));
+    run(&mut s, "shape.effects", json!({"innerShadow": null}));
+    assert!(fx(&s.doc).inner_shadow.is_none());
+}
+
+/// A preset shape's shadow is drawn from its own outline.
+#[test]
+fn preset_shapes_keep_their_shadows() {
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    run(&mut s, "insert.shape", json!({"preset": "hexagon"}));
+    run(&mut s, "shape.effects", json!({"shadow": "offsetBottom"}));
+    let l = s.layout();
+    let draws = opened(page_display(&s.doc, &l.pages[0], &DisplayOptions::default()));
+    assert!(draws.iter().any(|d| matches!(d, Draw::Effects { filled: true, .. })), "{draws:?}");
+}
+
+/// A dark page leaves shapes and filled text boxes in their colours, as the reference draws them,
+/// and a box's automatic text is read against its fill: white on a dark one, black on white.
+#[test]
+fn filled_text_boxes_keep_their_colours_and_read_their_text_against_the_fill() {
+    use wordcraft_doc::Rgb;
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let mut s = s();
+    run(&mut s, "insert.textBox", json!({"text": "Dark fill", "width": 160, "height": 40}));
+    run(&mut s, "caret.set", json!({"pos": {"story": "body", "path": [0], "off": 0}}));
+    run(&mut s, "select.objects", json!({"index": 0}));
+    let navy = Rgb(0x20, 0x38, 0x64);
+    run(&mut s, "shape.fill", json!({"color": "203864"}));
+    let l = s.layout();
+    let draws = page_display(&s.doc, &l.pages[0], &DisplayOptions::default());
+    let kept: Vec<Draw> =
+        draws.iter().filter_map(|d| if let Draw::Kept { items } = d { Some(opened(items.clone())) } else { None }).flatten().collect();
+    assert!(kept.iter().any(|d| matches!(d, Draw::Shape { fill: Some(f), .. } if *f == wordcraft_layout::display::Paint::solid(navy))), "the box kept: {draws:?}");
+    let text = kept.iter().find_map(|d| match d {
+        Draw::Glyphs { text, color, .. } if text.contains("Dark") => Some(*color),
+        _ => None,
+    });
+    assert_eq!(text, Some(Rgb::WHITE), "its text kept, white on the dark fill");
+    run(&mut s, "shape.fill", json!({"color": "FFFFFF"}));
+    let l = s.layout();
+    let text = opened(page_display(&s.doc, &l.pages[0], &DisplayOptions::default())).into_iter().find_map(|d| match d {
+        Draw::Glyphs { text, color, .. } if text.contains("Dark") => Some(color),
+        _ => None,
+    });
+    assert_eq!(text, Some(Rgb::BLACK), "black on a white fill");
+}
+
+/// The draws with the groups a dark page leaves in their colours (shapes, filled text boxes,
+/// pictures' shadows) opened up.
+fn opened(draws: Vec<wordcraft_layout::display::Draw>) -> Vec<wordcraft_layout::display::Draw> {
+    use wordcraft_layout::display::Draw;
+    draws.into_iter().flat_map(|x| if let Draw::Kept { items } = x { opened(items) } else { vec![x] }).collect()
 }

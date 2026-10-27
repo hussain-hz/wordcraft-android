@@ -40,9 +40,15 @@ fn substitutes_by_name(family: &str) -> (&'static [&'static str], bool) {
     const SANS: &[&str] = &["Carlito", "Helvetica Neue", "Arial", "Liberation Sans", "Noto Sans", "DejaVu Sans", "Source Sans 3"];
     const SERIF: &[&str] = &["Caladea", "Times New Roman", "Liberation Serif", "Georgia", "Noto Serif", "DejaVu Serif", "Source Serif 4"];
     const MONO: &[&str] = &["Courier New", "Liberation Mono", "Menlo", "Consolas", "DejaVu Sans Mono", "JetBrains Mono"];
+    // Courier New: Courier Prime keeps its widths and its typewriter look (Liberation Mono keeps the
+    // widths in a plainer face)
+    const COURIER: &[&str] = &["Courier New", "Courier Prime", "Liberation Mono", "Cousine", "Menlo", "DejaVu Sans Mono", "JetBrains Mono"];
     const ARIAL: &[&str] = &["Liberation Sans", "Helvetica", "Helvetica Neue", "Arimo", "Source Sans 3"];
     const ARIAL_UNICODE: &[&str] = &["Arial", "Liberation Sans", "Helvetica", "Helvetica Neue", "Arimo", "Source Sans 3"];
     const TIMES: &[&str] = &["Liberation Serif", "Times", "Tinos", "Source Serif 4"];
+    // Aptos has no open twin: Source Sans 3 (bundled) comes nearest its widths (about 2% short;
+    // Calibri's twin is 5% short, Arial's 5% over).
+    const APTOS: &[&str] = &["Source Sans 3", "Carlito", "Helvetica Neue", "Arial", "Liberation Sans", "Noto Sans", "DejaVu Sans"];
     // Word's symbol fonts (Symbol, Wingdings…) are proprietary: their characters are drawn as their
     // Unicode equivalents (`wordcraft_doc::symbol_fonts`) from these faces or any face that has them.
     const SYMBOL: &[&str] = &["Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols", "Noto Sans Symbols 2", "Source Sans 3"];
@@ -130,8 +136,10 @@ fn substitutes_by_name(family: &str) -> (&'static [&'static str], bool) {
         "palatino linotype" | "book antiqua" | "palatino" => (PALATINO, true),
         "arial" | "helvetica" | "arial nova" => (ARIAL, true),
         "arial unicode ms" => (ARIAL_UNICODE, true),
+        "aptos" | "aptos display" => (APTOS, true),
         "times new roman" | "times" => (TIMES, true),
-        "courier new" | "courier" | "consolas" | "lucida console" | "cascadia code" | "cascadia mono" => (MONO, true),
+        "courier new" | "courier" => (COURIER, true),
+        "consolas" | "lucida console" | "cascadia code" | "cascadia mono" => (MONO, true),
         "symbol" | "wingdings" | "wingdings 2" | "wingdings 3" | "segoe ui symbol" | "webdings" => (SYMBOL, true),
         // Serif faces with no open clone of their own: the generic serif list, as for any font.
         "cambria"
@@ -198,10 +206,32 @@ fn metric_twins(family: &str) -> &'static [&'static str] {
     match family.trim().to_ascii_lowercase().as_str() {
         "times new roman" => &["Liberation Serif", "Tinos"],
         "arial" => &["Liberation Sans", "Arimo"],
-        "courier new" => &["Liberation Mono", "Cousine"],
+        "courier new" => &["Liberation Mono", "Cousine", "Courier Prime"],
         "calibri" => &["Carlito"],
         "cambria" => &["Caladea"],
         _ => &[],
+    }
+}
+
+/// The line metrics (ascent and descent, in ems) of a proprietary font that has no open twin, as
+/// the reference lays out its lines (measured from its highlight boxes): a font standing in for it
+/// keeps its line spacing. The phone app's Mobile View (`mobile`) sets lines a little apart from
+/// its pages.
+fn stand_in_line_metrics(family: &str, mobile: bool) -> Option<(f64, f64)> {
+    match family.trim().to_ascii_lowercase().as_str() {
+        "aptos" | "aptos display" if mobile => Some((0.970, 0.340)),
+        "aptos" | "aptos display" => Some((0.951, 0.274)),
+        _ => None,
+    }
+}
+
+/// [`line_metrics`] for text asked in `family` and drawn in `face` (as [`resolve`] chose it), on
+/// the pages or in Mobile View (`mobile`): a face standing in for a font with known line metrics
+/// takes that font's.
+pub fn line_metrics_for(family: &str, substituted: bool, face: &crate::FontFace, mobile: bool) -> (f64, f64) {
+    match stand_in_line_metrics(charset_base_family(family), mobile).filter(|_| substituted) {
+        Some((a, d)) => (a * face.upem, d * face.upem),
+        None => line_metrics(face),
     }
 }
 
@@ -479,6 +509,20 @@ mod tests {
         assert_eq!(super::metric_twins("calibri "), &["Carlito"]);
         assert!(super::metric_twins("No Such Brand Font").is_empty());
         assert!(!super::has_metric_twin("No Such Brand Font"));
+    }
+
+    #[test]
+    fn a_face_standing_in_for_aptos_takes_its_line_spacing() {
+        let r = super::resolve("Source Serif 4", false, false);
+        let face = r.face.get();
+        let (a, d) = super::line_metrics_for("Aptos", true, face, true);
+        assert!(((a + d) / face.upem - 1.31).abs() < 1e-9, "Mobile View: {a} {d}");
+        // the pages set its lines closer
+        let (a, d) = super::line_metrics_for("Aptos", true, face, false);
+        assert!(((a + d) / face.upem - 1.225).abs() < 1e-9, "pages: {a} {d}");
+        // asked for itself, or a font with no known metrics: the face's own
+        assert_eq!(super::line_metrics_for("Aptos", false, face, true), super::line_metrics(face));
+        assert_eq!(super::line_metrics_for("Some Other Font", true, face, true), super::line_metrics(face));
     }
 
     use super::*;

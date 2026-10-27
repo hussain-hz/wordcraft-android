@@ -1098,7 +1098,7 @@ impl Exporter<'_> {
                 s.set_stroke(None);
             }
 
-            Draw::Figure { draws, .. } => {
+            Draw::Figure { draws, .. } | Draw::Kept { items: draws } => {
                 for d in draws {
                     self.draw(s, d);
                 }

@@ -75,10 +75,25 @@ private const val MAX_ZOOM = 5f
  * middle of a column as wide as the widest page plus [pad] each side, [gap] apart. The screen
  * shows it at [scale] pixels per point, scrolled by ([scrollX], [scrollY]) points, centred
  * across when it is narrower than the view. Mobile View has no padding or gaps: its one page is
- * the screen's width.
+ * the screen's width. [padTop] is the room above the first page (less than none hides some of
+ * its top margin).
  */
 @Stable
-class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5f) {
+/**
+ * The pages' view: where it is scrolled to and how far zoomed. It starts at [startScale] pixels a
+ * point, the first page's left edge at the view's and scrolled [startTop] points down it (past
+ * its top margin), or fitting the page's width when that is 0. With [hundred] (the pixels a point
+ * of 100%) it zooms from 22% to 220% and Zoom In and Out step by tens of percent, as the
+ * reference's pages do.
+ */
+class DocumentViewport(
+    private val pad: Float = 4f,
+    private val gap: Float = 5.5f,
+    private val padTop: Float = pad,
+    private val startScale: Float = 0f,
+    private val startTop: Float = 0f,
+    private val hundred: Float = 0f,
+) {
     var scale by mutableFloatStateOf(0f)
         private set
     var scrollX by mutableFloatStateOf(0f)
@@ -108,13 +123,13 @@ class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5
         val maxW = list.maxOfOrNull { it.width + it.markup } ?: 612f
         contentW = maxW + 2 * pad
         tops = FloatArray(list.size)
-        var y = pad
+        var y = padTop
         list.forEachIndexed { i, p ->
             tops[i] = y
             y += p.height + gap
         }
         contentH = y - gap + pad
-        if (wasFit && viewW > 0f) scale = fitScale
+        if (scale <= 0f) start() else if (wasFit && viewW > 0f) scale = fitScale
         clamp()
     }
 
@@ -122,8 +137,20 @@ class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5
         val wasFit = scale <= 0f || abs(scale - fitScale) < 0.001f
         viewW = w
         viewH = h
-        if (wasFit && contentW > 0f) scale = fitScale
+        if (scale <= 0f) start() else if (wasFit && contentW > 0f) scale = fitScale
         clamp()
+    }
+
+    /** The first scale, once the pages and the view have sizes. */
+    private fun start() {
+        if (contentW <= 0f || viewW <= 0f) return
+        if (startScale > 0f && startScale.isFinite()) {
+            scale = startScale.coerceIn(minScale, maxScale)
+            scrollX = pad
+            scrollY = startTop.coerceAtLeast(0f)
+        } else {
+            scale = fitScale
+        }
     }
 
     private fun shiftX(): Float = max(0f, (viewW - contentW * scale) / 2f)
@@ -134,7 +161,7 @@ class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5
         return pad + (maxW - (p.width + p.markup)) / 2f
     }
 
-    fun pageTop(i: Int): Float = tops.getOrNull(i) ?: pad
+    fun pageTop(i: Int): Float = tops.getOrNull(i) ?: padTop
 
     fun toScreen(xPt: Float, yPt: Float): Offset = Offset((xPt - scrollX) * scale + shiftX(), (yPt - scrollY) * scale)
 
@@ -209,7 +236,7 @@ class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5
         if (scale <= 0f || !factor.isFinite() || factor <= 0f) return
         val docX = (focus.x - shiftX()) / scale + scrollX
         val docY = focus.y / scale + scrollY
-        scale = (scale * factor).coerceIn(fitScale * MIN_ZOOM, fitScale * MAX_ZOOM)
+        scale = (scale * factor).coerceIn(minScale, maxScale)
         scrollX = docX - (focus.x - shiftX()) / scale
         scrollY = docY - focus.y / scale
         clamp()
@@ -232,6 +259,21 @@ class DocumentViewport(private val pad: Float = 4f, private val gap: Float = 5.5
     /** Zoom to [s] pixels per point about the middle of the view. */
     fun zoomTo(s: Float) {
         if (scale > 0f && s.isFinite() && s > 0f) zoomBy(s / scale, Offset(viewW / 2f, viewH / 2f))
+    }
+
+    private val minScale: Float get() = if (hundred > 0f) hundred * 0.22f else fitScale * MIN_ZOOM
+    private val maxScale: Float get() = if (hundred > 0f) hundred * 2.2f else fitScale * MAX_ZOOM
+
+    /** Zoom In ([up]) or Out a step: to the next ten percent on the pages, by a quarter elsewhere. */
+    fun zoomStep(up: Boolean) {
+        if (scale <= 0f) return
+        if (hundred <= 0f) {
+            zoomBy(if (up) 1.25f else 0.8f, Offset(viewW / 2f, viewH / 2f))
+            return
+        }
+        val percent = scale / hundred * 100f
+        val next = if (up) (kotlin.math.floor(percent / 10f + 0.001f) + 1f) * 10f else (kotlin.math.ceil(percent / 10f - 0.001f) - 1f) * 10f
+        zoomTo(next.coerceIn(22f, 220f) / 100f * hundred)
     }
 
     /** The page width fills the view (Page Width). */
@@ -325,6 +367,9 @@ fun DocumentView(
     onHandleDrag: (end: String, page: Int, x: Float, y: Float) -> Unit = { _, _, _, _ -> },
     highlights: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     wordHighlights: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
+    commentMarks: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
+    activeMark: io.github.artcraftandroid.wordcraft.core.PageRect? = null,
+    activeRange: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     highlightColor: Color = Color(0x4D4C6EF5),
     dark: Boolean = false,
     darkPaperChannel: Int = 0x14,
@@ -524,6 +569,36 @@ fun DocumentView(
             // the sentence Read Aloud is saying, and the word in it, darker
             for (r in highlights + wordHighlights) {
                 drawRect(highlightColor, topLeft = viewport.onPage(r.page.toInt(), r.x, r.y), size = Size(r.width * viewport.scale, r.height * viewport.scale))
+            }
+            // the comment the Comments pane shows: its text tinted (under the letters: screened on a
+            // dark page, multiplied on a white one) between a bar at each end, as the reference marks it
+            if (activeRange.isNotEmpty()) {
+                val tint = if (dark) ACTIVE_COMMENT_DARK else ACTIVE_COMMENT_LIGHT
+                val bar = if (dark) ACTIVE_BAR_DARK else ACTIVE_BAR_LIGHT
+                val blend = if (dark) androidx.compose.ui.graphics.BlendMode.Screen else androidx.compose.ui.graphics.BlendMode.Multiply
+                for (r in activeRange) {
+                    drawRect(tint, topLeft = viewport.onPage(r.page.toInt(), r.x, r.y), size = Size(r.width * viewport.scale, r.height * viewport.scale), blendMode = blend)
+                }
+                val bw = ACTIVE_BAR_WIDTH * viewport.scale
+                activeRange.first().let { r -> drawRect(bar, topLeft = viewport.onPage(r.page.toInt(), r.x, r.y) - Offset(bw, 0f), size = Size(bw, r.height * viewport.scale)) }
+                activeRange.last().let { r -> drawRect(bar, topLeft = viewport.onPage(r.page.toInt(), r.x + r.width, r.y), size = Size(bw, r.height * viewport.scale)) }
+            }
+            // Mobile View marks a commented line with a speech bubble in the right margin, as the
+            // reference does; the shown comment's is filled
+            if (mobile) {
+                val bubble = if (dark) Color(0xFFC8C8C8) else Color(0xFF505050)
+                for (m in commentMarks) {
+                    val w = info.pages.getOrNull(m.page.toInt())?.width ?: continue
+                    // level with the text's middle, above the line's spacing
+                    val c = viewport.onPage(m.page.toInt(), w - COMMENT_MARK_INSET, m.y + m.height * 0.32f)
+                    val active = activeMark != null && m.page == activeMark.page && m.y == activeMark.y
+                    if (active) {
+                        drawCommentMark(c, COMMENT_MARK_SIZE * viewport.scale, if (dark) ACTIVE_MARK_FILL_DARK else ACTIVE_MARK_FILL_LIGHT, fill = true)
+                        drawCommentMark(c, COMMENT_MARK_SIZE * viewport.scale, if (dark) ACTIVE_MARK_EDGE_DARK else ACTIVE_MARK_EDGE_LIGHT)
+                    } else {
+                        drawCommentMark(c, COMMENT_MARK_SIZE * viewport.scale, bubble)
+                    }
+                }
             }
             val pen = ink
             if (pen != null && pen.tool != "eraser" && live.size >= 2) {
@@ -833,4 +908,49 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.panAndZo
             }
         }
     }
+}
+
+/** A comment mark's size and how far in from the page's right edge its middle is, points. */
+private const val COMMENT_MARK_SIZE = 12f
+private const val COMMENT_MARK_INSET = 5.2f
+
+/**
+ * The comment the Comments pane shows, as the reference marks it: its text tinted purple over the
+ * grey comment shade (screened on the dark page, to #744F7B there; multiplied on a white page,
+ * to #E2BFE8), a bar 1.15 pt wide at each end, and its speech bubble filled. (sRGB values: the
+ * phone shows apps through its Display P3 mode, so a screenshot's numbers are converted first.)
+ */
+private val ACTIVE_COMMENT_DARK = Color(0xFF481851)
+private val ACTIVE_COMMENT_LIGHT = Color(0xFFF8D2FF)
+private val ACTIVE_BAR_DARK = Color(0xFF7E1A73)
+private val ACTIVE_BAR_LIGHT = Color(0xFF7E1A73)
+private const val ACTIVE_BAR_WIDTH = 1.15f
+private val ACTIVE_MARK_FILL_DARK = Color(0xFF602465)
+private val ACTIVE_MARK_EDGE_DARK = Color(0xFFD492D8)
+private val ACTIVE_MARK_FILL_LIGHT = Color(0xFFE3BBE6)
+private val ACTIVE_MARK_EDGE_LIGHT = Color(0xFF922E9B)
+
+/** A speech bubble `size` across, centred on `c`: a rounded box with a tail at the bottom left, outlined or [fill]ed. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCommentMark(c: Offset, size: Float, color: Color, fill: Boolean = false) {
+    val w = size
+    val h = size * 0.72f
+    val left = c.x - w / 2f
+    val top = c.y - h / 2f - size * 0.08f
+    val r = size * 0.08f
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(left + r, top)
+        lineTo(left + w - r, top)
+        quadraticTo(left + w, top, left + w, top + r)
+        lineTo(left + w, top + h - r)
+        quadraticTo(left + w, top + h, left + w - r, top + h)
+        lineTo(left + w * 0.42f, top + h)
+        lineTo(left + w * 0.2f, top + h + size * 0.22f)
+        lineTo(left + w * 0.24f, top + h)
+        lineTo(left + r, top + h)
+        quadraticTo(left, top + h, left, top + h - r)
+        lineTo(left, top + r)
+        quadraticTo(left, top, left + r, top)
+        close()
+    }
+    if (fill) drawPath(path, color) else drawPath(path, color, style = Stroke(width = (size * 0.075f).coerceAtLeast(1f), join = androidx.compose.ui.graphics.StrokeJoin.Round))
 }

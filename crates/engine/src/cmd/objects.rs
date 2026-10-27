@@ -2562,11 +2562,9 @@ mod tests {
         let mut s = Session::new(wordcraft_doc::Document::new());
         s.run("insert.picture", &json!({"data": super::super::insert::base64_encode(&header_only_png(20_000, 20_000))})).unwrap();
         let media = s.doc.media.len();
-        for (id, v) in [
-            ("picture.corrections", json!({"brightness": 10})),
-            ("picture.color", json!({"mode": "sepia"})),
-            ("picture.removeBackground", json!({})),
-        ] {
+        for (id, v) in
+            [("picture.corrections", json!({"brightness": 10})), ("picture.color", json!({"mode": "sepia"})), ("picture.removeBackground", json!({}))]
+        {
             let e = s.run(id, &v).unwrap_err().to_string();
             assert!(e.contains("too large to edit"), "{id}: {e}");
         }
@@ -2640,7 +2638,6 @@ mod tests {
             ("picture.border", json!({"width": 200})),
         ] {
             s.run(id, &v).unwrap(); // Android stores vector framing; it allocates no bitmap.
-
         }
         assert_eq!(s.doc.media.len(), media, "nothing was drawn");
         for style in ["thickFrame", "shadow", "simpleFrame"] {

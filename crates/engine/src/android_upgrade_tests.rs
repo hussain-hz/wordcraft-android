@@ -1,8 +1,8 @@
 //! Regression coverage for Android features across upstream engine migrations.
-use serde_json::json;
-use wordcraft_doc::{Document, InlineObject, Rgb};
-use wordcraft_doc::fill::Fill;
 use crate::{Session, cmd::objects};
+use serde_json::json;
+use wordcraft_doc::fill::Fill;
+use wordcraft_doc::{Document, InlineObject, Rgb};
 
 #[test]
 fn legacy_shape_styles_keep_gradient_and_opacity_through_docx() {
@@ -15,7 +15,8 @@ fn legacy_shape_styles_keep_gradient_and_opacity_through_docx() {
             extra.fill_gradient = Some(wordcraft_doc::connector::ShapeGradient::shaded(Rgb(20, 60, 120)));
             extra.fill_transparency = Some(40.0);
         }
-    }).unwrap();
+    })
+    .unwrap();
     let expected = match objects::selected(&s).unwrap().1 {
         InlineObject::Shape { fill, extra, .. } => extra.effective_fill(fill.as_ref()),
         _ => panic!("shape"),
@@ -29,11 +30,11 @@ fn legacy_shape_styles_keep_gradient_and_opacity_through_docx() {
     assert_eq!(actual.stops.len(), expected.stops.len());
     for (a, b) in actual.stops.iter().zip(&expected.stops) {
         assert_eq!(a.color, b.color);
-        assert!((a.transparency-b.transparency).abs() < 0.01);
+        assert!((a.transparency - b.transparency).abs() < 0.01);
     }
     s.run("shape.fill", &json!({"color": "FF0000", "transparency": 0})).unwrap();
     let InlineObject::Shape { fill, extra, .. } = objects::selected(&s).unwrap().1 else { panic!("shape") };
-    assert_eq!(extra.effective_fill(fill.as_ref()), Some(Fill::solid(Rgb(255,0,0))));
+    assert_eq!(extra.effective_fill(fill.as_ref()), Some(Fill::solid(Rgb(255, 0, 0))));
 }
 
 #[test]

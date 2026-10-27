@@ -50,7 +50,7 @@ fn shape_fill(s: &mut Session, v: &Value) -> CmdResult {
                     extra.fill_gradient = None;
                     extra.fill_transparency = None;
                     fill
-                },
+                }
                 o => match super::canvas::style_mut(o) {
                     Some(style) => &mut style.fill,
                     None => return,

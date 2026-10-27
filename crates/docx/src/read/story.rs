@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use wordcraft_doc::connector::{ConnEnd, ShapeExtra};
 use wordcraft_doc::control::{ContentControl, ControlWrap};
-use wordcraft_doc::effects::{Glow, Shadow, ShapeEffects, InnerShadow, Reflection};
+use wordcraft_doc::effects::{Glow, InnerShadow, Reflection, Shadow, ShapeEffects};
 use wordcraft_doc::graphic::{Embedded, Graphic, GraphicItem, GraphicKind};
 use wordcraft_doc::para::{AltText, Anchor, Float, FloatAlign, NoteKind, PTabAlign, PTabBase, ShapeKind, Wrap, WrapText, cap_alt};
 use wordcraft_doc::props::{CharProps, NumChange, PropChange, Rgb, TextColor};

@@ -580,7 +580,22 @@ impl Series {
         }
         let labels = show_values(ser.child("c:dLbls"));
         let marker_on = ser.child("c:marker").and_then(|m| m.child("c:symbol")).and_then(|v| v.attr("val")).is_some_and(|v| v != "none");
-        Series { name, color, line_w, line, values, xs, points, fmt, x_fmt, labels, marker: marker_on, marker_disabled: ser.child("c:marker").and_then(|m| m.child("c:symbol")).and_then(|v| v.attr("val")) == Some("none"), outline, raw: Vec::new() }
+        Series {
+            name,
+            color,
+            line_w,
+            line,
+            values,
+            xs,
+            points,
+            fmt,
+            x_fmt,
+            labels,
+            marker: marker_on,
+            marker_disabled: ser.child("c:marker").and_then(|m| m.child("c:symbol")).and_then(|v| v.attr("val")) == Some("none"),
+            outline,
+            raw: Vec::new(),
+        }
     }
 }
 

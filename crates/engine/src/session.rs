@@ -968,7 +968,8 @@ impl Session {
         // a view change that moves them in or out of the text lays it out again.
         let original = self.view.markup_view == MarkupView::Original;
         let hide_deleted = !original && !self.view.show_markup;
-        let deleted = (hide_deleted, if original { Default::default() } else { self.prefs.markup.hidden_deletions() }, self.revisions_in_balloons(), original);
+        let deleted =
+            (hide_deleted, if original { Default::default() } else { self.prefs.markup.hidden_deletions() }, self.revisions_in_balloons(), original);
         let outline = (mode == ViewMode::Outline).then(|| self.view.outline.view());
         if let Some((r, w, h, m, sp, l, pf, o, hd, n, t)) = &self.layout
             && *r == self.rev

@@ -158,18 +158,32 @@ impl ShapeExtra {
     /// Convert Android's legacy shape-style fill to the shared 0.10 fill model.
     pub fn effective_fill(&self, fill: Option<&crate::fill::Fill>) -> Option<crate::fill::Fill> {
         use crate::fill::{Fill, Gradient, GradientKind};
-        let mut fill = self.fill_gradient.as_ref().and_then(|g| g.sanitized()).map(|g| {
-            Fill::Gradient(std::sync::Arc::new(Gradient {
-                stops: g.stops, kind: GradientKind::Linear { angle: g.angle, scaled: false },
-                tile: None, rot_with_shape: true, flip: Default::default(),
-            }))
-        }).or_else(|| fill.cloned())?;
+        let mut fill = self
+            .fill_gradient
+            .as_ref()
+            .and_then(|g| g.sanitized())
+            .map(|g| {
+                Fill::Gradient(std::sync::Arc::new(Gradient {
+                    stops: g.stops,
+                    kind: GradientKind::Linear { angle: g.angle, scaled: false },
+                    tile: None,
+                    rot_with_shape: true,
+                    flip: Default::default(),
+                }))
+            })
+            .or_else(|| fill.cloned())?;
         let opacity = self.fill_opacity();
-        if opacity == 1.0 { return fill.sanitized(); }
+        if opacity == 1.0 {
+            return fill.sanitized();
+        }
         let fade = |t: f32| 100.0 * (1.0 - (1.0 - t / 100.0) * opacity);
         match &mut fill {
             Fill::Solid { transparency, .. } => *transparency = fade(*transparency),
-            Fill::Gradient(g) => for stop in &mut std::sync::Arc::make_mut(g).stops { stop.transparency = fade(stop.transparency); },
+            Fill::Gradient(g) => {
+                for stop in &mut std::sync::Arc::make_mut(g).stops {
+                    stop.transparency = fade(stop.transparency);
+                }
+            }
         }
         fill.sanitized()
     }

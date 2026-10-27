@@ -274,7 +274,9 @@ fn is_false(v: &bool) -> bool {
 }
 
 impl Float {
-    pub fn stacking(&self) -> (bool, i64) { (self.z == 0, self.z) }
+    pub fn stacking(&self) -> (bool, i64) {
+        (self.z == 0, self.z)
+    }
     /// The rotation and flips, the angle normalised to `0..360` (a NaN angle is no rotation).
     pub fn spin(&self) -> wordcraft_geom::Spin {
         wordcraft_geom::Spin::new(self.rot, self.flip_h, self.flip_v)

@@ -2,7 +2,11 @@
 #[test]
 fn file_reads_preserve_bytes_and_reject_directories() {
     use wordcraft_engine::io;
-    let dir = std::env::temp_dir().join(format!("wordcraft-read-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let dir = std::env::temp_dir().join(format!(
+        "wordcraft-read-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    ));
     std::fs::create_dir(&dir).unwrap();
     let path = dir.join("sample.txt");
     let bytes = "Arabic: \u{645}\u{631}\u{62d}\u{628}\u{627}".as_bytes();

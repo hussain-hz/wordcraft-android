@@ -517,6 +517,8 @@ impl Default for MobileSession {
         let mut s = Session::new(wordcraft_engine::blank_document(&Region::default()));
         // the app speaks each sentence with the phone's own speech and asks for the next
         s.read_aloud.backend = speech::Backend::Hold;
+        // Arabic-Indic and Western digits may coexist in the same document.
+        s.view.numeral = wordcraft_engine::layout::NumeralMode::Preserve;
         Self { session: Mutex::new(s), dark_paper: AtomicU8::new(DARK_PAPER), reading: Mutex::new(Vec::new()) }
     }
 }

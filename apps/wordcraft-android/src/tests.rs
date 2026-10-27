@@ -827,3 +827,27 @@ fn imported_arabic_alignment_buttons_and_saved_layout_agree_in_both_views() {
         assert_eq!(m.format_state().align, "right");
     }
 }
+
+#[test]
+fn arabic_and_western_digits_render_as_written_on_android_and_in_export_options() {
+    use wordcraft_engine::layout::NumeralMode;
+    let m = MobileSession::default();
+    let text = "الأرقام العربية ١٢٣٤٥٦٧٨٩٠ والإنجليزية 1234567890 والفارسية ۱۲۳";
+    m.type_text(text.into()).unwrap();
+    assert_eq!(m.lock().view.numeral, NumeralMode::Preserve);
+    let saved = m.save_bytes("digits.docx".into()).unwrap();
+    let reopened = io::open_bytes("digits.docx", &saved).unwrap();
+    m.lock().set_document(reopened);
+    for mode in ["print", "mobile"] {
+        m.set_view(mode.into(), 320.0).unwrap();
+        assert_eq!(body_text(&m), text);
+        assert_eq!(file::export_options(&m.lock(), &json!({})).numeral, NumeralMode::Preserve);
+        let original = m.render_page(0, 1.0).unwrap().rgba;
+        m.execute("view.numeral".into(), json!({"value": "arabic"}).to_string()).unwrap();
+        assert_ne!(original, m.render_page(0, 1.0).unwrap().rgba, "Arabic-Indic digits have distinct rendered glyphs");
+        m.execute("view.numeral".into(), json!({"value": "preserve"}).to_string()).unwrap();
+        assert_eq!(original, m.render_page(0, 1.0).unwrap().rgba);
+        assert_eq!(body_text(&m), text, "display settings never rewrite the digits");
+        assert!(m.export_bytes("digits.pdf".into()).unwrap().starts_with(b"%PDF"));
+    }
+}

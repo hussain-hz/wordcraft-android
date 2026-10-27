@@ -64,6 +64,8 @@ pub enum ViewMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NumeralMode {
+    /// Preserve each digit as written, including mixed Western, Arabic-Indic and Persian digits.
+    Preserve,
     /// Western digits everywhere (`0123456789`); the default, today's behaviour.
     #[default]
     Arabic,
@@ -81,6 +83,7 @@ impl NumeralMode {
     /// Short UI label (Word's option names).
     pub fn label(self) -> &'static str {
         match self {
+            NumeralMode::Preserve => "As Typed",
             NumeralMode::Arabic => "Arabic",
             NumeralMode::Hindi => "Hindi",
             NumeralMode::Context => "Context",
@@ -91,6 +94,7 @@ impl NumeralMode {
     /// Parse a command value (`"arabic" | "hindi" | "context" | "system"`, any case).
     pub fn parse(s: &str) -> Option<NumeralMode> {
         match s.to_lowercase().as_str() {
+            "preserve" => Some(NumeralMode::Preserve),
             "arabic" => Some(NumeralMode::Arabic),
             "hindi" => Some(NumeralMode::Hindi),
             "context" => Some(NumeralMode::Context),
@@ -116,6 +120,7 @@ impl NumeralMode {
     /// resolved falls back to Western digits.
     pub fn map(self, c: char, rtl: bool) -> char {
         let hindi = match self {
+            NumeralMode::Preserve => return c,
             NumeralMode::Arabic => false,
             NumeralMode::Hindi => true,
             NumeralMode::Context => rtl,
@@ -1353,7 +1358,14 @@ fn layout_box(
                 prev_end = push_para(&mut items, story, &path, &pl, 0, pl.lines.len(), 0.0, y + lead, width, edges);
                 // Pictures, shapes and text boxes: drawn, their areas and text boxes' text.
                 if !p.objects.is_empty() {
-                    let at = ObjFrame { page: frame, col: (0.0, width), para_y: para_top, table_chr: table.map(|t| &t.chr), pinned: Some(&pinned), stack: false };
+                    let at = ObjFrame {
+                        page: frame,
+                        col: (0.0, width),
+                        para_y: para_top,
+                        table_chr: table.map(|t| &t.chr),
+                        pinned: Some(&pinned),
+                        stack: false,
+                    };
                     let (back, front) = place_objects(ctx, story, &path, p, &pl, (0, pl.lines.len()), (0.0, y + lead), &at, &floats, depth);
                     for placed in back.iter().chain(front.iter()) {
                         if let Placed::Object { rect, spin, wrap, .. } = placed
@@ -4154,7 +4166,7 @@ fn place_para_in_flow(ctx: &mut Ctx, pb: &mut PageBuilder, p: &Paragraph, block:
             para_y: if pb.web { y } else { anchor_y },
             table_chr: None,
             pinned: None,
-        stack: true,
+            stack: true,
         };
         let (behind, front) = place_objects(ctx, StoryRef::Body, &[block as u32], p, &pl, (l0, l1), (x, y), &at, &float_rects, 0);
         items.extend(front);

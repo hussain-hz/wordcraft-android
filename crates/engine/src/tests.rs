@@ -10860,3 +10860,22 @@ fn export_png_refuses_a_path_that_is_not_png() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn numeral_preserve_keeps_mixed_digits_distinct_in_pdf_and_png_exports() {
+    let mut s = s();
+    s.doc = wordcraft_doc::Document::from_text("١٢٣ 123 ۱۲۳");
+    s.doc.core.created = "2024-01-01T00:00:00Z".into();
+    let copy = |s: &Session, name: &str| crate::io::save_bytes_opts(name, &s.doc, &cmd::file::export_options(s, &json!({}))).unwrap();
+    run(&mut s, "view.numeral", json!({"value": "preserve"}));
+    let (pdf, png) = (copy(&s, "digits.pdf"), copy(&s, "digits.png"));
+    for mode in ["arabic", "hindi"] {
+        run(&mut s, "view.numeral", json!({"value": mode}));
+        assert_ne!(copy(&s, "digits.pdf"), pdf, "mixed digits differ from forced {mode} PDF");
+        assert_ne!(copy(&s, "digits.png"), png, "mixed digits differ from forced {mode} page image");
+    }
+    run(&mut s, "view.numeral", json!({"value": "preserve"}));
+    assert_eq!(copy(&s, "digits.pdf"), pdf);
+    assert_eq!(copy(&s, "digits.png"), png);
+    assert_eq!(text(&s), "١٢٣ 123 ۱۲۳");
+}

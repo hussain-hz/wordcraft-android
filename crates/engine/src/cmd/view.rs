@@ -150,15 +150,15 @@ pub fn specs() -> Vec<CommandSpec> {
             None => Ok(json!({"value": s.view.numeral})),
             Some(Value::String(name)) => {
                 let Some(mode) = NumeralMode::parse(name) else {
-                    return Err(CmdError::Params("numeral mode: arabic|hindi|context|system".into()));
+                    return Err(CmdError::Params("numeral mode: preserve|arabic|hindi|context|system".into()));
                 };
                 s.view.numeral = mode;
                 s.relayout();
                 Ok(json!({"value": s.view.numeral}))
             }
-            Some(_) => Err(CmdError::Params("numeral mode: arabic|hindi|context|system".into())),
+            Some(_) => Err(CmdError::Params("numeral mode: preserve|arabic|hindi|context|system".into())),
         })
-        .params(r#"{"value"?: "arabic|hindi|context|system"}"#)
+        .params(r#"{"value"?: "preserve|arabic|hindi|context|system"}"#)
         .pure(),
     ]
 }

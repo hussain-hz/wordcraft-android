@@ -176,3 +176,19 @@ fn remap_range_maps_display_bytes_to_original() {
     assert_eq!(remap_range(&map_starts, &orig_of, orig.len(), 99, 200), (4, 4));
     assert_eq!(remap_range(&map_starts, &orig_of, orig.len(), 3, 1), (1, 2));
 }
+
+#[test]
+fn preserve_mode_keeps_mixed_digit_scripts_and_original_byte_positions() {
+    let text = "١٢٣ 123 ۱۲۳";
+    assert_eq!(NumeralMode::parse("preserve"), Some(NumeralMode::Preserve));
+    for rtl in [false, true] {
+        for c in "٠١٢٣٤٥٦٧٨٩0123456789۰۱۲۳۴۵۶۷۸۹".chars() {
+            assert_eq!(NumeralMode::Preserve.map(c, rtl), c);
+        }
+        let original = line_gids(&lay_opts(text, rtl, NumeralMode::Preserve), text);
+        let western = line_gids(&lay_opts(text, rtl, NumeralMode::Arabic), text);
+        let hindi = line_gids(&lay_opts(text, rtl, NumeralMode::Hindi), text);
+        assert_ne!(original, western, "explicit Arabic-Indic digits retain their glyphs");
+        assert_ne!(original, hindi, "explicit Western digits retain their glyphs");
+    }
+}

@@ -3,11 +3,11 @@
 Candidate integration: engine **0.15.0**, app **0.0.10-beta.2** on `integrate/engine-0.15`.
 See [the Arabic integration and validation report](ENGINE-0.15-ANDROID-ar.md).
 The [Android upstream follow-up report](ANDROID-UPSTREAM-2026-10-28-ar.md) documents beta.2 and its additional review/search checks.
-The user approved beta.2 after testing. [Stable 0.0.10 preparation](RELEASE-0.0.10-ar.md) is on `release/0.0.10`; the unsigned Release build passes and its native libraries match beta.2. Publication awaits the original production signing key. The last published stable release remains unchanged.
+The user approved beta.2 and then explicitly approved creating a new production signing key. [Stable 0.0.10](RELEASE-0.0.10-ar.md) is signed with that new key, and its native libraries match beta.2. A one-time uninstall of older releases is required; subsequent updates retain the new key. Encrypted GitHub Actions secrets and local backups are configured.
 
 ## Stable 0.11 integration history
 
-Latest stable app: 0.0.9, version code 9990. Engine: 0.11.0.
+Previous stable app: 0.0.9, version code 9990. Engine: 0.11.0. Current approved stable build: 0.0.10 (10990), engine 0.15.0; see the report above.
 Approved test: 0.0.9-beta.1 (9010). The user approved contextual Arabic joining; stable 0.0.9 retains the same implementation with final version metadata. See [the release report](RELEASE-0.0.9-ar.md).
 Approved test build: 0.0.8-beta.1, version code 8010. The user approved it; stable 0.0.8 retains the same implementation with final version metadata. See [the stable release report](RELEASE-0.0.8-ar.md).
 Android upstream merged through 9beb31563db9901507abf96f7bca9a8572734474, retaining engine 0.11.0 and our Arabic/theme fixes.

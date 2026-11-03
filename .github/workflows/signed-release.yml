@@ -1,0 +1,102 @@
+name: Build signed release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: signed-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'hussain-hz/wordcraft-android' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target-android
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install the pinned Rust toolchain and Android targets
+        run: |
+          rustup show active-toolchain
+          rustup target add aarch64-linux-android x86_64-linux-android
+          cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Install Android SDK and tested NDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37" "build-tools;36.0.0" "ndk;30.0.16248370"
+      - name: Restore the signing key from encrypted repository secrets
+        env:
+          WORDCRAFT_KEYSTORE_BASE64: ${{ secrets.WORDCRAFT_KEYSTORE_BASE64 }}
+        run: |
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          folder = Path(os.environ['RUNNER_TEMP']) / 'wordcraft-signing'
+          folder.mkdir(mode=0o700, exist_ok=True)
+          key = folder / 'release.p12'
+          blob = os.environ.get('WORDCRAFT_KEYSTORE_BASE64', '')
+          if not blob:
+              raise SystemExit('Missing signing secret WORDCRAFT_KEYSTORE_BASE64')
+          key.write_bytes(base64.b64decode(blob, validate=True))
+          key.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write(f'WORDCRAFT_KEYSTORE={key}\n')
+          PY
+      - name: Build and lint the signed Release APK
+        env:
+          WORDCRAFT_KEYSTORE_PASSWORD: ${{ secrets.WORDCRAFT_KEYSTORE_PASSWORD }}
+          WORDCRAFT_KEY_ALIAS: ${{ secrets.WORDCRAFT_KEY_ALIAS }}
+          WORDCRAFT_KEY_PASSWORD: ${{ secrets.WORDCRAFT_KEY_PASSWORD }}
+        run: |
+          chmod +x apps/wordcraft-android/android/gradlew
+          apps/wordcraft-android/android/gradlew -p apps/wordcraft-android/android :app:assembleRelease :app:lintRelease -Pwordcraft.abis=arm64-v8a,x86_64 -Pwordcraft.ndkVersion=30.0.16248370 --max-workers=2 --no-daemon
+      - name: Verify certificate and prepare APK and checksum
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, re, shutil, subprocess
+          from pathlib import Path
+          props = Path('apps/wordcraft-android/android/gradle.properties').read_text()
+          version = re.search(r'^wordcraft.version=(.+)$', props, re.M).group(1).strip()
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', version):
+              raise SystemExit('Invalid version')
+          source = Path('apps/wordcraft-android/android/app/build/outputs/apk/release/app-release.apk')
+          signer = Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0/apksigner'
+          result = subprocess.check_output([str(signer), 'verify', '--print-certs', str(source)], text=True)
+          digest = re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-f]+)', result).group(1)
+          expected = Path('.github/wordcraft-signing-sha256.txt').read_text().strip()
+          if digest != expected:
+              raise SystemExit('Unexpected APK signing certificate')
+          out = Path('dist'); out.mkdir(exist_ok=True)
+          apk = out / f'WordCraft-{version}-release.apk'
+          shutil.copyfile(source, apk)
+          sha = hashlib.sha256(apk.read_bytes()).hexdigest()
+          (out / f'WordCraft-{version}-SHA256SUMS.txt').write_text(f'{sha}  {apk.name}\n')
+          print(f'Verified production certificate: {digest}')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wordcraft-signed-release
+          path: |
+            dist/WordCraft-*-release.apk
+            dist/WordCraft-*-SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove the temporary signing key
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          key = Path(os.environ['RUNNER_TEMP']) / 'wordcraft-signing/release.p12'
+          key.unlink(missing_ok=True)
+          PY

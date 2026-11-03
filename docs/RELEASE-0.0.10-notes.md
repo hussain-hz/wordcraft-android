@@ -1,6 +1,8 @@
 <!-- lang:ar -->
 ما الجديد؟
 
+**ملاحظة التثبيت:** يستخدم هذا الإصدار مفتاح توقيع جديدًا. احذف النسخة القديمة ثم ثبّت الملف من صفحة الإصدار. احتفظ أولًا بأي مستندات أو مسودات تحتاجها من التطبيق القديم. التحديثات التالية ستستخدم المفتاح الجديد نفسه.
+
 - ترقية المحرك إلى 0.15.0 مع الحفاظ على أدوات التطبيق وإصلاحات العربية.
 - تحسين الجداول وتخطيط الصفحات والأشكال والاستيراد والتصدير.
 - إضافة إدارة حزم لغات التدقيق وفتح مستندات Word المحمية بكلمة مرور.
@@ -15,6 +17,8 @@
 
 <!-- lang:en -->
 What's new?
+
+**Installation note:** this release uses a new signing key. Uninstall the old app, then install the APK from the release page. First export any documents or drafts you need from the old app. Future updates will use this same new key.
 
 - Upgrade the engine to 0.15.0 while preserving Android tools and Arabic fixes.
 - Improve tables, page layout, shapes, imports and exports.

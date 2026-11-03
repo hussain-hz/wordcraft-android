@@ -12449,7 +12449,12 @@ fn display_for_review_shows_four_views() {
     let l = s.layout();
     let opts = DisplayOptions { markup: false, simple_markup: true, ..Default::default() };
     let draws = page_display(&s.doc, &l.pages[0], &opts);
-    assert!(draws.iter().any(|d| matches!(d, Draw::Line { color, .. } if *color == SIMPLE_MARKUP_BAR)), "a red bar");
+    assert!(
+        draws
+            .iter()
+            .any(|d| matches!(d, Draw::Kept { items } if items.iter().any(|i| matches!(i, Draw::Line { color, .. } if *color == SIMPLE_MARKUP_BAR)))),
+        "a red bar kept on dark pages"
+    );
     assert!(s.run("review.markup", &json!({"value": "sideways"})).is_err());
     // no value: markup on and off
     run(&mut s, "review.markup", json!({}));
@@ -12769,4 +12774,17 @@ fn filled_text_boxes_keep_their_colours_and_read_their_text_against_the_fill() {
 fn opened(draws: Vec<wordcraft_layout::display::Draw>) -> Vec<wordcraft_layout::display::Draw> {
     use wordcraft_layout::display::Draw;
     draws.into_iter().flat_map(|x| if let Draw::Kept { items } = x { opened(items) } else { vec![x] }).collect()
+}
+
+#[test]
+fn find_can_read_tracked_deleted_text() {
+    let mut s = s();
+    run(&mut s, "document.setText", json!({"text": "The work, weather allowing."}));
+    run(&mut s, "review.trackChanges", json!({"value": true}));
+    run(&mut s, "select.text", json!({"text": ", weather allowing"}));
+    run(&mut s, "text.delete", json!({}));
+    assert_eq!(run(&mut s, "edit.find", json!({"text": "the"}))["count"], 1, "the live text only");
+    assert_eq!(run(&mut s, "edit.find", json!({"text": "the", "deletedText": true}))["count"], 2, "and the deleted \"weather\"");
+    // Replace keeps to the live text whatever Find reads
+    assert_eq!(run(&mut s, "edit.replaceAll", json!({"text": "the", "with": "a"}))["replaced"], 1);
 }

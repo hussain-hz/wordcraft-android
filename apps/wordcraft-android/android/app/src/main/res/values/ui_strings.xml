@@ -186,6 +186,7 @@
     <string name="ui_4f494b22379b">Download update</string>
     <string name="ui_9437db71b92f">Downloading update: %1$d%%</string>
     <string name="ui_a778d3492af2">Downloading…</string>
+    <string name="ui_3299c1e4296d">Drag handle</string>
     <string name="ui_61517c08b3bf">Draw</string>
     <string name="ui_a16bcc337125">Draw with Pen</string>
     <string name="ui_40dbfbab7d57">Draw with Touch</string>

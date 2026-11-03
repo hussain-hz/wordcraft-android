@@ -341,7 +341,7 @@ private data class TileKey(val page: Int, val tx: Int, val ty: Int, val scale: F
  * A tile's picture, the area of its page it shows (points), and the revision and page size it was
  * drawn for (Mobile View lays the text out again at a new width without a new revision).
  */
-private class Tile(val bitmap: Bitmap, val x: Float, val y: Float, val w: Float, val h: Float, val revision: ULong, val pageW: Float, val pageH: Float)
+private class Tile(val bitmap: Bitmap, val x: Float, val y: Float, val w: Float, val h: Float, val revision: ULong, val pageW: Float, val pageH: Float, val look: Any?)
 
 /**
  * The document's pages: scrolled and pinch-zoomed by touch, drawn by the engine in tiles, with the
@@ -370,11 +370,13 @@ fun DocumentView(
     commentMarks: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     activeMark: io.github.artcraftandroid.wordcraft.core.PageRect? = null,
     activeRange: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
+    look: Any? = null,
     highlightColor: Color = Color(0x4D4C6EF5),
     dark: Boolean = false,
     darkPaperChannel: Int = 0x14,
     findMatches: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     findCurrent: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
+    findCurrentLines: List<io.github.artcraftandroid.wordcraft.core.PageRect> = emptyList(),
     objectHandles: Boolean = false,
     objectMovable: Boolean = false,
     keepRatio: Boolean = false,
@@ -426,13 +428,13 @@ fun DocumentView(
             keys
         }
     }
-    LaunchedEffect(needed, info.revision, info.pages, dark, darkPaper) {
+    LaunchedEffect(needed, info.revision, info.pages, dark, darkPaper, look) {
         val keys = needed ?: return@LaunchedEffect
         val scale = keys.firstOrNull()?.scale ?: return@LaunchedEffect
         for (key in keys) {
             val p = info.pages.getOrNull(key.page) ?: continue
             val have = tiles[key]
-            if (have != null && have.revision == info.revision && have.pageW == p.width && have.pageH == p.height) continue
+            if (have != null && have.revision == info.revision && have.pageW == p.width && have.pageH == p.height && have.look == look) continue
             val x = key.tx * TILE_PX / scale
             val y = key.ty * TILE_PX / scale
             val w = min(TILE_PX / scale, p.width - x)
@@ -440,7 +442,7 @@ fun DocumentView(
             if (w <= 0f || h <= 0f) continue
             val img = runCatching { engine.render { renderArea(key.page.toUInt(), x, y, w, h, scale) } }.getOrNull() ?: continue
             val bmp = img.toBitmap() ?: continue
-            tiles[key] = Tile(bmp, x, y, w, h, info.revision, p.width, p.height)
+            tiles[key] = Tile(bmp, x, y, w, h, info.revision, p.width, p.height, look)
         }
         // the visible area is covered at this scale: let the other scales go, and keep this
         // scale's tiles one row and column around the view for scrolling back
@@ -561,6 +563,18 @@ fun DocumentView(
             }
             // Find's matches, under the text: multiplied on a white page, screened on a dark one
             val blend = if (dark) androidx.compose.ui.graphics.BlendMode.Screen else androidx.compose.ui.graphics.BlendMode.Multiply
+            // the selected match's lines under its text: the selection showing, as the reference's does
+            for ((line, t) in findCurrentLines.zip(findCurrent)) {
+                val gap = line.y + line.height - (t.y + t.height)
+                if (gap > 0.05f) {
+                    drawRect(
+                        io.github.artcraftandroid.wordcraft.ui.WordColors.MatchSelected,
+                        topLeft = viewport.onPage(line.page.toInt(), line.x, t.y + t.height),
+                        size = Size(line.width * viewport.scale, gap * viewport.scale),
+                        blendMode = blend,
+                    )
+                }
+            }
             for ((rects, color) in listOf(findMatches to io.github.artcraftandroid.wordcraft.ui.WordColors.MatchOther, findCurrent to io.github.artcraftandroid.wordcraft.ui.WordColors.MatchCurrent)) {
                 for (r in rects) {
                     drawRect(color, topLeft = viewport.onPage(r.page.toInt(), r.x, r.y), size = Size(r.width * viewport.scale, r.height * viewport.scale), blendMode = blend)

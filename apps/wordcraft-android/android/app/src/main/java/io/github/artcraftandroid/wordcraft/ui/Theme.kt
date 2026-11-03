@@ -50,6 +50,8 @@ object WordColors {
     /** Bottom sheets (the header's overflow). */
     val Sheet get() = pick(0xFFFFFFFF, 0xFF000000, 0xFF3A3A3A)
 
+    val SheetGrip get() = pick(0xFFD2D2D2, 0xFF4D4D4D, 0xFF666666)
+
     /** The floating toolbar's icons, and the circle behind a button that is on. */
     val OnPill get() = pick(0xFF242424, 0xFFFFFFFF)
     val PillOn get() = pick(0xFFDADADA, 0xFF575757, 0xFF666666)
@@ -101,12 +103,14 @@ object WordColors {
     val FindBar get() = pick(0xFFE6E6E6, 0xFF303030, 0xFF565656)
     val FindField get() = pick(0xFFFFFFFF, 0xFF000000, 0xFF3C3C3C)
     val FindHint get() = pick(0xFF8A8A8A, 0xFFACACAC, 0xFFC7C7C7)
-    val MatchCurrent get() = pick(0xFFC7BA64, 0xFF867836)
+    val MatchCurrent get() = pick(0xFFC7BA64, 0xFF7C6E26)
 
     /** Mobile View's message card over the pages, and its text (the dark one measured on the reference). */
-    val MessageCard get() = pick(0xFFDCE5F7, 0xFF244185)
-    val OnMessageCard get() = pick(0xFF1F3B78, 0xFF8AAAEB)
-    val MatchOther get() = pick(0xFFFFEE80, 0xFF4D4A2A)
+    val MessageCard get() = pick(0xFFDCE5F7, 0xFF19428A)
+    val OnMessageCard get() = pick(0xFF1F3B78, 0xFF81ABF1)
+    val MatchOther get() = pick(0xFFFFEE80, 0xFF5A4500)
+
+    val MatchSelected get() = pick(0xFFC6C6C6, 0xFF373737)
 
     /** Find settings: an unticked box, its edge, and the line under Replace. */
     val CheckOff get() = pick(0xFFFFFFFF, 0xFF6E6E6E)

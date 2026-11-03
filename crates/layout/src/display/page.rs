@@ -17,7 +17,7 @@ pub const MOVE_COLOR: Rgb = Rgb(0x1A, 0x7F, 0x37);
 /// Colour for revisions by author index.
 pub fn revision_color(i: u32) -> Rgb {
     const C: [Rgb; 6] =
-        [Rgb(0xA8, 0x28, 0x40), Rgb(0x1E, 0x6E, 0xB0), Rgb(0x2E, 0x8B, 0x3E), Rgb(0xC0, 0x5A, 0x10), Rgb(0x70, 0x3C, 0xB0), Rgb(0x0E, 0x7C, 0x86)];
+        [Rgb(0xB5, 0x08, 0x2E), Rgb(0x2F, 0x97, 0xD3), Rgb(0x2E, 0x8B, 0x3E), Rgb(0xC0, 0x5A, 0x10), Rgb(0x70, 0x3C, 0xB0), Rgb(0x0E, 0x7C, 0x86)];
     C.get(i as usize % C.len()).copied().unwrap_or(C[0])
 }
 
@@ -101,7 +101,11 @@ fn body_change_bars(doc: &Document, page: &Page, items: &[Placed], opts: &Displa
             insertions_deletions: true,
             ..opts.revisions.clone()
         };
-        change_bars(doc, page, items, &bars, alpha, opts.outer_margin, out);
+        let mut red = Vec::new();
+        change_bars(doc, page, items, &bars, alpha, opts.outer_margin, &mut red);
+        if !red.is_empty() {
+            out.push(Draw::Kept { items: red });
+        }
     }
 }
 
@@ -379,7 +383,7 @@ fn warped_text(input: WarpedText<'_, '_, '_, '_, '_, '_>, out: &mut Vec<Draw>) {
 /// The automatic colour of the bars beside changed lines.
 pub const CHANGE_BAR: Rgb = Rgb(0x70, 0x70, 0x70);
 /// The colour of Simple Markup's bars.
-pub const SIMPLE_MARKUP_BAR: Rgb = Rgb(0xD1, 0x34, 0x38);
+pub const SIMPLE_MARKUP_BAR: Rgb = Rgb(0xFF, 0x00, 0x00);
 
 /// Bars in the margin beside body lines with tracked insertions or deletions, or (when shown)
 /// tracked formatting changes of their text, paragraph or paragraph mark.

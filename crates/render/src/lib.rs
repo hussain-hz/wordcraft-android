@@ -220,11 +220,11 @@ impl RenderOptions {
 /// reference's greys.
 const DARK_L_TOP: f32 = 0.973;
 const DARK_L_SPAN: f32 = 0.693;
-const DARK_L_POW: f32 = 1.68;
+const DARK_L_POW: f32 = 1.76;
 /// How a colour's chroma follows its change in lightness (`(L / L')^DARK_CHROMA_FOLLOW`), and the
 /// share of it kept: the reference's colours come out a little greyer than they went in.
 const DARK_CHROMA_FOLLOW: f32 = 0.4;
-const DARK_CHROMA_KEPT: f32 = 0.8;
+const DARK_CHROMA_KEPT: f32 = 1.0;
 
 /// A document colour as a dark page shows it, the way the reference turns colours (fitted to its
 /// greys, then checked on a set of hues: within a few levels for greys and pale colours, about

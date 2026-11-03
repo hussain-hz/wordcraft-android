@@ -35,6 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.artcraftandroid.wordcraft.ui.AppViewModel
@@ -50,6 +55,7 @@ import io.github.artcraftandroid.wordcraft.ui.WordColors
 fun OverflowSheet(vm: AppViewModel, visible: Boolean, onSaveAs: () -> Unit, modifier: Modifier = Modifier) {
     val close = { vm.overflowOpen = false }
     Box(modifier.fillMaxSize()) {
+        val gripLabel = uiText("Drag handle")
         AnimatedVisibility(visible, enter = fadeIn(tween(io.github.artcraftandroid.wordcraft.ui.Motion.SHEET)), exit = fadeOut(tween(io.github.artcraftandroid.wordcraft.ui.Motion.SHEET))) {
             Box(Modifier.fillMaxSize().background(WordColors.Scrim).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = close))
         }
@@ -65,8 +71,9 @@ fun OverflowSheet(vm: AppViewModel, visible: Boolean, onSaveAs: () -> Unit, modi
                     .navigationBarsPadding()
                     .verticalScroll(rememberScrollState()),
             ) {
-                Box(Modifier.fillMaxWidth().height(33.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(32.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(WordColors.Pressed))
+                // the grip 7.8 dp under the sheet's edge, the rows 19.5 dp under it, as the reference's
+                Box(Modifier.fillMaxWidth().height(19.5.dp).semantics { contentDescription = gripLabel }, contentAlignment = Alignment.TopCenter) {
+                    Box(Modifier.padding(top = 7.8.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(WordColors.SheetGrip))
                 }
                 val editing = vm.editing
                 // drawing is on the pages only, not in Mobile View
@@ -137,8 +144,16 @@ fun OverflowSheet(vm: AppViewModel, visible: Boolean, onSaveAs: () -> Unit, modi
 @Composable
 private fun OverflowRow(label: String, glyph: Glyph, enabled: Boolean = true, on: Boolean = false, switch: Boolean? = null, onClick: () -> Unit) {
     val tint = if (enabled) WordColors.Accent else WordColors.Disabled
+    val itemLabel = uiText(label)
+    val switchState = switch?.let { uiText(if (it) "On" else "Off") }
     Row(
-        Modifier.fillMaxWidth().height(48.dp).background(if (on) WordColors.Divider else Color.Transparent).clickable(enabled = enabled, onClick = onClick),
+        Modifier.fillMaxWidth().height(48.dp).background(if (on) WordColors.Divider else Color.Transparent).clickable(enabled = enabled, onClick = onClick)
+            // the whole row is the item for a screen reader, as the reference's rows are
+            .clearAndSetSemantics {
+                contentDescription = itemLabel
+                if (switch != null) stateDescription = switchState.orEmpty()
+                if (!enabled) disabled()
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Spacer(Modifier.width(20.dp))

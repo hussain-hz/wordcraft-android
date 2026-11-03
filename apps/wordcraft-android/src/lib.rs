@@ -142,8 +142,12 @@ pub struct CommentMark {
 pub struct FindView {
     pub count: u32,
     pub current: Option<u32>,
+    /// The matches' text: each line's box without the extra of its paragraph's line spacing,
+    /// as the phone app marks them.
     pub matches: Vec<PageRect>,
     pub current_rects: Vec<PageRect>,
+    /// The selected match's whole lines, the selection under it showing below its text.
+    pub current_lines: Vec<PageRect>,
 }
 
 /// The link the caret is in: where it goes (a web address, or `#bookmark` for a place in the
@@ -1051,30 +1055,47 @@ impl MobileSession {
         let (a, b) = (a.clone(), b.clone());
         let results = &s.find.results;
         let current = results.iter().position(|(x, y)| *x == a && *y == b);
-        let rects = |x: &Pos, y: &Pos| -> Vec<PageRect> {
+        let lines = |x: &Pos, y: &Pos| -> Vec<PageRect> {
             layout
                 .selection_rects(&s.doc, x, y, hint)
                 .into_iter()
                 .map(|(page, r)| PageRect { page: page_index(page), x: r.x, y: r.y, width: r.w, height: r.h })
                 .collect()
         };
+        // a line of a paragraph spaced at a multiple has the extra under its text
+        let text = |x: &Pos, y: &Pos| -> Vec<PageRect> {
+            let m = match s.doc.para_at(x).map(|p| s.doc.styles.resolve_para(&p.props).line_spacing) {
+                Some(wordcraft_engine::doc::props::LineSpacing::Multiple(m)) if m.is_finite() && m > 1.0 => m,
+                _ => 1.0,
+            };
+            lines(x, y).into_iter().map(|r| PageRect { height: r.height / m, ..r }).collect()
+        };
         let matches =
-            results.iter().enumerate().take(MAX_FIND_DRAWN).filter(|(i, _)| Some(*i) != current).flat_map(|(_, (x, y))| rects(x, y)).collect();
-        let current_rects = current.and_then(|i| results.get(i)).map(|(x, y)| rects(x, y)).unwrap_or_default();
+            results.iter().enumerate().take(MAX_FIND_DRAWN).filter(|(i, _)| Some(*i) != current).flat_map(|(_, (x, y))| text(x, y)).collect();
+        let current_rects = current.and_then(|i| results.get(i)).map(|(x, y)| text(x, y)).unwrap_or_default();
+        let current_lines = current.and_then(|i| results.get(i)).map(|(x, y)| lines(x, y)).unwrap_or_default();
         FindView {
             count: u32::try_from(results.len()).unwrap_or(u32::MAX),
             current: current.and_then(|i| u32::try_from(i).ok()),
             matches,
             current_rects,
+            current_lines,
         }
     }
 
     /// Search again as Find's text or options change (`params` as `edit.find` takes them): from
     /// the start of the selected match, so the match being typed stays the selected one.
     pub fn find_again(&self, params: String) -> Result<FindView, MobileError> {
-        let params: Value = serde_json::from_str(&params).map_err(|e| MobileError::Command(format!("edit.find: parameters are not JSON: {e}")))?;
+        let mut params: Value =
+            serde_json::from_str(&params).map_err(|e| MobileError::Command(format!("edit.find: parameters are not JSON: {e}")))?;
         {
             let mut s = self.lock();
+            // deleted text that shows (All Markup, Original) is searched too, as the phone app's Find does
+            let shown = (s.view.show_markup && s.view.markup_view == wordcraft_engine::MarkupView::All)
+                || s.view.markup_view == wordcraft_engine::MarkupView::Original;
+            if let Some(o) = params.as_object_mut() {
+                o.insert("deletedText".into(), Value::Bool(shown));
+            }
             let (a, b) = s.sel.ordered();
             let (a, b) = (a.clone(), b.clone());
             if s.find.results.iter().any(|(x, y)| *x == a && *y == b) {

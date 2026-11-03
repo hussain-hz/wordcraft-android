@@ -206,6 +206,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Download update" -> R.string.ui_4f494b22379b
     "Downloading update: %1\$d%%" -> R.string.ui_9437db71b92f
     "Downloading…" -> R.string.ui_a778d3492af2
+    "Drag handle" -> R.string.ui_3299c1e4296d
     "Draw" -> R.string.ui_61517c08b3bf
     "Draw with Pen" -> R.string.ui_a16bcc337125
     "Draw with Touch" -> R.string.ui_40dbfbab7d57

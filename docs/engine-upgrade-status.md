@@ -1,7 +1,8 @@
 # Android engine integration
 
-Candidate integration: engine **0.15.0**, app **0.0.10-beta.1** on `integrate/engine-0.15`.
+Candidate integration: engine **0.15.0**, app **0.0.10-beta.2** on `integrate/engine-0.15`.
 See [the Arabic integration and validation report](ENGINE-0.15-ANDROID-ar.md).
+The [Android upstream follow-up report](ANDROID-UPSTREAM-2026-10-28-ar.md) documents beta.2 and its additional review/search checks.
 The candidate does not replace the last approved stable release below.
 
 ## Stable 0.11 integration history

@@ -110,6 +110,8 @@ pub struct FindState {
     pub ignore_space: bool,
     /// Sounds like (English): whole words that sound like the query's, by their Soundex codes.
     pub sounds_like: bool,
+    /// Find may include tracked-deleted text; Replace always skips it.
+    pub deleted_too: bool,
     /// Matches from the last search: (start, end).
     #[serde(skip)]
     pub results: Vec<(Pos, Pos)>,

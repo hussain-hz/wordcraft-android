@@ -14,6 +14,57 @@ pub(crate) fn author_order<'a>(authors: impl Iterator<Item = &'a str>) -> HashMa
     seen
 }
 
+/// Review colours follow the first visible body occurrence of a change or comment.
+/// Use a hash map and a single walk, retaining the 0.15 work accounting and lazy cache.
+fn document_author_order<'a>(doc: &'a Document) -> HashMap<&'a str, u32> {
+    let all = author_order(doc.revisions.iter().map(|r| r.author.as_str()).chain(doc.comments.values().map(|c| c.author.as_str())));
+    if all.len() < 2 {
+        return all;
+    }
+    let mut seen = HashMap::new();
+    let mut note = |a: &'a str| {
+        let n = u32::try_from(seen.len()).unwrap_or(u32::MAX);
+        seen.entry(a).or_insert(n);
+    };
+    let changed = |id: Option<u32>| id.and_then(|r| doc.revisions.get(r as usize)).map(|r| r.author.as_str());
+    for path in doc.para_paths(wordcraft_doc::StoryRef::Body) {
+        crate::work::steps(1);
+        let Some(p) = doc.para(wordcraft_doc::StoryRef::Body, &path) else { continue };
+        let objects = p.object_offsets();
+        let mut next = objects.into_iter().peekable();
+        let commented = |offset| match p.object_at(offset) {
+            Some(wordcraft_doc::InlineObject::CommentStart { id }) => doc.comments.get(id).map(|c| c.author.as_str()),
+            _ => None,
+        };
+        let mut off = 0usize;
+        for run in &p.runs {
+            crate::work::steps(1);
+            let end = off.saturating_add(run.len);
+            while let Some(o) = next.next_if(|o| *o < end) {
+                if let Some(a) = commented(o) {
+                    note(a);
+                }
+            }
+            for a in [changed(run.props.ins), changed(run.props.del)].into_iter().flatten() {
+                note(a);
+            }
+            off = end;
+        }
+        for o in next {
+            if let Some(a) = commented(o) {
+                note(a);
+            }
+        }
+        for a in [changed(p.mark.ins), changed(p.mark.del)].into_iter().flatten() {
+            note(a);
+        }
+    }
+    for a in doc.revisions.iter().map(|r| r.author.as_str()).chain(doc.comments.values().map(|c| c.author.as_str())) {
+        note(a);
+    }
+    seen
+}
+
 /// The colours of the document's revision authors ([`author_order`]), worked out once for a
 /// drawing, when its first tracked change is drawn, not once for every change.
 pub(super) struct Authors<'a> {
@@ -28,7 +79,7 @@ impl<'a> Authors<'a> {
 
     /// The colour of revision `r`'s author.
     pub(super) fn color(&self, r: u32) -> Rgb {
-        let order = self.order.get_or_init(|| author_order(self.doc.revisions.iter().map(|v| v.author.as_str())));
+        let order = self.order.get_or_init(|| document_author_order(self.doc));
         revision_color(self.doc.revisions.get(r as usize).and_then(|v| order.get(v.author.as_str()).copied()).unwrap_or(0))
     }
 }

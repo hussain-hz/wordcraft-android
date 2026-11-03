@@ -1,6 +1,6 @@
 # Android engine integration
 
-Candidate integration: engine **0.15.0**, app **0.0.10-beta.2** on `integrate/engine-0.15`.
+Current stable: engine **0.15.0**, app **0.0.10** (10990), published as `v0.0.10`. Approved beta.2 remains on `integrate/engine-0.15`.
 See [the Arabic integration and validation report](ENGINE-0.15-ANDROID-ar.md).
 The [Android upstream follow-up report](ANDROID-UPSTREAM-2026-10-28-ar.md) documents beta.2 and its additional review/search checks.
 The user approved beta.2 and then explicitly approved creating a new production signing key. [Stable 0.0.10](RELEASE-0.0.10-ar.md) is signed with that new key, and its native libraries match beta.2. A one-time uninstall of older releases is required; subsequent updates retain the new key. Encrypted GitHub Actions secrets and local backups are configured.

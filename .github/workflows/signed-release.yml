@@ -33,7 +33,7 @@ jobs:
           cargo install cargo-ndk --version 4.1.2 --locked
       - name: Install Android SDK and tested NDK
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37" "build-tools;36.0.0" "ndk;30.0.16248370"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0" "ndk;30.0.16248370"
       - name: Restore the signing key from encrypted repository secrets
         env:
           WORDCRAFT_KEYSTORE_BASE64: ${{ secrets.WORDCRAFT_KEYSTORE_BASE64 }}

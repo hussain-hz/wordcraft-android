@@ -3,7 +3,7 @@
 Candidate integration: engine **0.15.0**, app **0.0.10-beta.2** on `integrate/engine-0.15`.
 See [the Arabic integration and validation report](ENGINE-0.15-ANDROID-ar.md).
 The [Android upstream follow-up report](ANDROID-UPSTREAM-2026-10-28-ar.md) documents beta.2 and its additional review/search checks.
-The candidate does not replace the last approved stable release below.
+The user approved beta.2 after testing. [Stable 0.0.10 preparation](RELEASE-0.0.10-ar.md) is on `release/0.0.10`; the unsigned Release build passes and its native libraries match beta.2. Publication awaits the original production signing key. The last published stable release remains unchanged.
 
 ## Stable 0.11 integration history
 

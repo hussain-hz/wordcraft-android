@@ -293,6 +293,19 @@ pub fn engine_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Use the application's private directory for verified proofing packs. No download at startup.
+#[uniffi::export]
+pub fn initialize_language_packs(directory: String) {
+    wordcraft_engine::packs::use_font_store_in(std::path::PathBuf::from(directory), true);
+    wordcraft_engine::packs::set_background(Some(std::sync::Arc::new(|| {})));
+}
+
+/// Called only by a refresh/install tap in the Language Packs screen.
+#[uniffi::export]
+pub fn enable_language_pack_downloads() -> bool {
+    wordcraft_engine::packs::backend().is_some_and(|backend| backend.enable_network().is_ok())
+}
+
 /// Send the engine's log to logcat (tag `wordcraft`). Call once at start-up; later calls do
 /// nothing.
 #[uniffi::export]
@@ -640,7 +653,13 @@ impl MobileSession {
         if let (Some(p), Some(o)) = (password, params.as_object_mut()) {
             o.insert("password".into(), json!(p));
         }
-        s.run("file.open", &params).map_err(|e| open_error(&e))?;
+        // The caller handles the typed error (including password retries). Do not
+        // leave its raw status to surface as a second, untranslated toast later.
+        let status = std::mem::take(&mut s.status);
+        if let Err(e) = s.run("file.open", &params) {
+            s.status = status;
+            return Err(open_error(&e));
+        }
         Ok(info(&mut s))
     }
 
@@ -737,7 +756,13 @@ impl MobileSession {
         let (doc, layout, opts) = self.snapshot();
         let p = layout.pages.get(page as usize).ok_or(MobileError::NoPage(page + 1))?;
         let finite = |v: f32| if v.is_finite() { v } else { 0.0 };
-        let r = render::render_area(&doc, p, finite(x), finite(y), finite(width).max(0.0), finite(height).max(0.0), clamp_scale(scale), &opts);
+        let r = render::render_area(
+            &doc,
+            p,
+            wordcraft_geom::Rect::new(finite(x), finite(y), finite(width).max(0.0), finite(height).max(0.0)),
+            clamp_scale(scale),
+            &opts,
+        );
         Ok(PageImage { width: r.width, height: r.height, rgba: r.pixels })
     }
 
@@ -1206,7 +1231,7 @@ impl MobileSession {
             .map(|(id, v)| {
                 let g = wordcraft_engine::cmd::chart::chart_graphic(v, &s.doc.settings.theme_colors, w, h);
                 let draws = wordcraft_engine::layout::display::graphic_display(&s.doc, &g, w, h);
-                let r = render::render_items(&s.doc, &draws, 0.0, 0.0, w, h, scale, &opts);
+                let r = render::render_items(&s.doc, &draws, wordcraft_geom::Rect::new(0.0, 0.0, w, h), scale, &opts);
                 GalleryImage { id, image: PageImage { width: r.width, height: r.height, rgba: r.pixels } }
             })
             .collect()
@@ -1239,7 +1264,7 @@ impl MobileSession {
                     svg: None,
                 };
                 let draws = wordcraft_engine::layout::display::drawing_display(&o, x, y, pw, ph, &Default::default());
-                let r = render::render_items(&doc, &draws, 0.0, 0.0, w, h, scale, &opts);
+                let r = render::render_items(&doc, &draws, wordcraft_geom::Rect::new(0.0, 0.0, w, h), scale, &opts);
                 Some(GalleryImage { id: id.to_string(), image: PageImage { width: r.width, height: r.height, rgba: r.pixels } })
             })
             .collect()
@@ -1526,8 +1551,14 @@ impl MobileSession {
         EngineEvents { requests, status: (!status.is_empty()).then_some(status) }
     }
 
-    /// A copy of the document as a file of the format `name`'s extension names, for sharing or
-    /// printing: unlike [`MobileSession::save_bytes`] it leaves the document's saved state alone.
+    /// The phone print service's PDF: unlike a shared PDF, omit interactive link annotations
+    /// that some printer drivers cannot fit to paper. Leaves the saved state alone.
+    pub fn print_bytes(&self) -> Result<Vec<u8>, MobileError> {
+        self.lock().print_job_pdf(&json!({})).map(|(bytes, _)| bytes).map_err(|e| MobileError::Save(e.to_string()))
+    }
+
+    /// A copy of the document as a file of the format `name`'s extension names, for sharing:
+    /// unlike [`MobileSession::save_bytes`] it leaves the document's saved state alone.
     pub fn export_bytes(&self, name: String) -> Result<Vec<u8>, MobileError> {
         let s = self.lock();
         let opts = file::export_options(&s, &json!({}));

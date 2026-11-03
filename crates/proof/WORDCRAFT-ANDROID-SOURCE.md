@@ -1,0 +1,1 @@
+Vendored from https://github.com/storytold/craft-libs/tree/89fa1559e94378ecef85cd7e4681400f4df053e0/crates/proof for WordCraft engine 0.15.0. MIT OR Apache-2.0. Android retains its repeated-word issue classification and second-word underline, and uses the repository-pinned assets/language-data when CRAFT_I18N_DIR is unset.

@@ -46,6 +46,7 @@ fun CheckSheet(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             CheckSwitch("Spelling", vm.checkSpelling) { vm.setProofing(spelling = it) }
             CheckSwitch("Grammar", vm.markGrammar) { vm.setProofing(grammar = it) }
+            LanguagePacks(vm, Modifier.weight(1f))
             return@Column
         }
         Row(Modifier.fillMaxWidth().height(50.dp).background(WordColors.Bar), verticalAlignment = Alignment.CenterVertically) {

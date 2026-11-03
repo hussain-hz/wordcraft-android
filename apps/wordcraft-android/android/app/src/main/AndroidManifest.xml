@@ -47,6 +47,14 @@
                 <data android:mimeType="text/rtf" />
                 <data android:mimeType="application/vnd.oasis.opendocument.text" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/html" />
+                <data android:mimeType="application/xhtml+xml" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
+                <data android:mimeType="application/x-tex" />
+                <data android:mimeType="text/x-tex" />
+                <data android:mimeType="multipart/related" />
+                <data android:mimeType="application/x-mimearchive" />
             </intent-filter>
         </activity>
 

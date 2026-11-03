@@ -587,7 +587,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Print the document through the phone's print service. */
     fun print() = withEngine { e ->
         val doc = document ?: return@withEngine
-        val bytes = e.command { exportBytes("print.pdf") }
+        val bytes = e.command { printBytes() }
         printRequests.trySend(doc.name.substringBeforeLast('.', doc.name) to bytes)
     }
 
@@ -1282,7 +1282,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try {
             e.command { open(file.absolutePath, null) }
         } catch (_: MobileException.NeedsPassword) {
-            message = messageText("This document is protected with a password.")
+            passwordChoice = PasswordChoice(file, uri, name)
+            passwordError = null
             return@withEngine
         }
         remember(uri, name)
@@ -1291,6 +1292,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A text file waiting for its encoding to be chosen ([TextEncodingScreen]): the copy the engine reads, where it came from, and what it can be read in. */
     class EncodingChoice(val file: java.io.File, val uri: Uri, val name: String, val writable: Boolean, val offer: io.github.artcraftandroid.wordcraft.core.TextEncodingOffer)
+
+    class PasswordChoice(val file: java.io.File, val uri: Uri, val name: String)
+    var passwordChoice by mutableStateOf<PasswordChoice?>(null)
+        private set
+    var passwordError by mutableStateOf<String?>(null)
+        private set
+    var passwordOpening by mutableStateOf(false)
+        private set
+
+    fun cancelPassword() { if (!passwordOpening) { passwordChoice = null; passwordError = null } }
+
+    fun unlockDocument(password: String) {
+        val choice = passwordChoice ?: return
+        if (passwordOpening) return
+        passwordOpening = true
+        withEngine { e ->
+            try {
+                e.command { open(choice.file.absolutePath, password) }
+                passwordChoice = null
+                passwordError = null
+                remember(choice.uri, choice.name)
+                // Preserve the protected source; Save As creates a new copy.
+                started(e, OpenDocument(choice.name, choice.uri, false), edit = false)
+            } catch (_: MobileException.WrongPassword) {
+                passwordError = "The password isn't correct."
+            } catch (t: MobileException) {
+                passwordError = t.userMessage
+            } finally { passwordOpening = false }
+        }
+    }
 
     var encodingChoice by mutableStateOf<EncodingChoice?>(null)
         private set

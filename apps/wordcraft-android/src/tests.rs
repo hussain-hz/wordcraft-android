@@ -517,8 +517,6 @@ fn the_session_can_move_between_threads() {
     assert_eq!(body_text(&m), "From another thread");
 }
 
-
-
 #[test]
 fn read_aloud_finds_each_word_said() {
     let m = MobileSession::new();
@@ -831,7 +829,9 @@ fn arabic_and_western_digits_render_as_written_on_android_and_in_export_options(
         assert_eq!(file::export_options(&m.lock(), &json!({})).numeral, NumeralMode::Preserve);
         let original = m.render_page(0, 1.0).unwrap().rgba;
         m.execute("view.numeral".into(), json!({"value": "arabic"}).to_string()).unwrap();
-        assert_ne!(original, m.render_page(0, 1.0).unwrap().rgba, "Arabic-Indic digits have distinct rendered glyphs");
+        assert_eq!(original, m.render_page(0, 1.0).unwrap().rgba, "Arabic mode preserves explicitly typed Arabic-Indic digits");
+        m.execute("view.numeral".into(), json!({"value": "hindi"}).to_string()).unwrap();
+        assert_ne!(original, m.render_page(0, 1.0).unwrap().rgba, "Hindi mode converts Western digits for display");
         m.execute("view.numeral".into(), json!({"value": "preserve"}).to_string()).unwrap();
         assert_eq!(original, m.render_page(0, 1.0).unwrap().rgba);
         assert_eq!(body_text(&m), text, "display settings never rewrite the digits");
@@ -857,10 +857,15 @@ fn arabic_inserted_letters_join_existing_text_and_survive_docx() {
     let glyphs = |m: &MobileSession| {
         let mut s = m.lock();
         let l = s.layout();
-        l.pages.iter().flat_map(|p| p.items.iter()).filter_map(|i| match i {
-            wordcraft_engine::layout::Placed::Lines { para, .. } => Some(para.glyphs.iter().map(|g| g.gid)),
-            _ => None,
-        }).flatten().collect::<Vec<_>>()
+        l.pages
+            .iter()
+            .flat_map(|p| p.items.iter())
+            .filter_map(|i| match i {
+                wordcraft_engine::layout::Placed::Lines { para, .. } => Some(para.glyphs.iter().map(|g| g.gid)),
+                _ => None,
+            })
+            .flatten()
+            .collect::<Vec<_>>()
     };
     for reopen in [false, true] {
         if reopen {
@@ -877,12 +882,14 @@ fn arabic_inserted_letters_join_existing_text_and_survive_docx() {
             assert_eq!((actual.width, actual.height), (expected.width, expected.height));
             // Red and black both have a zero green component: compare that channel to check the
             // actual rasterized letter geometry while preserving the new letter's red formatting.
-            assert!(actual.rgba.chunks_exact(4).zip(expected.rgba.chunks_exact(4)).all(|(a, b)| a[1] == b[1]), "rendered joining geometry: {mode}, reopened={reopen}");
+            assert!(
+                actual.rgba.chunks_exact(4).zip(expected.rgba.chunks_exact(4)).all(|(a, b)| a[1] == b[1]),
+                "rendered joining geometry: {mode}, reopened={reopen}"
+            );
             assert_eq!(body_text(&m), "فتحته");
         }
     }
 }
-
 
 #[test]
 fn a_picture_s_shadow_stays_dark_on_a_dark_page() {
@@ -1001,4 +1008,38 @@ fn colour_swatches_have_names() {
     assert_eq!(c.standard[0].label, "Dark Red");
     assert_eq!(c.highlights[0].label, "Yellow");
     assert!(c.theme.iter().flatten().chain(&c.standard).chain(&c.highlights).all(|s| !s.label.is_empty()));
+}
+
+#[test]
+fn encrypted_open_retries_do_not_leave_a_stale_status() {
+    let dir = std::env::temp_dir().join(format!("wc-password-status-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("protected.docx");
+    std::fs::write(&file, include_bytes!("../android/app/src/androidTest/assets/encrypted-engine015.docx")).unwrap();
+    let m = MobileSession::default();
+    let path = file.to_string_lossy().into_owned();
+    assert!(matches!(m.open(path.clone(), None), Err(MobileError::NeedsPassword)));
+    assert!(m.take_events().status.is_none());
+    assert!(matches!(m.open(path.clone(), Some("wrong".into())), Err(MobileError::WrongPassword)));
+    assert!(m.take_events().status.is_none());
+    m.open(path, Some("engine015".into())).unwrap();
+    assert!(body_text(&m).contains("Protected Arabic"));
+    m.type_text(" edited".into()).unwrap();
+    let saved = m.save_bytes("copy.docx".into()).unwrap();
+    assert!(io::open_bytes("copy.docx", &saved).is_err(), "the saved Word copy remains encrypted");
+    let (doc, _) = io::open_bytes_with("copy.docx", &saved, Some("engine015")).unwrap();
+    assert!(doc.plain_text(wordcraft_engine::doc::StoryRef::Body).contains("edited"));
+    assert!(!m.take_events().status.unwrap_or_default().contains("password"));
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn android_print_pdf_omits_links_but_shared_pdf_keeps_them() {
+    let m = MobileSession::default();
+    m.execute("insert.link".into(), json!({"url":"https://example.com", "text":"a link"}).to_string()).unwrap();
+    let shared = m.export_bytes("shared.pdf".into()).unwrap();
+    let printed = m.print_bytes().unwrap();
+    assert!(String::from_utf8_lossy(&shared).contains("/Annots"));
+    assert!(!String::from_utf8_lossy(&printed).contains("/Annots"));
+    assert!(m.document_info().dirty, "printing and sharing leave unsaved edits alone");
 }

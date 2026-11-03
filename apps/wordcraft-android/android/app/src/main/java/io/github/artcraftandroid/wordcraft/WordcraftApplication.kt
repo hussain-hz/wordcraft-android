@@ -4,6 +4,7 @@ import android.app.Application
 import android.system.Os
 import io.github.artcraftandroid.wordcraft.core.MobileSession
 import io.github.artcraftandroid.wordcraft.core.initLogging
+import io.github.artcraftandroid.wordcraft.core.initializeLanguagePacks
 import io.github.artcraftandroid.wordcraft.engine.Engine
 import java.io.File
 import java.util.Locale
@@ -27,6 +28,7 @@ class WordcraftApplication : Application() {
                 Os.setenv("HOME", filesDir.absolutePath, true)
                 Os.setenv("TMPDIR", cacheDir.absolutePath, true)
                 initLogging()
+                initializeLanguagePacks(File(filesDir, "language-store").absolutePath)
                 val session = MobileSession()
                 session.start(Locale.getDefault().toLanguageTag())
                 Engine(session)

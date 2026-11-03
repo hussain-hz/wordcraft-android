@@ -11,3 +11,6 @@
 *.icns binary
 *.jar binary
 *.p12 binary
+
+# Keep upstream dictionary data and licence notices byte-for-byte, including trailing spaces.
+assets/language-data/** whitespace=-blank-at-eol,-blank-at-eof

@@ -86,6 +86,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Bar" -> R.string.ui_95d64cacce0f
     "Basic List" -> R.string.ui_8a61b311e8ca
     "Basic Shapes" -> R.string.ui_fb72fc26e3d2
+    "Basic dictionaries work offline. Download additional languages when needed." -> R.string.ui_7fcbc2cba8db
     "Behind Text" -> R.string.ui_a7ddfa05b06e
     "Below" -> R.string.ui_a53dffffb7e5
     "Black" -> R.string.ui_c6cfe6e4f129
@@ -147,6 +148,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Comments pane" -> R.string.ui_b10b4e15f3b4
     "Continuous" -> R.string.ui_04f13cecbc50
     "Copy" -> R.string.ui_e21f935f11d7
+    "Could not update language packs. Please try again." -> R.string.ui_8d83ed4af58e
     "Couldn't check for updates. Try again when connected." -> R.string.ui_db037a3559ae
     "Couldn't download or verify the update. Please try again." -> R.string.ui_b63c7ea6144b
     "Crop Graphic" -> R.string.ui_d235c78b73d3
@@ -200,8 +202,10 @@ private fun labelResource(source: String): Int? = when (source) {
     "Documents you open show here." -> R.string.ui_526a8ed429fa
     "Don't Save" -> R.string.ui_20961bde9480
     "Doughnut" -> R.string.ui_5d821b815f53
+    "Download language pack" -> R.string.ui_36f07fcf1892
     "Download update" -> R.string.ui_4f494b22379b
     "Downloading update: %1\$d%%" -> R.string.ui_9437db71b92f
+    "Downloading…" -> R.string.ui_a778d3492af2
     "Draw" -> R.string.ui_61517c08b3bf
     "Draw with Pen" -> R.string.ui_a16bcc337125
     "Draw with Touch" -> R.string.ui_40dbfbab7d57
@@ -210,6 +214,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Edit Header" -> R.string.ui_4ab2645dc4c7
     "Edit Link" -> R.string.ui_f0d155f6ac36
     "Edit Text" -> R.string.ui_eb25bd7c6059
+    "Edits are saved as a new document." -> R.string.ui_7a10b61ed57b
     "Elbow Connector" -> R.string.ui_663aa3d5ca17
     "Elbow Connector Arrow" -> R.string.ui_cd0789bf2de9
     "Elbow Connector Double Arrow" -> R.string.ui_e812b7b748b0
@@ -217,6 +222,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Emphasis" -> R.string.ui_0ab4b2c43447
     "Endnote" -> R.string.ui_150c8fdadd59
     "Engine" -> R.string.ui_8e75ebbdb215
+    "Enter the document password" -> R.string.ui_4b5046a3366d
     "Equation" -> R.string.ui_560fa5972253
     "Equation Shapes" -> R.string.ui_a29285c93777
     "Even Page" -> R.string.ui_9cb248d4dcc3
@@ -284,6 +290,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Insert Rows and Columns" -> R.string.ui_6c0125167d16
     "Insert Table" -> R.string.ui_7660cc9246f7
     "Inside" -> R.string.ui_123a3ebc57e3
+    "Install Language Pack" -> R.string.ui_27f43c6bace2
     "Install update" -> R.string.ui_cada4215d344
     "Intense Emphasis" -> R.string.ui_e50e9fc6c20d
     "Intense Quote" -> R.string.ui_b4d82d8253a0
@@ -296,7 +303,9 @@ private fun labelResource(source: String): Int? = when (source) {
     "Keywords" -> R.string.ui_8bfdb93cafaa
     "Landscape" -> R.string.ui_e658d3ae034a
     "Language" -> R.string.ui_a4fe65264ef7
+    "Language Packs" -> R.string.ui_9aef089acf9f
     "Language combo box, %1\$s selected" -> R.string.ui_60dffe50dfcb
+    "Language packs" -> R.string.ui_6a2b54fada8e
     "Last Column" -> R.string.ui_1f875464bfd5
     "Later" -> R.string.ui_73b6e48a1b55
     "Layout" -> R.string.ui_a511909161e1
@@ -402,6 +411,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "Page Width" -> R.string.ui_58e8f03d0851
     "Pages" -> R.string.ui_9046da16aea9
     "Paragraph Formatting" -> R.string.ui_49f7566d1056
+    "Password" -> R.string.ui_e7cf3ef4f17c
     "Paste" -> R.string.ui_f3380f7b44bd
     "Pen" -> R.string.ui_a04bd35be167
     "Perspective" -> R.string.ui_e3ad1bcc2cbd
@@ -446,17 +456,21 @@ private fun labelResource(source: String): Int? = when (source) {
     "Redo" -> R.string.ui_74273989b096
     "Reflection" -> R.string.ui_7538c2135b03
     "Reflection Variations" -> R.string.ui_93f3d37260ee
+    "Refresh language packs" -> R.string.ui_81293fb4a945
+    "Refresh to see available language packs." -> R.string.ui_b5fea8c79d30
     "Reject" -> R.string.ui_ab604a360777
     "Reject All Changes" -> R.string.ui_e445fc8ed6c0
     "Reject and Move to Next" -> R.string.ui_67dae4ca2958
     "Release notes are not available." -> R.string.ui_644d0520a9b5
     "Remove Footer" -> R.string.ui_c61ab19c1753
     "Remove Header" -> R.string.ui_2f2f09b9ec77
+    "Remove Language Pack" -> R.string.ui_8bb458559b26
     "Remove Link" -> R.string.ui_e3e0591b816f
     "Remove Page Numbers" -> R.string.ui_8e13ce2e3131
     "Remove Space After Paragraph" -> R.string.ui_7bf634db2abe
     "Remove Space Before Paragraph" -> R.string.ui_fb127e3a415a
     "Remove from list" -> R.string.ui_82963c765306
+    "Remove language pack" -> R.string.ui_328315d05e1c
     "Reopen" -> R.string.ui_a886d1dc4f12
     "Reopen thread" -> R.string.ui_5c89cdaff549
     "Repeat Header Rows" -> R.string.ui_e219c08d75aa
@@ -559,6 +573,7 @@ private fun labelResource(source: String): Int? = when (source) {
     "The %1\$s tab is on its way." -> R.string.ui_9f504bdae859
     "The document can't be opened: %1\$s" -> R.string.ui_df46b8a2d60d
     "The document can't be saved there." -> R.string.ui_990843d46cd8
+    "The password isn't correct." -> R.string.ui_a26b9a53855e
     "The picture can't be read." -> R.string.ui_31390ccb9d73
     "Theme" -> R.string.ui_efb52e7172b7
     "Theme Colors" -> R.string.ui_61a90ad013ec

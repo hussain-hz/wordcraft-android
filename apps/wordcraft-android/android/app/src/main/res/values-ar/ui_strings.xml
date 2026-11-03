@@ -66,6 +66,7 @@
     <string name="ui_95d64cacce0f">شريط</string>
     <string name="ui_8a61b311e8ca">القائمة الأساسية</string>
     <string name="ui_fb72fc26e3d2">أشكال أساسية</string>
+    <string name="ui_7fcbc2cba8db">تعمل القواميس الأساسية دون اتصال. نزّل لغات إضافية عند الحاجة.</string>
     <string name="ui_a7ddfa05b06e">خلف النص</string>
     <string name="ui_a53dffffb7e5">أسفل</string>
     <string name="ui_c6cfe6e4f129">أسود</string>
@@ -127,6 +128,7 @@
     <string name="ui_b10b4e15f3b4">لوحة التعليقات</string>
     <string name="ui_04f13cecbc50">مستمر</string>
     <string name="ui_e21f935f11d7">نسخ</string>
+    <string name="ui_8d83ed4af58e">تعذر تحديث حزم اللغات. حاول مرة أخرى.</string>
     <string name="ui_db037a3559ae">تعذر التحقق من التحديثات. أعد المحاولة عند الاتصال بالإنترنت.</string>
     <string name="ui_b63c7ea6144b">تعذّر تنزيل التحديث أو التحقق منه. حاول مرة أخرى.</string>
     <string name="ui_d235c78b73d3">اقتصاص الرسم</string>
@@ -180,8 +182,10 @@
     <string name="ui_526a8ed429fa">تظهر هنا المستندات التي تفتحها.</string>
     <string name="ui_20961bde9480">لا تقم بالحفظ</string>
     <string name="ui_5d821b815f53">دونات</string>
+    <string name="ui_36f07fcf1892">تنزيل حزمة اللغة</string>
     <string name="ui_4f494b22379b">تنزيل التحديث</string>
     <string name="ui_9437db71b92f">جارٍ تنزيل التحديث: %1$d%%</string>
+    <string name="ui_a778d3492af2">جارٍ التنزيل…</string>
     <string name="ui_61517c08b3bf">رسم</string>
     <string name="ui_a16bcc337125">الرسم بالقلم</string>
     <string name="ui_40dbfbab7d57">الرسم باللمس</string>
@@ -190,6 +194,7 @@
     <string name="ui_4ab2645dc4c7">تحرير الرأس</string>
     <string name="ui_f0d155f6ac36">تحرير الرابط</string>
     <string name="ui_eb25bd7c6059">تحرير النص</string>
+    <string name="ui_7a10b61ed57b">تُحفظ التعديلات في مستند جديد.</string>
     <string name="ui_663aa3d5ca17">موصل زاوي</string>
     <string name="ui_cd0789bf2de9">موصل زاوي بسهم</string>
     <string name="ui_e812b7b748b0">موصل زاوي بسهمين</string>
@@ -197,6 +202,7 @@
     <string name="ui_0ab4b2c43447">التأكيد</string>
     <string name="ui_150c8fdadd59">حاشية ختامية</string>
     <string name="ui_8e75ebbdb215">المحرك</string>
+    <string name="ui_4b5046a3366d">أدخل كلمة مرور المستند</string>
     <string name="ui_560fa5972253">معادلة</string>
     <string name="ui_a29285c93777">أشكال المعادلات</string>
     <string name="ui_9cb248d4dcc3">حتى الصفحة</string>
@@ -264,6 +270,7 @@
     <string name="ui_6c0125167d16">إدراج صفوف وأعمدة</string>
     <string name="ui_7660cc9246f7">إدراج جدول</string>
     <string name="ui_123a3ebc57e3">بالداخل</string>
+    <string name="ui_27f43c6bace2">تثبيت حزمة لغة</string>
     <string name="ui_cada4215d344">تثبيت التحديث</string>
     <string name="ui_e50e9fc6c20d">توكيد قوي</string>
     <string name="ui_b4d82d8253a0">اقتباس مكثف</string>
@@ -276,7 +283,9 @@
     <string name="ui_8bfdb93cafaa">الكلمات المفتاحية</string>
     <string name="ui_e658d3ae034a">أفقي</string>
     <string name="ui_a4fe65264ef7">اللغة</string>
+    <string name="ui_9aef089acf9f">حزم اللغات</string>
     <string name="ui_60dffe50dfcb">اللغة، المحدد %1$s</string>
+    <string name="ui_6a2b54fada8e">حزم اللغات</string>
     <string name="ui_1f875464bfd5">العمود الأخير</string>
     <string name="ui_73b6e48a1b55">لاحقًا</string>
     <string name="ui_a511909161e1">تخطيط</string>
@@ -382,6 +391,7 @@
     <string name="ui_58e8f03d0851">عرض الصفحة</string>
     <string name="ui_9046da16aea9">الصفحات</string>
     <string name="ui_49f7566d1056">تنسيق الفقرة</string>
+    <string name="ui_e7cf3ef4f17c">كلمة المرور</string>
     <string name="ui_f3380f7b44bd">لصق</string>
     <string name="ui_a04bd35be167">القلم</string>
     <string name="ui_e3ad1bcc2cbd">منظور</string>
@@ -426,17 +436,21 @@
     <string name="ui_74273989b096">إعادة</string>
     <string name="ui_7538c2135b03">انعكاس</string>
     <string name="ui_93f3d37260ee">خيارات الانعكاس</string>
+    <string name="ui_81293fb4a945">تحديث قائمة حزم اللغات</string>
+    <string name="ui_b5fea8c79d30">حدّث القائمة لعرض حزم اللغات المتاحة.</string>
     <string name="ui_ab604a360777">رفض</string>
     <string name="ui_e445fc8ed6c0">رفض كل التغييرات</string>
     <string name="ui_67dae4ca2958">رفض والانتقال إلى التالي</string>
     <string name="ui_644d0520a9b5">لا توجد ملاحظات لهذا الإصدار.</string>
     <string name="ui_c61ab19c1753">إزالة التذييل</string>
     <string name="ui_2f2f09b9ec77">إزالة الرأس</string>
+    <string name="ui_8bb458559b26">إزالة حزمة لغة</string>
     <string name="ui_e3e0591b816f">إزالة الرابط</string>
     <string name="ui_8e13ce2e3131">إزالة أرقام الصفحات</string>
     <string name="ui_7bf634db2abe">قم بإزالة المسافة بعد الفقرة</string>
     <string name="ui_fb127e3a415a">إزالة المسافة قبل الفقرة</string>
     <string name="ui_82963c765306">إزالة من القائمة</string>
+    <string name="ui_328315d05e1c">إزالة حزمة اللغة</string>
     <string name="ui_a886d1dc4f12">إعادة فتح</string>
     <string name="ui_5c89cdaff549">إعادة فتح سلسلة التعليقات</string>
     <string name="ui_e219c08d75aa">كرر صفوف الرأس</string>
@@ -539,6 +553,7 @@
     <string name="ui_9f504bdae859">ستتوفر أدوات تبويب %1$s لاحقًا.</string>
     <string name="ui_df46b8a2d60d">تعذّر فتح المستند: %1$s</string>
     <string name="ui_990843d46cd8">لا يمكن حفظ المستند في هذا الموقع.</string>
+    <string name="ui_a26b9a53855e">كلمة المرور غير صحيحة.</string>
     <string name="ui_31390ccb9d73">تعذّرت قراءة الصورة.</string>
     <string name="ui_efb52e7172b7">المظهر</string>
     <string name="ui_61a90ad013ec">ألوان السمة</string>

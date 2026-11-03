@@ -1,0 +1,1 @@
+Language data from https://github.com/storytold/craft-i18n at commit 059cbf95c2a3eb95d637ca8584faca1129d17f48 (WordCraft 0.15.0 craft-i18n.rev). Original notices and licences are retained beside the data.

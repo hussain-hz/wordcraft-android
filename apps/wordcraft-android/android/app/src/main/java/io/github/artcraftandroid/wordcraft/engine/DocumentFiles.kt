@@ -17,6 +17,14 @@ object DocumentFiles {
         "text/rtf",
         "application/vnd.oasis.opendocument.text",
         "text/plain",
+        "text/html",
+        "application/xhtml+xml",
+        "text/markdown",
+        "text/x-markdown",
+        "application/x-tex",
+        "text/x-tex",
+        "multipart/related",
+        "application/x-mimearchive",
     )
 
     const val DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

@@ -1054,9 +1054,21 @@ fn plain_wmf_target_comes_from_a_window_that_was_read() {
     assert!(close(x0, 0.0) && close(y0, 0.0) && close(x1, 200.0) && close(y1, 100.0), "{x0} {y0} {x1} {y1}");
 }
 
-// ---- SVG ----
+/// A poly-polygon's group counts are file data: a long list of empty groups adds no ops, so it
+/// mustn't reserve room for them either (the canvas charges what a path holds, capacity included).
+#[test]
+fn empty_poly_groups_reserve_nothing() {
+    let pts = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)];
+    let mut counts = vec![0usize; 100_000];
+    counts.push(3);
+    let ops = crate::geom::subpaths(&pts, &counts, true);
+    assert_eq!(ops.len(), 4, "M L L Z");
+    assert!(ops.capacity() <= 8, "capacity {}", ops.capacity());
+    // Counts past the points are cut short, and the size still matches.
+    let ops = crate::geom::subpaths(&pts, &[2, 5, 4], false);
+    assert_eq!((ops.len(), ops.capacity()), (3, 3));
+}
 
-/// Bounds `[x0, y0, x1, y1]` of a path's end points.
 fn seg_bounds(segs: &[Seg]) -> [f32; 4] {
     let mut b = [f32::MAX, f32::MAX, f32::MIN, f32::MIN];
     for s in segs {
@@ -1071,9 +1083,6 @@ fn near(a: [f32; 4], b: [f32; 4], tol: f32) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
 }
 
-/// An icon as icon files are written: a view box, a class from a style element (with a comment),
-/// a group transform, a path with relative commands and arcs, a shape styled by its `style`
-/// attribute, an outlined circle, and a path in `defs` that isn't drawn.
 #[test]
 fn svg_icon_is_read_as_paths() {
     let svg = br##"<?xml version="1.0" encoding="UTF-8"?>
@@ -1100,8 +1109,6 @@ fn svg_icon_is_read_as_paths() {
     assert_eq!((*fill, *stroke), (None, Some(([0, 0, 0, 255], 1.0))));
 }
 
-/// The view box's corner is the picture's origin, and the picture stretches to its frame; a
-/// `fill-rule`, `currentColor` and a gradient (as its first stop) are kept.
 #[test]
 fn svg_view_box_fills_the_frame() {
     let svg = br##"<svg viewBox="10 20 10 10" color="#00FF00">
@@ -1120,8 +1127,6 @@ fn svg_view_box_fills_the_frame() {
     assert!(near([b.x0 as f32, b.y0 as f32, b.x1 as f32, b.y1 as f32], [100.0, 50.0, 140.0, 70.0], 0.01), "{b:?}");
 }
 
-/// Junk, huge numbers, deep nesting, bad transforms and files that draw nothing give an error or
-/// leave the element out, never a panic or a hang.
 #[test]
 fn hostile_svg_is_refused() {
     assert!(parse(b"<svg not xml at all").is_err());
@@ -1142,9 +1147,6 @@ fn hostile_svg_is_refused() {
     assert_eq!((*fill, *stroke), (Some([0, 0, 0, 255]), Some(([255, 0, 128, 255], 1.0))));
 }
 
-/// Repainting an SVG: fills change where there are fills, outlines are added or recoloured at a
-/// width the transforms above them keep, a change replaces the one before it, and what isn't drawn
-/// is left as it was.
 #[test]
 fn svg_recolor_repaints_drawn_shapes() {
     let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><style>.a{fill:#123456}</style>

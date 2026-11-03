@@ -66,6 +66,7 @@
     <string name="ui_95d64cacce0f">Bar</string>
     <string name="ui_8a61b311e8ca">Basic List</string>
     <string name="ui_fb72fc26e3d2">Basic Shapes</string>
+    <string name="ui_7fcbc2cba8db">Basic dictionaries work offline. Download additional languages when needed.</string>
     <string name="ui_a7ddfa05b06e">Behind Text</string>
     <string name="ui_a53dffffb7e5">Below</string>
     <string name="ui_c6cfe6e4f129">Black</string>
@@ -127,6 +128,7 @@
     <string name="ui_b10b4e15f3b4">Comments pane</string>
     <string name="ui_04f13cecbc50">Continuous</string>
     <string name="ui_e21f935f11d7">Copy</string>
+    <string name="ui_8d83ed4af58e">Could not update language packs. Please try again.</string>
     <string name="ui_db037a3559ae">Couldn\'t check for updates. Try again when connected.</string>
     <string name="ui_b63c7ea6144b">Couldn\'t download or verify the update. Please try again.</string>
     <string name="ui_d235c78b73d3">Crop Graphic</string>
@@ -180,8 +182,10 @@
     <string name="ui_526a8ed429fa">Documents you open show here.</string>
     <string name="ui_20961bde9480">Don\'t Save</string>
     <string name="ui_5d821b815f53">Doughnut</string>
+    <string name="ui_36f07fcf1892">Download language pack</string>
     <string name="ui_4f494b22379b">Download update</string>
     <string name="ui_9437db71b92f">Downloading update: %1$d%%</string>
+    <string name="ui_a778d3492af2">Downloading…</string>
     <string name="ui_61517c08b3bf">Draw</string>
     <string name="ui_a16bcc337125">Draw with Pen</string>
     <string name="ui_40dbfbab7d57">Draw with Touch</string>
@@ -190,6 +194,7 @@
     <string name="ui_4ab2645dc4c7">Edit Header</string>
     <string name="ui_f0d155f6ac36">Edit Link</string>
     <string name="ui_eb25bd7c6059">Edit Text</string>
+    <string name="ui_7a10b61ed57b">Edits are saved as a new document.</string>
     <string name="ui_663aa3d5ca17">Elbow Connector</string>
     <string name="ui_cd0789bf2de9">Elbow Connector Arrow</string>
     <string name="ui_e812b7b748b0">Elbow Connector Double Arrow</string>
@@ -197,6 +202,7 @@
     <string name="ui_0ab4b2c43447">Emphasis</string>
     <string name="ui_150c8fdadd59">Endnote</string>
     <string name="ui_8e75ebbdb215">Engine</string>
+    <string name="ui_4b5046a3366d">Enter the document password</string>
     <string name="ui_560fa5972253">Equation</string>
     <string name="ui_a29285c93777">Equation Shapes</string>
     <string name="ui_9cb248d4dcc3">Even Page</string>
@@ -264,6 +270,7 @@
     <string name="ui_6c0125167d16">Insert Rows and Columns</string>
     <string name="ui_7660cc9246f7">Insert Table</string>
     <string name="ui_123a3ebc57e3">Inside</string>
+    <string name="ui_27f43c6bace2">Install Language Pack</string>
     <string name="ui_cada4215d344">Install update</string>
     <string name="ui_e50e9fc6c20d">Intense Emphasis</string>
     <string name="ui_b4d82d8253a0">Intense Quote</string>
@@ -276,7 +283,9 @@
     <string name="ui_8bfdb93cafaa">Keywords</string>
     <string name="ui_e658d3ae034a">Landscape</string>
     <string name="ui_a4fe65264ef7">Language</string>
+    <string name="ui_9aef089acf9f">Language Packs</string>
     <string name="ui_60dffe50dfcb">Language combo box, %1$s selected</string>
+    <string name="ui_6a2b54fada8e">Language packs</string>
     <string name="ui_1f875464bfd5">Last Column</string>
     <string name="ui_73b6e48a1b55">Later</string>
     <string name="ui_a511909161e1">Layout</string>
@@ -382,6 +391,7 @@
     <string name="ui_58e8f03d0851">Page Width</string>
     <string name="ui_9046da16aea9">Pages</string>
     <string name="ui_49f7566d1056">Paragraph Formatting</string>
+    <string name="ui_e7cf3ef4f17c">Password</string>
     <string name="ui_f3380f7b44bd">Paste</string>
     <string name="ui_a04bd35be167">Pen</string>
     <string name="ui_e3ad1bcc2cbd">Perspective</string>
@@ -426,17 +436,21 @@
     <string name="ui_74273989b096">Redo</string>
     <string name="ui_7538c2135b03">Reflection</string>
     <string name="ui_93f3d37260ee">Reflection Variations</string>
+    <string name="ui_81293fb4a945">Refresh language packs</string>
+    <string name="ui_b5fea8c79d30">Refresh to see available language packs.</string>
     <string name="ui_ab604a360777">Reject</string>
     <string name="ui_e445fc8ed6c0">Reject All Changes</string>
     <string name="ui_67dae4ca2958">Reject and Move to Next</string>
     <string name="ui_644d0520a9b5">Release notes are not available.</string>
     <string name="ui_c61ab19c1753">Remove Footer</string>
     <string name="ui_2f2f09b9ec77">Remove Header</string>
+    <string name="ui_8bb458559b26">Remove Language Pack</string>
     <string name="ui_e3e0591b816f">Remove Link</string>
     <string name="ui_8e13ce2e3131">Remove Page Numbers</string>
     <string name="ui_7bf634db2abe">Remove Space After Paragraph</string>
     <string name="ui_fb127e3a415a">Remove Space Before Paragraph</string>
     <string name="ui_82963c765306">Remove from list</string>
+    <string name="ui_328315d05e1c">Remove language pack</string>
     <string name="ui_a886d1dc4f12">Reopen</string>
     <string name="ui_5c89cdaff549">Reopen thread</string>
     <string name="ui_e219c08d75aa">Repeat Header Rows</string>
@@ -539,6 +553,7 @@
     <string name="ui_9f504bdae859">The %1$s tab is on its way.</string>
     <string name="ui_df46b8a2d60d">The document can\'t be opened: %1$s</string>
     <string name="ui_990843d46cd8">The document can\'t be saved there.</string>
+    <string name="ui_a26b9a53855e">The password isn\'t correct.</string>
     <string name="ui_31390ccb9d73">The picture can\'t be read.</string>
     <string name="ui_efb52e7172b7">Theme</string>
     <string name="ui_61a90ad013ec">Theme Colors</string>

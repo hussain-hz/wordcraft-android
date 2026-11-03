@@ -1,4 +1,10 @@
-# Engine 0.11 Android integration
+# Android engine integration
+
+Candidate integration: engine **0.15.0**, app **0.0.10-beta.1** on `integrate/engine-0.15`.
+See [the Arabic integration and validation report](ENGINE-0.15-ANDROID-ar.md).
+The candidate does not replace the last approved stable release below.
+
+## Stable 0.11 integration history
 
 Latest stable app: 0.0.9, version code 9990. Engine: 0.11.0.
 Approved test: 0.0.9-beta.1 (9010). The user approved contextual Arabic joining; stable 0.0.9 retains the same implementation with final version metadata. See [the release report](RELEASE-0.0.9-ar.md).

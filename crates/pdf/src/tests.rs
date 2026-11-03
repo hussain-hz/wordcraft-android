@@ -790,6 +790,32 @@ fn unsubsettable_font_is_drawn_as_outlines() {
     assert!(paths > 0, "its glyphs are drawn as outlines");
 }
 
+/// #3674: shaping gives 32-bit glyph ids (a format-12 cmap can map a character to any of them),
+/// but krilla takes 16-bit ones and panics on a larger id. That failed the export, and on wasm
+/// (`panic = "abort"`) lost the tab. A glyph id above 65535 is now written as .notdef.
+#[test]
+fn glyph_id_above_u16_exports() {
+    let mut d = Document::new();
+    d.body = vec![para_block(Paragraph::with_text("Wide glyph", CharProps { font: Some("Source Sans 3".into()), ..Default::default() }))];
+    let opts = PdfOptions { tagged: false, ..Default::default() };
+    let mut lay = layout(&d, &mut LayoutCache::new(), &LayoutOptions::default());
+    let (want, _) = count_glyphs_and_paths(&export_layout(&d, &lay, &opts).unwrap());
+    assert!(want > 0);
+    let mut wide = 0;
+    for item in lay.pages.iter_mut().flat_map(|p| p.items.iter_mut()) {
+        if let Placed::Lines { para, .. } = item
+            && let Some(g) = Arc::make_mut(para).glyphs.first_mut()
+        {
+            g.gid = 70_000;
+            wide += 1;
+        }
+    }
+    assert_eq!(wide, 1, "one glyph id is out of range");
+    let bytes = export_layout(&d, &lay, &opts).expect("a glyph id above 65535 must not fail the export");
+    let (glyphs, _) = count_glyphs_and_paths(&bytes);
+    assert_eq!(glyphs, want, "every glyph is still drawn, the wide one as .notdef");
+}
+
 #[test]
 fn flat_lines_in_a_group_are_drawn() {
     // A horizontal divider inside a group has no height (`a:ext cy="0"`): it used to be left out
@@ -1069,7 +1095,18 @@ fn a_crop_keeping_a_sliver_draws_the_source_that_much_wider() {
         let mut p = Paragraph::new();
         p.insert_object(
             0,
-            InlineObject::Image { media, w: 70.0, h: 70.0, alt: String::new(), float: Default::default(), crop, ole: None, svg: None, effects: Default::default(), framing: Default::default() },
+            InlineObject::Image {
+                media,
+                w: 70.0,
+                h: 70.0,
+                alt: String::new(),
+                float: Default::default(),
+                crop,
+                ole: None,
+                svg: None,
+                effects: Default::default(),
+                framing: Default::default(),
+            },
             &CharProps::default(),
         )
         .unwrap();
@@ -1129,7 +1166,18 @@ fn inline_picture_figure_keeps_its_alt_text() {
         let media = d.add_media(red_right_half_emf(), "emf");
         let mut p = Paragraph::with_text("Figure: ", CharProps::default());
         let n = p.len();
-        let obj = InlineObject::Image { media, w: 70.0, h: 70.0, alt: alt.into(), float: Default::default(), crop: [0.0; 4], ole: None, svg: None, effects: Default::default(), framing: Default::default() };
+        let obj = InlineObject::Image {
+            media,
+            w: 70.0,
+            h: 70.0,
+            alt: alt.into(),
+            float: Default::default(),
+            crop: [0.0; 4],
+            ole: None,
+            svg: None,
+            effects: Default::default(),
+            framing: Default::default(),
+        };
         p.insert_object(n, obj, &CharProps::default()).unwrap();
         d.body = vec![para_block(p)];
         String::from_utf8_lossy(&export(&d, &PdfOptions { compress: false, tagged: true, ..Default::default() }).unwrap()).into_owned()
@@ -1146,7 +1194,18 @@ fn tagged_picture_pdf(float: wordcraft_doc::para::Float) -> String {
     let media = d.add_media(red_right_half_emf(), "emf");
     let mut p = Paragraph::with_text("Figure: ", CharProps::default());
     let n = p.len();
-    let obj = InlineObject::Image { media, w: 70.0, h: 70.0, alt: "A red square".into(), float, crop: [0.0; 4], ole: None, svg: None, effects: Default::default(), framing: Default::default() };
+    let obj = InlineObject::Image {
+        media,
+        w: 70.0,
+        h: 70.0,
+        alt: "A red square".into(),
+        float,
+        crop: [0.0; 4],
+        ole: None,
+        svg: None,
+        effects: Default::default(),
+        framing: Default::default(),
+    };
     p.insert_object(n, obj, &CharProps::default()).unwrap();
     d.body = vec![para_block(p)];
     String::from_utf8_lossy(&export(&d, &PdfOptions { compress: false, tagged: true, ..Default::default() }).unwrap()).into_owned()
@@ -1181,8 +1240,18 @@ fn rotated_group_tags_each_picture_on_its_own() {
     use wordcraft_doc::para::{AltText, Float, GroupChild};
     let mut d = Document::new();
     let media = d.add_media(red_right_half_emf(), "emf");
-    let picture =
-        |alt: &str, float: Float| InlineObject::Image { media: media.clone(), w: 70.0, h: 70.0, alt: alt.into(), float, crop: [0.0; 4], ole: None, svg: None, effects: Default::default(), framing: Default::default() };
+    let picture = |alt: &str, float: Float| InlineObject::Image {
+        media: media.clone(),
+        w: 70.0,
+        h: 70.0,
+        alt: alt.into(),
+        float,
+        crop: [0.0; 4],
+        ole: None,
+        svg: None,
+        effects: Default::default(),
+        framing: Default::default(),
+    };
     let decorative = Float { alt: AltText { decorative: true, ..Default::default() }, ..Default::default() };
     let group = InlineObject::Group {
         w: 160.0,
@@ -1366,7 +1435,18 @@ fn metafile_text_records_are_drawn_as_text() {
     let n = p.len();
     p.insert_object(
         n,
-        InlineObject::Image { media, w: 70.0, h: 70.0, alt: String::new(), float: Default::default(), crop: [0.0; 4], ole: None, svg: None, effects: Default::default(), framing: Default::default() },
+        InlineObject::Image {
+            media,
+            w: 70.0,
+            h: 70.0,
+            alt: String::new(),
+            float: Default::default(),
+            crop: [0.0; 4],
+            ole: None,
+            svg: None,
+            effects: Default::default(),
+            framing: Default::default(),
+        },
         &CharProps::default(),
     )
     .unwrap();
@@ -1384,6 +1464,7 @@ fn bookmark_destination_is_the_page_of_its_start() {
     let mut p = Paragraph::with_text("Paragraph start\u{c}Bookmark target", CharProps::default());
     let at = "Paragraph start\u{c}".len();
     p.insert_object(at, InlineObject::BookmarkStart { name: "target".into() }, &CharProps::default()).unwrap();
+    p.insert_object(at, InlineObject::BookmarkStart { name: "First".into() }, &CharProps::default()).unwrap();
     p.insert_object(0, InlineObject::BookmarkStart { name: "first".into() }, &CharProps::default()).unwrap();
     d.body = vec![para_block(p)];
     let lay = layout(&d, &mut LayoutCache::new(), &LayoutOptions::default());
@@ -1415,6 +1496,13 @@ fn bookmark_destination_is_the_page_of_its_start() {
     let (page_ci, x_ci, y_ci) = ex.bookmark("TARGET").unwrap();
     assert_eq!(page_ci, 1);
     assert_eq!((x_ci, y_ci), (x, y));
+    // An exact name wins; names that differ only in case fall back to the first in the document
+    // (a folded index, not a scan of a hash map in arbitrary order for every link).
+    assert_eq!(ex.bookmark("First").map(|b| b.0), Some(1));
+    assert_eq!(ex.bookmark("FIRST").map(|b| b.0), Some(0));
+    assert!(ex.bookmark("absent").is_none());
+    let (exact, folded) = ex.bookmarks.get().unwrap();
+    assert_eq!((exact.len(), folded.len()), (3, 2));
 
     // Whitespace in ISO date string is parsed successfully
     assert!(parse_iso("  2024-05-06T07:08:09Z \n").is_some());
@@ -1515,7 +1603,18 @@ fn outline_keeps_visible_objects() {
     let media = base.add_media(png(), "png");
     for object in [
         InlineObject::Field { instr: "QUOTE Visible".into(), result: "Visible".into(), locked: true, dirty: false, code: false, form: String::new() },
-        InlineObject::Image { media, w: 16.0, h: 8.0, alt: String::new(), float: Default::default(), crop: [0.0; 4], ole: None, svg: None, effects: Default::default(), framing: Default::default() },
+        InlineObject::Image {
+            media,
+            w: 16.0,
+            h: 8.0,
+            alt: String::new(),
+            float: Default::default(),
+            crop: [0.0; 4],
+            ole: None,
+            svg: None,
+            effects: Default::default(),
+            framing: Default::default(),
+        },
     ] {
         let mut d = base.clone();
         let mut heading = Paragraph::with_text("\u{c}After break", CharProps::default()).styled("Heading1");
@@ -2092,7 +2191,7 @@ fn bundled_unicode_glyphs_are_visible_and_extractable() {
     let lay = layout(&d, &mut LayoutCache::new(), &LayoutOptions::default());
     let mut drawn = String::new();
     for page in &lay.pages {
-        for draw in page_display(&d, page, &DisplayOptions::default()) {
+        for draw in wordcraft_layout::display::page_display(&d, page, &DisplayOptions::default()) {
             if let Draw::Glyphs { face, glyphs, text, .. } = draw {
                 assert_eq!(face.data(), bundled.data(), "page glyphs must use the bundled face without system fallback");
                 assert!(glyphs.iter().all(|(id, _, _)| *id != 0), "page glyphs must not use .notdef");
@@ -2201,6 +2300,13 @@ fn image_budget_is_checked_from_the_header() {
     // The decoded image and its RGBA conversion are charged: two buffers at peak.
     assert!(load_image_within(&data, 1024).is_some());
     assert!(load_image_within(&data, 1023).is_none());
+    // 16-bit RGBA decodes to 8 bytes a pixel, alive with its RGBA8 conversion: 12 bytes a pixel.
+    let mut wide = Vec::new();
+    let img16 = image::ImageBuffer::<image::Rgba<u16>, _>::from_fn(16, 8, |x, y| image::Rgba([x as u16 * 999, y as u16, 9, 65535]));
+    image::DynamicImage::ImageRgba16(img16).write_to(&mut std::io::Cursor::new(&mut wide), image::ImageFormat::Png).unwrap();
+    let wide = Arc::new(wide);
+    assert!(load_image_within(&wide, 1024).is_none(), "two RGBA8 buffers' worth is not enough for RGBA16");
+    assert!(load_image_within(&wide, 1536).is_some());
     // A header (valid CRC) claiming 30000x30000 with no pixel data reads fine, then the budget refuses it.
     let hdr = ihdr_only_png(30_000, 30_000);
     let dims = image::ImageReader::new(std::io::Cursor::new(hdr.as_slice())).with_guessed_format().unwrap().into_dimensions().unwrap();
@@ -2471,4 +2577,40 @@ fn only_safe_link_targets_become_annotations() {
         })
         .collect();
     assert_eq!(uris, ["https://example.com/", "mailto:ada@example.com"]);
+}
+
+/// A glyph's text runs to the first later glyph with a cluster past its own (the end of the text
+/// without one), found in one pass: a long run of glyphs sharing a cluster used to rescan the rest
+/// of the run for every glyph.
+#[test]
+fn cluster_ends_match_the_next_larger_cluster_in_linear_time() {
+    let brute = |cl: &[usize], len: usize| -> Vec<usize> {
+        (0..cl.len()).map(|i| cl.iter().skip(i + 1).copied().find(|n| *n > cl[i]).unwrap_or(len)).collect::<Vec<_>>()
+    };
+    for cl in [vec![], vec![0], vec![0, 0, 3, 3, 5], vec![5, 3, 3, 0], vec![2, 0, 4, 1, 1, 6, 3], vec![0, 7, 2, 2, 9, 1]] {
+        assert_eq!(cluster_ends(&cl, 10), brute(&cl, 10), "{cl:?}");
+    }
+    // One base letter and a million combining marks in its cluster, then one more letter.
+    // Milliseconds; the rescan (`brute`) took 2.9 s at 50,000 and grows with the square, so
+    // about 20 minutes here.
+    let n = 1_000_000;
+    let mut cl = vec![0; n + 1];
+    cl.push(2 * n + 2);
+    let start = std::time::Instant::now();
+    let ends = cluster_ends(&cl, 2 * n + 4);
+    assert!(start.elapsed() < std::time::Duration::from_secs(10), "{:?}", start.elapsed());
+    assert!(ends[..=n].iter().all(|e| *e == 2 * n + 2));
+    assert_eq!(ends.last(), Some(&(2 * n + 4)));
+}
+
+/// A run's baseline is the y most of its glyphs share, ties to the lower bits; a run on one
+/// baseline (the common case) gives its y without counting.
+#[test]
+fn baseline_is_the_most_shared_y() {
+    assert_eq!(baseline(&[]), None);
+    assert_eq!(baseline(&[(1, 0.0, 7.5)]), Some(7.5));
+    assert_eq!(baseline(&[(1, 0.0, 7.5), (2, 3.0, 7.5), (3, 6.0, 7.5)]), Some(7.5));
+    assert_eq!(baseline(&[(1, 0.0, 7.5), (2, 3.0, 4.0), (3, 6.0, 7.5)]), Some(7.5));
+    assert_eq!(baseline(&[(1, 0.0, 9.0), (2, 3.0, 4.0)]), Some(4.0));
+    assert_eq!(baseline(&[(1, 0.0, -0.0), (2, 3.0, 0.0)]), Some(0.0));
 }

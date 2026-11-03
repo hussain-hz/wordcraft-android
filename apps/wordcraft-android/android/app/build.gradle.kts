@@ -295,6 +295,7 @@ android {
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersion
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters.addAll(rustAbis) }
     }
 
@@ -434,4 +435,7 @@ dependencies {
     implementation(libs.androidx.exifinterface)
     implementation(libs.jna) { artifact { type = "aar" } }
     testImplementation(libs.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }

@@ -596,5 +596,20 @@
   "Lighter 80%": "أفتح بنسبة 80%",
   "Darker 80%": "أغمق بنسبة 80%",
   "Lighter 90%": "أفتح بنسبة 90%",
-  "Darker 90%": "أغمق بنسبة 90%"
+  "Darker 90%": "أغمق بنسبة 90%",
+  "Language packs": "حزم اللغات",
+  "Basic dictionaries work offline. Download additional languages when needed.": "تعمل القواميس الأساسية دون اتصال. نزّل لغات إضافية عند الحاجة.",
+  "Refresh language packs": "تحديث قائمة حزم اللغات",
+  "Could not update language packs. Please try again.": "تعذر تحديث حزم اللغات. حاول مرة أخرى.",
+  "Refresh to see available language packs.": "حدّث القائمة لعرض حزم اللغات المتاحة.",
+  "Remove language pack": "إزالة حزمة اللغة",
+  "Download language pack": "تنزيل حزمة اللغة",
+  "Downloading…": "جارٍ التنزيل…",
+  "Password": "كلمة المرور",
+  "Enter the document password": "أدخل كلمة مرور المستند",
+  "Language Packs": "حزم اللغات",
+  "Install Language Pack": "تثبيت حزمة لغة",
+  "Remove Language Pack": "إزالة حزمة لغة",
+  "The password isn't correct.": "كلمة المرور غير صحيحة.",
+  "Edits are saved as a new document.": "تُحفظ التعديلات في مستند جديد."
 }

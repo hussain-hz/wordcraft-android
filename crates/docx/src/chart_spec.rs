@@ -6,7 +6,9 @@
 //! [`spec_of`] turns a chart part back into the model only when writing that model again gives
 //! the same markup, so a chart with anything the model leaves out stays as it was read.
 
-use wordcraft_doc::chart::{ChartFamily, ChartPalette, ChartSeries, ChartSpec, ChartType, Grouping, LabelParts, LabelPos, LegendPos, ThemeShade};
+use wordcraft_doc::chart::{
+    ChartFamily, ChartPalette, ChartSeries, ChartSpec, ChartType, Grouping, LabelParts, LabelPos, LegendPos, MAX_POINTS, MAX_SERIES, ThemeShade,
+};
 use wordcraft_doc::graphic::GraphicItem;
 use wordcraft_doc::props::Rgb;
 
@@ -23,9 +25,21 @@ pub(crate) const CHART_URI: &str = "http://schemas.openxmlformats.org/drawingml/
 const CAT_AX: &str = "500000001";
 const VAL_AX: &str = "500000002";
 
-/// The chart part for `spec`: a complete XML document. `spec` should be sanitized
-/// ([`ChartSpec::sanitize`]); a value that isn't finite is written as a gap either way.
+/// The chart part for `spec`: a complete XML document, written as [`ChartSpec::sanitize`] leaves
+/// it (a value that isn't finite is a gap).
 pub fn chart_xml(spec: &ChartSpec) -> String {
+    chart_part(spec).0
+}
+
+/// [`chart_xml`], and whether the chart limits left series or points of `spec` out of it.
+pub(crate) fn chart_part(spec: &ChartSpec) -> (String, bool) {
+    let kept = bounded(spec);
+    let points = spec.series.iter().map(|s| s.values.len()).max().unwrap_or(0).max(spec.categories.len());
+    let cut = kept.series.len() < spec.series.len() || kept.points() < points;
+    (write_chart(&kept), cut)
+}
+
+fn write_chart(spec: &ChartSpec) -> String {
     let mut w = W::new();
     w.open("c:chartSpace", &[("xmlns:c", NS_C), ("xmlns:a", NS_A), ("xmlns:r", NS_R)]);
     w.empty("c:roundedCorners", &[("val", "0")]);
@@ -83,6 +97,31 @@ pub fn chart_xml(spec: &ChartSpec) -> String {
     w.close("c:spPr");
     w.close("c:chartSpace");
     w.s
+}
+
+/// `spec` held to the chart limits. A model deserialised as is (a `.json` document) never went
+/// through [`ChartSpec::sanitize`], and every series repeats every category, so its size would
+/// multiply (#3648). Only what the limits keep is copied before sanitizing.
+fn bounded(spec: &ChartSpec) -> ChartSpec {
+    ChartSpec {
+        kind: spec.kind,
+        categories: spec.categories.iter().take(MAX_POINTS).cloned().collect(),
+        series: spec
+            .series
+            .iter()
+            .take(MAX_SERIES)
+            .map(|s| ChartSeries { name: s.name.clone(), values: s.values.iter().take(MAX_POINTS).copied().collect() })
+            .collect(),
+        title: spec.title.clone(),
+        title_overlay: spec.title_overlay,
+        legend: spec.legend,
+        data_labels: spec.data_labels,
+        style: spec.style,
+        palette: spec.palette.clone(),
+        label_parts: spec.label_parts,
+        label_pos: spec.label_pos,
+    }
+    .sanitized()
 }
 
 /// What `spec` draws as, `w` × `h` points, in the colours of `theme` (series take the accents in
@@ -713,6 +752,28 @@ mod tests {
     /// Children of `e` by name, in order.
     fn names(e: &El) -> Vec<&str> {
         e.els().map(|c| c.name.as_str()).collect()
+    }
+
+    #[test]
+    fn a_chart_past_the_limits_is_written_within_them() {
+        // A model deserialised as is (a `.json` document) never went through `sanitize`, and every
+        // series repeats every category: 300 series of 4,500 points wrote 2.7 million points (#3648).
+        use wordcraft_doc::chart::MAX_CELLS;
+        let spec = ChartSpec {
+            kind: ChartType::Column,
+            categories: (0..4500).map(|i| i.to_string()).collect(),
+            series: (0..300).map(|i| ChartSeries { name: format!("S{i}"), values: vec![Some(1.0); 4500] }).collect(),
+            title: None,
+            legend: None,
+            data_labels: false,
+            ..Default::default()
+        };
+        let x = chart_xml(&spec);
+        let series = x.matches("<c:ser>").count();
+        let points = x.matches("<c:pt ").count();
+        assert!((1..=MAX_SERIES).contains(&series), "{series} series");
+        assert!(points <= 2 * MAX_CELLS, "{points} points");
+        assert!(!x.contains(&format!("<c:pt idx=\"{MAX_POINTS}\"")), "past the point limit");
     }
 
     #[test]

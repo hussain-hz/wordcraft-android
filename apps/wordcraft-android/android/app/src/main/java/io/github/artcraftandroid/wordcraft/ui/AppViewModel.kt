@@ -825,7 +825,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         screen = if (document != null) Screen.Editor else Screen.Start
     }
 
-    /** The zoom the document was saved at, percent (0: fitting the page), which Print View opens at. */
+    /** Initial Print View zoom, percent (0: fit width). Mode switches reset it to fit width. */
     var docZoom by mutableStateOf(100)
         private set
 
@@ -1379,7 +1379,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleMobileView() = withEngine { e ->
         viewMode = if (viewMode == ViewMode.Mobile) ViewMode.Print else ViewMode.Mobile
-        if (viewMode == ViewMode.Mobile) e.command { setView("mobile", mobileWidth.coerceAtLeast(200f)) } else e.command { setView("print", 0f) }
+        if (viewMode == ViewMode.Mobile) {
+            e.command { setView("mobile", mobileWidth.coerceAtLeast(200f)) }
+        } else {
+            // A saved desktop zoom can crop most of the page on a phone. Switching back to
+            // pages starts at fit width; this is view state, not a change to the saved document.
+            docZoom = 0
+            e.command { setView("print", 0f) }
+        }
         refresh(e)
     }
 

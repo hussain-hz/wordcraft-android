@@ -84,4 +84,28 @@ class DocumentViewportTest {
         val caret = v.onPage(2, 100f, 700f)
         assertTrue(caret.y >= 0f && caret.y + 14f * v.scale <= 2000f)
     }
+    @Test
+    fun fittedPagesFollowLayoutArrivingAfterTheViewSize() {
+        val v = DocumentViewport(pad = 5f, gap = 12f)
+        v.setView(1080f, 2000f)
+        // A mode change can first expose the previous mobile layout, then the print pages.
+        v.setPages(listOf(PageSize(320f, 1800f, 0f)))
+        v.setPages(listOf(letter))
+        assertEquals(1080f / 622f, v.scale, 1e-4f)
+        assertTrue(v.pageRect(0).left > 0f)
+        assertTrue(v.pageRect(0).right < 1080f)
+        v.setView(2000f, 1080f)
+        assertEquals(2000f / 622f, v.scale, 1e-4f)
+    }
+
+    @Test
+    fun resizingForTheKeyboardDoesNotDiscardManualZoom() {
+        val v = viewport()
+        v.zoomBy(2f, Offset(540f, 600f))
+        val zoomed = v.scale
+        v.setView(1080f, 1000f)
+        v.setPages(listOf(letter))
+        assertEquals(zoomed, v.scale, 1e-4f)
+    }
+
 }

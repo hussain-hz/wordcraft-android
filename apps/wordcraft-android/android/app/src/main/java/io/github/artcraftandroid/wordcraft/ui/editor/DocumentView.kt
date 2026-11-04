@@ -403,7 +403,7 @@ fun DocumentView(
     // dark pages are drawn by the engine: a change of theme draws every tile again
     val darkPaper = Color(0xFF000000 or (darkPaperChannel * 0x010101).toLong())
     val tiles = remember(info.documentId, mobile, dark, darkPaper) { mutableStateMapOf<TileKey, Tile>() }
-    LaunchedEffect(info.pages) { viewport.setPages(info.pages) }
+    LaunchedEffect(viewport, info.pages) { viewport.setPages(info.pages) }
 
     // The tiles that show, the caret's page first: this list changes only when a tile comes into
     // or goes out of view, or the zoom settles (while two fingers zoom, the tiles at the old scale
